@@ -1,0 +1,9 @@
+#All used messages in core should be added in here
+default_language:
+  no_language_set: "&cYou have not set a language yet! Please set one using /language <language>"
+  language_set:    "&aYour language has been set to &e::language::"
+  available_languages: "&aAvailable languages: &e::languages::"
+  no_permission: "&cYou do not have permission to perform this command."
+  only_players: "&cOnly players can perform this command."
+  reload_complete: "&aVystorm Core has been reloaded."
+  

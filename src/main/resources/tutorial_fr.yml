@@ -1,0 +1,50 @@
+# Français — UTF-8. Keep keys, placeholders and formatting tokens unchanged.
+title: Vystorm Noyau
+permission: ''
+pages:
+- title: Commencer par /vmenu
+  text: |
+    1. Type /vmenu dans le chat.
+    2. Choisir "Tutoriels".
+    3. Choisir "<plugin name> · Guide" puis un sujet.
+    4. "Tous les tutoriels" vous ramène à la liste des plugins; à partir de là "Retour à /vmenu" mène au menu principal.
+
+    Core unifie comment les plugins Vystorm sont utilisés. Les inventaires contenant des articles réels restent des inventaires; les entrées, les confirmations et les guides sont ouverts sous forme de dialogues Minecraft.
+- title: Menu principal et menu ESC
+  text: |
+    Il y a trois façons d'ouvrir le menu principal Vystorm:
+    1. /vmenu dans le chat.
+    2. Appuyez sur ESC et choisissez "Vystorm Menu".
+    3. La clé d'action rapide (Minecraft clé liant "Quick Actions").
+
+    Le menu principal trie tous les plugins en domaines : Caractère, Économie, Communauté, Monde & Aventure, Bâtiment & Tech, Tutoriels et – pour les administrateurs – Administration. Une zone apparaît seulement quand il y a quelque chose que vous êtes autorisé à ouvrir.
+- title: Paramètres
+  text: |
+    Menu principal → "Paramètres" ou /vsettings ouvre vos paramètres personnels de tous les plugins. Modifier les valeurs et appuyez sur "Enregistrer"; seules les valeurs modifiées sont appliquées.
+
+    Ici vous pouvez également choisir votre langue ("Langue"). "Automatic" suit votre langue Minecraft.
+
+    Les administrateurs voient également "Paramètres du serveur" : la configuration des plugins. Les modifications s'appliquent immédiatement à l'ensemble du serveur. /vsettings server les ouvre directement.
+- title: Trouver des guides
+  text: |
+    1. Ouvrir /vmenu et choisissez "Tutoriels"".
+    2. Choisir "<plugin name> · Guide".
+    3. Choisissez un sujet. la page « Suivant » et « Retour » dans le guide; "Tous les sujets" retourne à l'aperçu.
+
+    /vmenu didacticiels ouvre directement la catégorie de didacticiels; clés directes telles que /vmenu deepinventory:tutorial continuer à travailler.
+
+    /vmenu list affiche les touches de menu disponibles. Vous pouvez mettre une clé juste après /vmenu, e.g. /vmenu Inventaire profond: étude. La touche Tab vous aide à choisir.
+- title: Utilisation des dialogues
+  text: |
+    Entrées : remplissez les champs marqués et appuyez sur "Appliquer" ou sur le bouton d'action affiché.
+    Confirmations : lisez la cible et les coûts avant de confirmer. "Annuler" ne lance pas l'action.
+    Guides : les boutons ne tournent que des pages ; ils n'achètent, ne construisent ou ne changent rien.
+
+    Les dialogues expirent après environ une minute. Ouvrez à nouveau le menu si une ancienne réponse n'est plus acceptée. Les autorisations, les stocks ou les objectifs qui ont changé entre-temps peuvent également rendre une action invalide.
+- title: Quand quelque chose n'est pas disponible
+  text: |
+    Si une entrée est manquante, vérifiez /vmenu list first. A plugin peut être désactivé ou vous pouvez manquer la permission.
+
+    Si une action est rejetée, lisez le message dans chat et le tutoriel correspondant: souvent espace, équilibre, une configuration complète ou l'accès à la cible est manquant.
+
+    Si quelque chose a changé depuis que vous avez ouvert la vue, ouvrez-la à nouveau. Si l'erreur reste, indiquez à l'équipe serveur le plugin, votre action et le message exact.

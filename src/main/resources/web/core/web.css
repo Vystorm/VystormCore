@@ -1,0 +1,107 @@
+/* Vystorm Web – shared styles of all modules. Use colors only through the tokens below. */
+:root {
+  color-scheme: light dark;
+  --vw-bg: #f4f5f7;
+  --vw-surface: #ffffff;
+  --vw-surface-2: #eceef2;
+  --vw-border: #d5d9e0;
+  --vw-text: #1b1e24;
+  --vw-muted: #5d6573;
+  --vw-accent: #7a4de0;
+  --vw-accent-text: #ffffff;
+  --vw-ok: #1f8a4c;
+  --vw-warn: #a86400;
+  --vw-danger: #c43131;
+  --vw-focus: #7a4de0;
+  --vw-radius: 10px;
+  --vw-gap: 16px;
+  --vw-font: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --vw-mono: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --vw-bg: #111318;
+    --vw-surface: #1a1d24;
+    --vw-surface-2: #232733;
+    --vw-border: #323846;
+    --vw-text: #e6e8ee;
+    --vw-muted: #9aa3b2;
+    --vw-accent: #9c7bff;
+    --vw-accent-text: #0f0a1f;
+    --vw-ok: #4cc27f;
+    --vw-warn: #e0a040;
+    --vw-danger: #ff6b6b;
+    --vw-focus: #b89cff;
+  }
+}
+:root[data-theme="dark"] {
+  --vw-bg: #111318;
+  --vw-surface: #1a1d24;
+  --vw-surface-2: #232733;
+  --vw-border: #323846;
+  --vw-text: #e6e8ee;
+  --vw-muted: #9aa3b2;
+  --vw-accent: #9c7bff;
+  --vw-accent-text: #0f0a1f;
+  --vw-ok: #4cc27f;
+  --vw-warn: #e0a040;
+  --vw-danger: #ff6b6b;
+  --vw-focus: #b89cff;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
+body {
+  background: var(--vw-bg);
+  color: var(--vw-text);
+  font: 15px/1.5 var(--vw-font);
+  min-height: 100vh;
+}
+a { color: var(--vw-accent); }
+:focus-visible { outline: 2px solid var(--vw-focus); outline-offset: 2px; }
+.vw-bar {
+  display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+  padding: 10px 16px; background: var(--vw-surface); border-bottom: 1px solid var(--vw-border);
+}
+.vw-brand { font-weight: 700; letter-spacing: .02em; color: var(--vw-text); text-decoration: none; margin-right: auto; }
+.vw-user { color: var(--vw-muted); font-size: 14px; }
+.vw-main { max-width: 1100px; margin: 0 auto; padding: 24px 16px 48px; }
+.vw-main.vw-wide { max-width: none; }
+h1 { font-size: 24px; margin: 0 0 16px; }
+h2 { font-size: 18px; margin: 24px 0 8px; }
+.vw-muted { color: var(--vw-muted); }
+.vw-grid { display: grid; gap: var(--vw-gap); grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); }
+.vw-card {
+  display: block; background: var(--vw-surface); border: 1px solid var(--vw-border); border-radius: var(--vw-radius);
+  padding: 16px; color: var(--vw-text); text-decoration: none;
+}
+a.vw-card:hover { border-color: var(--vw-accent); }
+.vw-card h3 { margin: 0 0 6px; font-size: 17px; }
+.vw-card p { margin: 0; color: var(--vw-muted); font-size: 14px; }
+.vw-button {
+  display: inline-flex; align-items: center; gap: 6px; font: inherit; font-size: 14px; cursor: pointer;
+  padding: 7px 14px; border-radius: 8px; border: 1px solid var(--vw-border); background: var(--vw-surface-2); color: var(--vw-text);
+}
+.vw-button:hover { border-color: var(--vw-accent); }
+.vw-button.vw-primary { background: var(--vw-accent); color: var(--vw-accent-text); border-color: var(--vw-accent); }
+.vw-button:disabled { opacity: .5; cursor: not-allowed; }
+.vw-input {
+  font: inherit; padding: 7px 10px; border-radius: 8px; border: 1px solid var(--vw-border);
+  background: var(--vw-surface); color: var(--vw-text); min-width: 0;
+}
+.vw-notice {
+  padding: 12px 14px; border-radius: var(--vw-radius); border: 1px solid var(--vw-border);
+  background: var(--vw-surface); margin: 0 0 16px;
+}
+.vw-notice.vw-error { border-color: var(--vw-danger); color: var(--vw-danger); }
+.vw-notice.vw-ok { border-color: var(--vw-ok); }
+.vw-table { width: 100%; border-collapse: collapse; background: var(--vw-surface); border-radius: var(--vw-radius); overflow: hidden; }
+.vw-table th, .vw-table td { text-align: left; padding: 8px 12px; border-bottom: 1px solid var(--vw-border); }
+.vw-table th { color: var(--vw-muted); font-weight: 600; width: 35%; }
+.vw-mono { font-family: var(--vw-mono); font-size: 13px; }
+.vw-row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.vw-hidden { display: none !important; }
+@media (max-width: 600px) {
+  .vw-main { padding: 16px 16px 32px; }
+  .vw-table th { width: auto; }
+}
+.vw-lang { width: auto; padding: 0.2rem 0.4rem; }

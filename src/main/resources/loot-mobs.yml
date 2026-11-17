@@ -1,0 +1,392 @@
+# Vystorm Core mob loot: one own table per vanilla mob type, standard Minecraft items only.
+# Rule for every Vystorm plugin: WHAT drops is defined by the mob (this table for vanilla mobs, the plugin's own
+# table for custom mobs), HOW GOOD only by the mob's level (config.yml loot.mob-level-luck). Player luck does not count.
+#
+# These are BONUS drops on top of the normal vanilla drops. They are rolled by the plugin that owns the kill
+# (SpawnDirector for vanilla/director mobs) through category:mob_drop_common / _elite / _boss with the table as "self".
+# Mob types without a table here use vystorm_core:mob/default.
+#
+# mode: each = every entry is checked once per kill with its own chance (like vanilla drop lists).
+# weight = rarity 0..10000 (tier: common <4000, uncommon <7000, rare <9000, epic <9800, legendary).
+# The mob level raises the chance of rarer entries: luck 3 (level 60+) makes a weight-9500 entry about 1.7x likelier,
+# a weight-1000 entry only 1.06x. table: '<id>' draws one item from that list (vystorm_core:vanilla/... in loot-vanilla.yml).
+# Preview: /vadmin loot simulate vystorm_core:mob/zombie 10000 level=40
+tables:
+  'vystorm_core:mob/default':
+    mode: each
+    entries:
+      - {table: 'vystorm_core:vanilla/common', weight: 1000, chance: 0.08}
+      - {item: 'minecraft:iron_nugget', weight: 2500, chance: 0.06, min-amount: 1, max-amount: 3}
+      - {table: 'vystorm_core:vanilla/uncommon', weight: 6000, chance: 0.03}
+      - {table: 'vystorm_core:vanilla/rare', weight: 8500, chance: 0.006}
+      - {table: 'vystorm_core:vanilla/epic', weight: 9600, chance: 0.001}
+
+  # ---------------------------------------------------------------- undead
+  'vystorm_core:mob/zombie':
+    mode: each
+    entries:
+      - {item: 'minecraft:iron_nugget', weight: 2000, chance: 0.12, min-amount: 1, max-amount: 3}
+      - {item: 'minecraft:carrot', weight: 2500, chance: 0.06}
+      - {item: 'minecraft:potato', weight: 2500, chance: 0.06}
+      - {table: 'vystorm_core:vanilla/food', weight: 3000, chance: 0.04}
+      - {item: 'minecraft:iron_ingot', weight: 5000, chance: 0.03}
+      - {item: 'minecraft:iron_shovel', weight: 6000, chance: 0.015}
+      - {item: 'minecraft:iron_sword', weight: 7500, chance: 0.006, enchant-levels: '5-15'}
+      - {table: 'vystorm_core:vanilla/rare', weight: 8500, chance: 0.008}
+      - {table: 'vystorm_core:vanilla/epic', weight: 9500, chance: 0.0015}
+  'vystorm_core:mob/husk':
+    mode: each
+    entries:
+      - {item: 'minecraft:sand', weight: 1500, chance: 0.08, min-amount: 2, max-amount: 6}
+      - {item: 'minecraft:gold_nugget', weight: 2500, chance: 0.08, min-amount: 1, max-amount: 4}
+      - {item: 'minecraft:iron_nugget', weight: 2500, chance: 0.06, min-amount: 1, max-amount: 3}
+      - {item: 'minecraft:gold_ingot', weight: 5500, chance: 0.025}
+      - {item: 'minecraft:rabbit_foot', weight: 7000, chance: 0.01}
+      - {table: 'vystorm_core:vanilla/treasure', weight: 8500, chance: 0.005}
+      - {table: 'vystorm_core:vanilla/rare', weight: 8500, chance: 0.006}
+      - {table: 'vystorm_core:vanilla/epic', weight: 9500, chance: 0.0015}
+  'vystorm_core:mob/zombie_villager':
+    mode: each
+    entries:
+      - {item: 'minecraft:wheat', weight: 1500, chance: 0.08, min-amount: 1, max-amount: 4}
+      - {item: 'minecraft:iron_nugget', weight: 2500, chance: 0.08, min-amount: 1, max-amount: 3}
+      - {item: 'minecraft:book', weight: 4500, chance: 0.04}
+      - {item: 'minecraft:golden_carrot', weight: 5500, chance: 0.03}
+      - {item: 'minecraft:emerald', weight: 6500, chance: 0.03}
+      - {table: 'vystorm_core:vanilla/magic', weight: 7500, chance: 0.01}
+      - {table: 'vystorm_core:vanilla/rare', weight: 8500, chance: 0.008}
+      - {table: 'vystorm_core:vanilla/epic', weight: 9500, chance: 0.0015}
+  'vystorm_core:mob/drowned':
+    mode: each
+    entries:
+      - {item: 'minecraft:copper_ingot', weight: 2500, chance: 0.10, min-amount: 1, max-amount: 3}
+      - {item: 'minecraft:prismarine_shard', weight: 3000, chance: 0.06, min-amount: 1, max-amount: 3}
+      - {item: 'minecraft:kelp', weight: 1000, chance: 0.06, min-amount: 1, max-amount: 4}
+      - {table: 'vystorm_core:vanilla/ocean', weight: 5000, chance: 0.03}
+      - {item: 'minecraft:nautilus_shell', weight: 7500, chance: 0.015}
+      - {table: 'vystorm_core:vanilla/rare', weight: 8500, chance: 0.006}
+      - {item: 'minecraft:trident', weight: 9600, chance: 0.003}
+      - {item: 'minecraft:heart_of_the_sea', weight: 9700, chance: 0.001}
+  'vystorm_core:mob/skeleton':
+    mode: each
+    entries:
+      - {item: 'minecraft:arrow', weight: 1000, chance: 0.15, min-amount: 2, max-amount: 6}
+      - {item: 'minecraft:bone', weight: 500, chance: 0.10, min-amount: 1, max-amount: 3}
+      - {item: 'minecraft:bone_block', weight: 3500, chance: 0.03}
+      - {item: 'minecraft:bow', weight: 4500, chance: 0.03}
+      - {item: 'minecraft:tipped_arrow', weight: 6000, chance: 0.02, potion: weakness, min-amount: 2, max-amount: 4}
+      - {item: 'minecraft:bow', weight: 7500, chance: 0.008, enchant-levels: '5-20'}
+      - {table: 'vystorm_core:vanilla/rare', weight: 8500, chance: 0.006}
+      - {table: 'vystorm_core:vanilla/epic', weight: 9500, chance: 0.0012}
+  'vystorm_core:mob/stray':
+    mode: each
+    entries:
+      - {item: 'minecraft:arrow', weight: 1000, chance: 0.12, min-amount: 2, max-amount: 6}
+      - {item: 'minecraft:bone', weight: 500, chance: 0.08, min-amount: 1, max-amount: 3}
+      - {item: 'minecraft:packed_ice', weight: 3500, chance: 0.04, min-amount: 1, max-amount: 3}
+      - {item: 'minecraft:tipped_arrow', weight: 5500, chance: 0.04, potion: slowness, min-amount: 2, max-amount: 4}
+      - {item: 'minecraft:bow', weight: 7500, chance: 0.008, enchant-levels: '5-20'}
+      - {item: 'minecraft:blue_ice', weight: 7000, chance: 0.01}
+      - {table: 'vystorm_core:vanilla/rare', weight: 8500, chance: 0.006}
+      - {table: 'vystorm_core:vanilla/epic', weight: 9500, chance: 0.0012}
+  'vystorm_core:mob/bogged':
+    mode: each
+    entries:
+      - {item: 'minecraft:arrow', weight: 1000, chance: 0.12, min-amount: 2, max-amount: 6}
+      - {item: 'minecraft:brown_mushroom', weight: 1500, chance: 0.08, min-amount: 1, max-amount: 3}
+      - {item: 'minecraft:red_mushroom', weight: 1500, chance: 0.08, min-amount: 1, max-amount: 3}
+      - {item: 'minecraft:tipped_arrow', weight: 5500, chance: 0.04, potion: poison, min-amount: 2, max-amount: 4}
+      - {item: 'minecraft:bow', weight: 7500, chance: 0.008, enchant-levels: '5-20'}
+      - {item: 'minecraft:trial_key', weight: 8000, chance: 0.005}
+      - {table: 'vystorm_core:vanilla/rare', weight: 8500, chance: 0.006}
+      - {table: 'vystorm_core:vanilla/epic', weight: 9500, chance: 0.0012}
+  'vystorm_core:mob/wither_skeleton':
+    mode: each
+    entries:
+      - {item: 'minecraft:coal', weight: 1000, chance: 0.15, min-amount: 1, max-amount: 3}
+      - {item: 'minecraft:bone', weight: 500, chance: 0.08, min-amount: 1, max-amount: 3}
+      - {table: 'vystorm_core:vanilla/nether', weight: 4500, chance: 0.04}
+      - {item: 'minecraft:gold_ingot', weight: 5000, chance: 0.04}
+      - {item: 'minecraft:stone_sword', weight: 6000, chance: 0.01, enchant-levels: '5-15'}
+      - {table: 'vystorm_core:vanilla/rare', weight: 8500, chance: 0.008}
+      - {item: 'minecraft:netherite_scrap', weight: 9600, chance: 0.002}
+      - {item: 'minecraft:wither_skeleton_skull', weight: 9700, chance: 0.004}
+  'vystorm_core:mob/zombified_piglin':
+    mode: each
+    entries:
+      - {item: 'minecraft:gold_nugget', weight: 1500, chance: 0.12, min-amount: 1, max-amount: 4}
+      - {item: 'minecraft:gold_ingot', weight: 5000, chance: 0.03}
+      - {table: 'vystorm_core:vanilla/nether', weight: 4500, chance: 0.03}
+      - {item: 'minecraft:golden_sword', weight: 6000, chance: 0.01, enchant-levels: '5-15'}
+      - {table: 'vystorm_core:vanilla/rare', weight: 8500, chance: 0.005}
+      - {table: 'vystorm_core:vanilla/epic', weight: 9500, chance: 0.001}
+  'vystorm_core:mob/zoglin':
+    mode: each
+    entries:
+      - {item: 'minecraft:leather', weight: 1500, chance: 0.08, min-amount: 1, max-amount: 3}
+      - {item: 'minecraft:rotten_flesh', weight: 500, chance: 0.08, min-amount: 1, max-amount: 3}
+      - {table: 'vystorm_core:vanilla/nether', weight: 4500, chance: 0.04}
+      - {table: 'vystorm_core:vanilla/rare', weight: 8500, chance: 0.006}
+      - {table: 'vystorm_core:vanilla/epic', weight: 9500, chance: 0.0012}
+
+  # ---------------------------------------------------------------- overworld monsters
+  'vystorm_core:mob/creeper':
+    mode: each
+    entries:
+      - {item: 'minecraft:gunpowder', weight: 1000, chance: 0.15, min-amount: 1, max-amount: 3}
+      - {item: 'minecraft:redstone', weight: 3000, chance: 0.06, min-amount: 2, max-amount: 6}
+      - {table: 'vystorm_core:vanilla/redstone', weight: 5000, chance: 0.03}
+      - {item: 'minecraft:tnt', weight: 6500, chance: 0.015}
+      - {item: 'minecraft:music_disc_13', weight: 8500, chance: 0.004}
+      - {item: 'minecraft:music_disc_cat', weight: 8500, chance: 0.004}
+      - {table: 'vystorm_core:vanilla/rare', weight: 8500, chance: 0.005}
+      - {table: 'vystorm_core:vanilla/epic', weight: 9500, chance: 0.001}
+  'vystorm_core:mob/spider':
+    mode: each
+    entries:
+      - {item: 'minecraft:string', weight: 500, chance: 0.15, min-amount: 1, max-amount: 3}
+      - {item: 'minecraft:spider_eye', weight: 2500, chance: 0.08}
+      - {item: 'minecraft:fermented_spider_eye', weight: 5500, chance: 0.02}
+      - {item: 'minecraft:cobweb', weight: 6000, chance: 0.02, min-amount: 1, max-amount: 2}
+      - {item: 'minecraft:lead', weight: 7000, chance: 0.01}
+      - {table: 'vystorm_core:vanilla/rare', weight: 8500, chance: 0.005}
+      - {table: 'vystorm_core:vanilla/epic', weight: 9500, chance: 0.001}
+  'vystorm_core:mob/cave_spider':
+    mode: each
+    entries:
+      - {item: 'minecraft:string', weight: 500, chance: 0.12, min-amount: 1, max-amount: 3}
+      - {item: 'minecraft:spider_eye', weight: 2500, chance: 0.08}
+      - {table: 'vystorm_core:vanilla/ores_ingots', weight: 4000, chance: 0.04}
+      - {item: 'minecraft:cobweb', weight: 6000, chance: 0.03, min-amount: 1, max-amount: 2}
+      - {item: 'minecraft:potion', weight: 7000, chance: 0.01, potion: poison}
+      - {table: 'vystorm_core:vanilla/rare', weight: 8500, chance: 0.006}
+      - {table: 'vystorm_core:vanilla/epic', weight: 9500, chance: 0.0012}
+  'vystorm_core:mob/silverfish':
+    mode: each
+    entries:
+      - {item: 'minecraft:cobblestone', weight: 500, chance: 0.08, min-amount: 1, max-amount: 4}
+      - {item: 'minecraft:raw_iron', weight: 3000, chance: 0.05}
+      - {table: 'vystorm_core:vanilla/ores_ingots', weight: 4000, chance: 0.04}
+      - {table: 'vystorm_core:vanilla/rare', weight: 8500, chance: 0.004}
+  'vystorm_core:mob/slime':
+    mode: each
+    entries:
+      - {item: 'minecraft:slime_ball', weight: 1000, chance: 0.10, min-amount: 1, max-amount: 2}
+      - {table: 'vystorm_core:vanilla/redstone', weight: 5000, chance: 0.02}
+      - {item: 'minecraft:lead', weight: 6500, chance: 0.01}
+      - {table: 'vystorm_core:vanilla/rare', weight: 8500, chance: 0.003}
+  'vystorm_core:mob/witch':
+    mode: each
+    entries:
+      - {item: 'minecraft:glass_bottle', weight: 500, chance: 0.10, min-amount: 1, max-amount: 3}
+      - {item: 'minecraft:glowstone_dust', weight: 2000, chance: 0.08, min-amount: 1, max-amount: 3}
+      - {item: 'minecraft:redstone', weight: 2000, chance: 0.08, min-amount: 1, max-amount: 4}
+      - {item: 'minecraft:experience_bottle', weight: 5000, chance: 0.04, min-amount: 1, max-amount: 3}
+      - {table: 'vystorm_core:vanilla/magic', weight: 5500, chance: 0.05}
+      - {item: 'minecraft:book', weight: 8000, chance: 0.008, enchant-levels: '10-25'}
+      - {table: 'vystorm_core:vanilla/rare', weight: 8500, chance: 0.008}
+      - {table: 'vystorm_core:vanilla/epic', weight: 9500, chance: 0.0015}
+  'vystorm_core:mob/phantom':
+    mode: each
+    entries:
+      - {item: 'minecraft:phantom_membrane', weight: 3000, chance: 0.08}
+      - {item: 'minecraft:feather', weight: 1000, chance: 0.06, min-amount: 1, max-amount: 3}
+      - {item: 'minecraft:potion', weight: 7000, chance: 0.01, potion: slow_falling}
+      - {table: 'vystorm_core:vanilla/rare', weight: 8500, chance: 0.006}
+      - {table: 'vystorm_core:vanilla/epic', weight: 9500, chance: 0.0012}
+  'vystorm_core:mob/creaking':
+    mode: each
+    entries:
+      - {item: 'minecraft:pale_oak_log', weight: 1000, chance: 0.10, min-amount: 1, max-amount: 4}
+      - {item: 'minecraft:resin_clump', weight: 3000, chance: 0.08, min-amount: 1, max-amount: 3}
+      - {item: 'minecraft:pale_oak_sapling', weight: 4500, chance: 0.03}
+      - {item: 'minecraft:creaking_heart', weight: 9000, chance: 0.004}
+      - {table: 'vystorm_core:vanilla/rare', weight: 8500, chance: 0.006}
+
+  # ---------------------------------------------------------------- illagers and raids
+  'vystorm_core:mob/pillager':
+    mode: each
+    entries:
+      - {item: 'minecraft:arrow', weight: 1000, chance: 0.12, min-amount: 2, max-amount: 6}
+      - {item: 'minecraft:emerald', weight: 6500, chance: 0.02}
+      - {item: 'minecraft:crossbow', weight: 5500, chance: 0.02}
+      - {item: 'minecraft:crossbow', weight: 7500, chance: 0.006, enchant-levels: '5-20'}
+      - {table: 'vystorm_core:vanilla/rare', weight: 8500, chance: 0.008}
+      - {table: 'vystorm_core:vanilla/epic', weight: 9500, chance: 0.0015}
+  'vystorm_core:mob/vindicator':
+    mode: each
+    entries:
+      - {item: 'minecraft:emerald', weight: 6000, chance: 0.05, min-amount: 1, max-amount: 2}
+      - {item: 'minecraft:iron_axe', weight: 6000, chance: 0.015}
+      - {item: 'minecraft:iron_axe', weight: 7500, chance: 0.006, enchant-levels: '5-15'}
+      - {table: 'vystorm_core:vanilla/rare', weight: 8500, chance: 0.01}
+      - {table: 'vystorm_core:vanilla/epic', weight: 9500, chance: 0.002}
+  'vystorm_core:mob/evoker':
+    mode: each
+    entries:
+      - {item: 'minecraft:emerald', weight: 5500, chance: 0.10, min-amount: 1, max-amount: 3}
+      - {table: 'vystorm_core:vanilla/magic', weight: 6000, chance: 0.05}
+      - {item: 'minecraft:book', weight: 8000, chance: 0.02, enchant-levels: '15-30'}
+      - {table: 'vystorm_core:vanilla/rare', weight: 8500, chance: 0.02}
+      - {table: 'vystorm_core:vanilla/epic', weight: 9500, chance: 0.004}
+  'vystorm_core:mob/illusioner':
+    mode: each
+    entries:
+      - {item: 'minecraft:emerald', weight: 5500, chance: 0.08, min-amount: 1, max-amount: 3}
+      - {table: 'vystorm_core:vanilla/magic', weight: 6000, chance: 0.05}
+      - {item: 'minecraft:bow', weight: 7500, chance: 0.02, enchant-levels: '10-25'}
+      - {table: 'vystorm_core:vanilla/rare', weight: 8500, chance: 0.02}
+      - {table: 'vystorm_core:vanilla/epic', weight: 9500, chance: 0.004}
+  'vystorm_core:mob/vex':
+    mode: each
+    entries:
+      - {item: 'minecraft:experience_bottle', weight: 5000, chance: 0.03}
+      - {item: 'minecraft:iron_sword', weight: 6000, chance: 0.01}
+      - {table: 'vystorm_core:vanilla/magic', weight: 6000, chance: 0.02}
+      - {table: 'vystorm_core:vanilla/rare', weight: 8500, chance: 0.004}
+  'vystorm_core:mob/ravager':
+    mode: each
+    entries:
+      - {item: 'minecraft:leather', weight: 1500, chance: 0.15, min-amount: 1, max-amount: 4}
+      - {item: 'minecraft:emerald', weight: 6000, chance: 0.08, min-amount: 1, max-amount: 3}
+      - {item: 'minecraft:saddle', weight: 7500, chance: 0.03}
+      - {table: 'vystorm_core:vanilla/rare', weight: 8500, chance: 0.03}
+      - {table: 'vystorm_core:vanilla/epic', weight: 9500, chance: 0.006}
+
+  # ---------------------------------------------------------------- ocean
+  'vystorm_core:mob/guardian':
+    mode: each
+    entries:
+      - {item: 'minecraft:prismarine_shard', weight: 1500, chance: 0.10, min-amount: 1, max-amount: 3}
+      - {item: 'minecraft:prismarine_crystals', weight: 3500, chance: 0.08, min-amount: 1, max-amount: 3}
+      - {table: 'vystorm_core:vanilla/ocean', weight: 5000, chance: 0.05}
+      - {item: 'minecraft:wet_sponge', weight: 8000, chance: 0.005}
+      - {table: 'vystorm_core:vanilla/rare', weight: 8500, chance: 0.006}
+  'vystorm_core:mob/elder_guardian':
+    mode: each
+    entries:
+      - {item: 'minecraft:prismarine_crystals', weight: 2000, chance: 0.5, min-amount: 2, max-amount: 6}
+      - {item: 'minecraft:wet_sponge', weight: 6000, chance: 0.2, min-amount: 1, max-amount: 2}
+      - {table: 'vystorm_core:vanilla/ocean', weight: 6000, chance: 0.2}
+      - {item: 'minecraft:tide_armor_trim_smithing_template', weight: 9300, chance: 0.05}
+      - {item: 'minecraft:heart_of_the_sea', weight: 9500, chance: 0.02}
+      - {table: 'vystorm_core:vanilla/epic', weight: 9500, chance: 0.03}
+
+  # ---------------------------------------------------------------- nether
+  'vystorm_core:mob/blaze':
+    mode: each
+    entries:
+      - {item: 'minecraft:blaze_powder', weight: 3000, chance: 0.10, min-amount: 1, max-amount: 2}
+      - {item: 'minecraft:fire_charge', weight: 3500, chance: 0.06, min-amount: 1, max-amount: 3}
+      - {table: 'vystorm_core:vanilla/nether', weight: 4500, chance: 0.05}
+      - {item: 'minecraft:blaze_rod', weight: 5000, chance: 0.06}
+      - {item: 'minecraft:magma_cream', weight: 5000, chance: 0.03}
+      - {item: 'minecraft:potion', weight: 7500, chance: 0.01, potion: fire_resistance}
+      - {table: 'vystorm_core:vanilla/rare', weight: 8500, chance: 0.008}
+      - {table: 'vystorm_core:vanilla/epic', weight: 9500, chance: 0.0015}
+  'vystorm_core:mob/ghast':
+    mode: each
+    entries:
+      - {item: 'minecraft:gunpowder', weight: 1000, chance: 0.12, min-amount: 1, max-amount: 3}
+      - {table: 'vystorm_core:vanilla/nether', weight: 4500, chance: 0.06}
+      - {item: 'minecraft:ghast_tear', weight: 7000, chance: 0.03}
+      - {table: 'vystorm_core:vanilla/rare', weight: 8500, chance: 0.01}
+      - {table: 'vystorm_core:vanilla/epic', weight: 9500, chance: 0.002}
+  'vystorm_core:mob/magma_cube':
+    mode: each
+    entries:
+      - {item: 'minecraft:magma_cream', weight: 3000, chance: 0.10}
+      - {item: 'minecraft:gold_nugget', weight: 1500, chance: 0.06, min-amount: 1, max-amount: 3}
+      - {table: 'vystorm_core:vanilla/nether', weight: 4500, chance: 0.03}
+      - {table: 'vystorm_core:vanilla/rare', weight: 8500, chance: 0.003}
+  'vystorm_core:mob/piglin':
+    mode: each
+    entries:
+      - {item: 'minecraft:gold_nugget', weight: 1500, chance: 0.12, min-amount: 2, max-amount: 6}
+      - {item: 'minecraft:gold_ingot', weight: 4500, chance: 0.04}
+      - {table: 'vystorm_core:vanilla/nether', weight: 4500, chance: 0.04}
+      - {item: 'minecraft:crossbow', weight: 5500, chance: 0.015}
+      - {item: 'minecraft:crying_obsidian', weight: 6000, chance: 0.02}
+      - {table: 'vystorm_core:vanilla/rare', weight: 8500, chance: 0.006}
+      - {table: 'vystorm_core:vanilla/epic', weight: 9500, chance: 0.0012}
+  'vystorm_core:mob/piglin_brute':
+    mode: each
+    entries:
+      - {item: 'minecraft:gold_ingot', weight: 4000, chance: 0.15, min-amount: 1, max-amount: 3}
+      - {table: 'vystorm_core:vanilla/nether', weight: 4500, chance: 0.10}
+      - {item: 'minecraft:golden_axe', weight: 7500, chance: 0.01, enchant-levels: '10-25'}
+      - {item: 'minecraft:gold_block', weight: 8000, chance: 0.01}
+      - {item: 'minecraft:snout_armor_trim_smithing_template', weight: 9300, chance: 0.004}
+      - {item: 'minecraft:netherite_scrap', weight: 9600, chance: 0.004}
+      - {table: 'vystorm_core:vanilla/epic', weight: 9500, chance: 0.003}
+  'vystorm_core:mob/hoglin':
+    mode: each
+    entries:
+      - {item: 'minecraft:porkchop', weight: 1000, chance: 0.10, min-amount: 1, max-amount: 2}
+      - {item: 'minecraft:leather', weight: 1500, chance: 0.08, min-amount: 1, max-amount: 2}
+      - {table: 'vystorm_core:vanilla/nether', weight: 4500, chance: 0.03}
+      - {table: 'vystorm_core:vanilla/rare', weight: 8500, chance: 0.004}
+
+  # ---------------------------------------------------------------- end
+  'vystorm_core:mob/enderman':
+    mode: each
+    entries:
+      - {item: 'minecraft:chorus_fruit', weight: 3000, chance: 0.05, min-amount: 1, max-amount: 3}
+      - {item: 'minecraft:ender_pearl', weight: 5000, chance: 0.06}
+      - {table: 'vystorm_core:vanilla/end', weight: 6000, chance: 0.03}
+      - {item: 'minecraft:ender_eye', weight: 7500, chance: 0.01}
+      - {table: 'vystorm_core:vanilla/rare', weight: 8500, chance: 0.006}
+      - {item: 'minecraft:shulker_shell', weight: 9300, chance: 0.002}
+      - {table: 'vystorm_core:vanilla/epic', weight: 9500, chance: 0.0015}
+  'vystorm_core:mob/endermite':
+    mode: each
+    entries:
+      - {item: 'minecraft:end_stone', weight: 500, chance: 0.08, min-amount: 1, max-amount: 3}
+      - {item: 'minecraft:ender_pearl', weight: 6000, chance: 0.04}
+      - {table: 'vystorm_core:vanilla/rare', weight: 8500, chance: 0.003}
+  'vystorm_core:mob/shulker':
+    mode: each
+    entries:
+      - {item: 'minecraft:end_rod', weight: 3000, chance: 0.08, min-amount: 1, max-amount: 2}
+      - {table: 'vystorm_core:vanilla/end', weight: 5000, chance: 0.05}
+      - {item: 'minecraft:shulker_shell', weight: 7500, chance: 0.05}
+      - {table: 'vystorm_core:vanilla/rare', weight: 8500, chance: 0.01}
+      - {table: 'vystorm_core:vanilla/epic', weight: 9500, chance: 0.002}
+
+  # ---------------------------------------------------------------- trial chambers and deep dark
+  'vystorm_core:mob/breeze':
+    mode: each
+    entries:
+      - {item: 'minecraft:wind_charge', weight: 3000, chance: 0.10, min-amount: 1, max-amount: 3}
+      - {item: 'minecraft:breeze_rod', weight: 6500, chance: 0.04}
+      - {item: 'minecraft:trial_key', weight: 8000, chance: 0.01}
+      - {table: 'vystorm_core:vanilla/rare', weight: 8500, chance: 0.008}
+      - {item: 'minecraft:ominous_trial_key', weight: 9500, chance: 0.002}
+  'vystorm_core:mob/warden':
+    mode: each
+    entries:
+      - {item: 'minecraft:sculk', weight: 1000, chance: 0.5, min-amount: 4, max-amount: 12}
+      - {item: 'minecraft:echo_shard', weight: 7000, chance: 0.15, min-amount: 1, max-amount: 3}
+      - {item: 'minecraft:disc_fragment_5', weight: 6000, chance: 0.10, min-amount: 1, max-amount: 3}
+      - {item: 'minecraft:music_disc_5', weight: 9000, chance: 0.03}
+      - {item: 'minecraft:book', weight: 9300, chance: 0.05, enchant-levels: '25-30', treasure-enchants: true}
+      - {table: 'vystorm_core:vanilla/epic', weight: 9500, chance: 0.10}
+      - {table: 'vystorm_core:vanilla/legendary', weight: 9900, chance: 0.01}
+
+  # ---------------------------------------------------------------- bosses
+  'vystorm_core:mob/wither':
+    mode: each
+    entries:
+      - {table: 'vystorm_core:vanilla/nether', weight: 4500, chance: 0.5}
+      - {table: 'vystorm_core:vanilla/rare', weight: 8000, chance: 0.5}
+      - {item: 'minecraft:wither_skeleton_skull', weight: 9700, chance: 0.05}
+      - {table: 'vystorm_core:vanilla/epic', weight: 9500, chance: 0.2}
+      - {table: 'vystorm_core:vanilla/legendary', weight: 9900, chance: 0.03}
+  'vystorm_core:mob/ender_dragon':
+    mode: each
+    entries:
+      - {table: 'vystorm_core:vanilla/end', weight: 5000, chance: 1.0}
+      - {table: 'vystorm_core:vanilla/rare', weight: 8000, chance: 0.5}
+      - {table: 'vystorm_core:vanilla/epic', weight: 9500, chance: 0.3}
+      - {table: 'vystorm_core:vanilla/legendary', weight: 9900, chance: 0.05}
+      - {item: 'minecraft:elytra', weight: 9950, chance: 0.02}

@@ -1,0 +1,94 @@
+# Vystorm loot categories: one entry point per loot situation, used by every Vystorm plugin.
+# A plugin rolls e.g. category:boss_chest and passes its own list for that source as "self"
+# (for example vystorm_dangerous_underground:boss/warden). By default a category only draws that own list,
+# so each plugin keeps its own contents and odds. When a plugin has no own list (or is not installed),
+# the "fallback: true" entries are used instead: the vanilla mixes from loot-vanilla.yml.
+#
+# Tune ALL plugins at once by editing a category here, for example:
+#   - mix generic loot into every boss chest:   - {table: 'vystorm_core:vanilla/legendary', weight: 9500}
+#     (each draw then picks the plugin list or this one by weight; raise rolls for extra draws)
+#   - a bonus item everywhere:                  - {item: 'minecraft:diamond', weight: 9000}
+#   - turn a category off: chance: 0
+# Per source a plugin config can still point to another table or category (see the plugin's config).
+# Preview: /vadmin loot simulate category:boss_chest 10000 self=<plugin table>
+categories:
+  dungeon_chest:
+    entries:
+      - {table: self, weight: 0}
+      - {table: 'vystorm_core:default/dungeon_chest', weight: 0, fallback: true}
+  boss_chest:
+    entries:
+      - {table: self, weight: 0}
+      - {table: 'vystorm_core:default/boss_chest', weight: 0, fallback: true}
+  mineshaft_cart:
+    entries:
+      - {table: self, weight: 0}
+      - {table: 'vystorm_core:default/mineshaft_cart', weight: 0, fallback: true}
+  treasure_vault:
+    entries:
+      - {table: self, weight: 0}
+      - {table: 'vystorm_core:default/treasure_vault', weight: 0, fallback: true}
+  cave_loot_room:
+    entries:
+      - {table: self, weight: 0}
+      - {table: 'vystorm_core:default/cave_loot_room', weight: 0, fallback: true}
+  sky_temple:
+    entries:
+      - {table: self, weight: 0}
+      - {table: 'vystorm_core:default/sky_temple', weight: 0, fallback: true}
+  sky_wreck:
+    entries:
+      - {table: self, weight: 0}
+      - {table: 'vystorm_core:default/sky_wreck', weight: 0, fallback: true}
+  fishing:
+    entries:
+      - {table: self, weight: 0}
+      - {table: 'vystorm_core:default/fishing', weight: 0, fallback: true}
+  expedition:
+    entries:
+      - {table: self, weight: 0}
+      - {table: 'vystorm_core:default/expedition', weight: 0, fallback: true}
+  mob_drop_common:
+    entries:
+      - {table: self, weight: 0}
+      - {table: 'vystorm_core:default/mob_drop_common', weight: 0, fallback: true}
+  mob_drop_elite:
+    entries:
+      - {table: self, weight: 0}
+      - {table: 'vystorm_core:default/mob_drop_elite', weight: 0, fallback: true}
+  mob_drop_boss:
+    entries:
+      - {table: self, weight: 0}
+      - {table: 'vystorm_core:default/mob_drop_boss', weight: 0, fallback: true}
+  quest_reward:
+    entries:
+      - {table: self, weight: 0}
+      - {table: 'vystorm_core:default/reward', weight: 0, fallback: true}
+  contract_reward:
+    entries:
+      - {table: self, weight: 0}
+      - {table: 'vystorm_core:default/reward', weight: 0, fallback: true}
+  arena_reward:
+    entries:
+      - {table: self, weight: 0}
+      - {table: 'vystorm_core:default/reward', weight: 0, fallback: true}
+  farm_rare_find:
+    entries:
+      - {table: self, weight: 0}
+      - {table: 'vystorm_core:default/farm_rare_find', weight: 0, fallback: true}
+  shrine:
+    entries:
+      - {table: self, weight: 0}
+      - {table: 'vystorm_core:default/shrine', weight: 0, fallback: true}
+  meteor:
+    entries:
+      - {table: self, weight: 0}
+      - {table: 'vystorm_core:default/meteor', weight: 0, fallback: true}
+  gathering_find:
+    entries:
+      - {table: self, weight: 0}
+      - {table: 'vystorm_core:default/gathering_find', weight: 0, fallback: true}
+  event_reward:
+    entries:
+      - {table: self, weight: 0}
+      - {table: 'vystorm_core:default/reward', weight: 0, fallback: true}

@@ -1,0 +1,197 @@
+plugins {
+    id 'java'
+    id("xyz.jpenilla.run-paper") version "3.0.2"
+}
+
+group = 'Vystorm'
+version = '0.64.0-Vystorm-Core-26.2'
+
+sourceSets {
+    main {
+        resources {
+            srcDirs = ['src/main/resources']
+            // include '**/*' // optional
+        }
+    }
+}
+
+repositories {
+    mavenCentral()
+    maven {
+        name = "papermc-repo"
+        url = "https://repo.papermc.io/repository/maven-public/"
+    }
+    maven {
+        name = "sonatype"
+        url = "https://oss.sonatype.org/content/groups/public/"
+    }
+    maven {url = "https://jitpack.io"}
+    maven { url = "https://hub.spigotmc.org/nexus/content/repositories/snapshots/"; content { includeGroup "org.spigotmc" } }
+}
+
+configurations { spigotCompatibility { transitive = false } }
+
+dependencies {
+    spigotCompatibility("org.spigotmc:spigot-api:26.2-R0.1-SNAPSHOT:shaded")
+    compileOnly("io.netty:netty-transport:4.1.118.Final")
+    testImplementation("io.netty:netty-transport:4.1.118.Final")
+    implementation("net.kyori:adventure-api:4.26.1")
+    implementation("net.kyori:adventure-text-minimessage:4.26.1")
+    implementation("net.kyori:adventure-text-serializer-gson:4.26.1")
+    implementation("net.kyori:adventure-text-serializer-legacy:4.26.1")
+    implementation("net.kyori:adventure-text-serializer-plain:4.26.1")
+    // Laufzeit: HikariCP und PostgreSQL lädt Paper über "libraries:" in plugin.yml (Versionen dort synchron halten);
+    // mysql-connector-j (Purpur 26.2: 9.2.0) und sqlite-jdbc liefert der Server selbst mit.
+    implementation("com.zaxxer:HikariCP:5.1.0")
+    implementation("org.postgresql:postgresql:42.7.4")
+    compileOnly("com.mysql:mysql-connector-j:9.2.0")
+    testRuntimeOnly("com.mysql:mysql-connector-j:9.2.0")
+    compileOnly("org.xerial:sqlite-jdbc:3.46.1.0")
+    // Use Adventure 4 signatures for shared text paths; Adventure 5 builder descriptors fail on older servers.
+    // Newer login events are isolated behind VisitSpawnListeners for 1.21.8.
+    compileOnly("io.papermc.paper:paper-api:1.21.11-R0.1-SNAPSHOT")
+    compileOnly "com.github.MilkBowl:VaultAPI:1.7.1"
+    // Proxy entry points (network hub). Never shipped; the proxy provides them at runtime.
+    compileOnly("com.velocitypowered:velocity-api:3.5.1")
+    compileOnly("net.md-5:bungeecord-api:1.21-R0.4")
+    testImplementation("com.velocitypowered:velocity-api:3.5.1") { transitive = false }
+    testImplementation("net.md-5:bungeecord-api:1.21-R0.4") { transitive = false }
+    testImplementation("io.papermc.paper:paper-api:1.21.11-R0.1-SNAPSHOT")
+    testImplementation("com.github.MilkBowl:VaultAPI:1.7.1")
+    testImplementation("org.junit.jupiter:junit-jupiter:6.0.1")
+    testImplementation("org.mockito:mockito-core:5.20.0")
+    testRuntimeOnly("org.junit.platform:junit-platform-launcher:6.0.1")
+}
+
+tasks {
+    runServer {
+        minecraftVersion("26.2")
+    }
+}
+
+def targetJavaVersion = 25
+java {
+    def javaVersion = JavaVersion.toVersion(targetJavaVersion)
+    sourceCompatibility = javaVersion
+    targetCompatibility = javaVersion
+    toolchain.languageVersion = JavaLanguageVersion.of(targetJavaVersion)
+}
+
+test {
+    useJUnitPlatform()
+    // Long classpaths go through files: Windows caps command lines at 32k characters.
+    def cpDir = layout.buildDirectory.dir("test-classpaths").get().asFile
+    systemProperty "vystorm.test.classpath", "@" + new File(cpDir, "test.txt").absolutePath
+    doFirst { cpDir.mkdirs(); new File(cpDir, "test.txt").text = sourceSets.test.runtimeClasspath.asPath }
+    systemProperty "vystorm.test.spigotClasspath", project.findProperty('spigotApiJar') ?: configurations.spigotCompatibility.asPath
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = 'UTF-8'
+
+    if (targetJavaVersion >= 10 || JavaVersion.current().isJava10Compatible()) {
+        options.release.set(21)
+    }
+}
+
+processResources {
+    def props = [version: version]
+    inputs.properties props
+    filteringCharset = 'UTF-8'
+    filesMatching(['plugin.yml', 'vystorm-core.properties', 'velocity-plugin.json', 'bungee.yml']) {
+        expand props
+    }
+    // Default web UI (vystorm-web-ui dist/) for servers without the gateway or an own build in web.ui-dir.
+    // Updated by scripts/update-web-ui.sh (no npm needed here); served from web/bundled-ui/ in the jar.
+    def webUiZip = file('webui/vystorm-web-ui-dist.zip')
+    if (webUiZip.exists()) {
+        from(zipTree(webUiZip)) { into 'web/bundled-ui' }
+        from('webui/web-ui.properties') { into 'web'; rename { 'bundled-ui.properties' } }
+    }
+}
+
+// Nur das aktuelle Jar in build/libs behalten, damit Glob-Auswahl in Build-Skripten eindeutig ist.
+tasks.named('jar') {
+    from(rootProject.file('LICENSE'))
+    from([rootProject.file('docs/AI-GUIDE.md'), rootProject.file('llms.txt')]) {
+        into 'META-INF/vystorm-core'
+    }
+    doFirst {
+        fileTree(destinationDirectory).matching { include 'Vystorm_Core-*.jar' }.each { old ->
+            if (old.name != archiveFileName.get()) old.delete()
+        }
+    }
+}
+
+// Actual generated voxel shapes for the local review preview (no game server needed).
+tasks.register('fungusPreview', JavaExec) {
+    dependsOn testClasses
+    classpath = sourceSets.test.runtimeClasspath
+    mainClass = 'Vystorm.vystorm_core._advancedMethods.structureGeneratorHandler.FungusPreviewExporter'
+    args file('../CustomTrees/src/main/resources/config.yml').absolutePath,
+         layout.buildDirectory.file('preview/fungi.json').get().asFile.absolutePath
+}
+// Before/after PNG previews of every sapling world tree from the real generator (see WorldTreePreviewExporter).
+tasks.register('worldTreePreview', JavaExec) {
+    dependsOn testClasses
+    classpath = sourceSets.test.runtimeClasspath
+    mainClass = 'Vystorm.vystorm_core._advancedMethods.structureGeneratorHandler.WorldTreePreviewExporter'
+    jvmArgs '-Djava.awt.headless=true', '-Xmx3g'
+    args project.findProperty('previewDir') ?: layout.buildDirectory.dir('preview/world-trees').get().asFile.absolutePath
+}
+
+// Historical public dialog signatures refer to Paper types and Core services in both
+// directions. Bootstrap those Core adapter classes, then compile main with ONLY the
+// baseline libraries and adapter classes. Bootstrap copies of main are never shipped.
+sourceSets { adapters { java.srcDirs = ['src/adapters/java'] } }
+configurations.adaptersCompileClasspath.extendsFrom(configurations.compileClasspath)
+def baselineLibraries = fileTree(findProperty('paper1206Libraries') ?: (System.getProperty('user.home') + '/source/tools/smoke-1206/libraries')) { include '**/*.jar' }
+def baselineClasspath = baselineLibraries + configurations.compileClasspath.filter {
+    !it.name.contains('paper-api') && !it.name.startsWith('adventure-') && !it.name.startsWith('gson-')
+}
+def bootstrap = tasks.register('compileAdapterBootstrap', JavaCompile) {
+    source = sourceSets.main.java + sourceSets.adapters.java
+    classpath = configurations.compileClasspath
+    destinationDirectory = layout.buildDirectory.dir('classes/java/adapterBootstrap')
+    javaCompiler = javaToolchains.compilerFor { languageVersion = JavaLanguageVersion.of(25) }
+}
+def adapterApi = tasks.register('adapterApiClasses', Sync) {
+    dependsOn bootstrap
+    from(bootstrap.flatMap { it.destinationDirectory }) {
+        sourceSets.adapters.java.files.each { sourceFile ->
+            def relative = file('src/adapters/java').toPath().relativize(sourceFile.toPath()).toString().replace('\\', '/')
+            def stem = relative.substring(0, relative.length() - '.java'.length())
+            include stem + '.class', stem + '$*.class'
+        }
+    }
+    into layout.buildDirectory.dir('classes/java/adapterApi')
+}
+tasks.named('compileJava', JavaCompile) {
+    dependsOn adapterApi
+    classpath = baselineClasspath + files(adapterApi.map { it.destinationDir })
+    options.compilerArgs += ['-Xmaxerrs', '500']
+    doFirst {
+        if (!baselineLibraries.files.any { it.name == 'paper-api-1.20.6-R0.1-SNAPSHOT.jar' })
+            throw new GradleException('Paper 1.20.6 libraries missing; set -Ppaper1206Libraries=<libraries directory>')
+    }
+}
+sourceSets.adapters.compileClasspath += sourceSets.main.output
+sourceSets.test.compileClasspath += sourceSets.adapters.output
+sourceSets.test.runtimeClasspath += sourceSets.adapters.output
+tasks.register('compat1206') { dependsOn tasks.named('compileJava') }
+tasks.named('check') { dependsOn tasks.named('compat1206') }
+tasks.named('jar') { from(sourceSets.adapters.output) }
+tasks.named('test') {
+    def baselineFile = layout.buildDirectory.file('test-classpaths/baseline.txt').get().asFile
+    systemProperty 'vystorm.test.baselineClasspath', '@' + baselineFile.absolutePath
+    doFirst { baselineFile.parentFile.mkdirs(); baselineFile.text = baselineClasspath.asPath }
+}
+
+// Proxy entry points (Velocity, BungeeCord) are compiled against the full API set: Velocity's types need a newer
+// Adventure than the Paper 1.20.6 baseline used for main. They only depend on the JDK-only network core in main.
+sourceSets { proxy { java.srcDirs = ['src/proxy/java'] } }
+sourceSets.proxy.compileClasspath += configurations.compileClasspath + sourceSets.main.output
+sourceSets.test.compileClasspath += sourceSets.proxy.output
+sourceSets.test.runtimeClasspath += sourceSets.proxy.output
+tasks.named('compileProxyJava', JavaCompile) { options.release.set(21) }
+tasks.named('jar') { from(sourceSets.proxy.output) }

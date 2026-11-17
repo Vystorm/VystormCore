@@ -1,0 +1,166 @@
+name: vystorm_core
+version: '${version}'
+main: Vystorm.vystorm_core.main
+softdepend:
+  - Vault
+api-version: '1.20.6'
+load: STARTUP
+libraries:
+  - net.kyori:adventure-api:4.26.1
+  - net.kyori:adventure-text-minimessage:4.26.1
+  - net.kyori:adventure-text-serializer-gson:4.26.1
+  - net.kyori:adventure-text-serializer-legacy:4.26.1
+  - net.kyori:adventure-text-serializer-plain:4.26.1
+  - com.zaxxer:HikariCP:5.1.0
+  - org.postgresql:postgresql:42.7.4
+commands:
+    vtrade:
+      description: 'Handelskanal: Nachricht an alle mit Empfangsrecht'
+      usage: /vtrade <message>
+      permission: vystorm_core.chat.trade.send
+    admin:
+        description: 'Vystorm-Admin-Dashboard'
+        usage: '/admin [list|status|<modul>|language [reload|audit|export|import]|config [plugin|history|undo <nr>]|setup [plugin]|news|permissions [plugin] [seite]|diagnostics [spieler]|migration <id>]'
+        aliases: [admin, ad]
+        permission: vystorm_core.admin
+    vadmin:
+        description: 'Vystorm-Admin-Dashboard'
+        usage: '/vadmin [list|status|<modul>|language [reload|audit|export|import]|config [plugin|history|undo <nr>]|setup [plugin]|news|permissions [plugin] [seite]|diagnostics [spieler]|migration <id>]'
+        permission: vystorm_core.admin
+    menu:
+      description: 'Öffnet das Vystorm-Hauptmenü'
+      usage: '/menu [list|search|settings|news|player <spieler>|access <spieler>|<plugin:menü>]'
+      aliases: [ m, vmenu, vm, menu ]
+      permission: vystorm_core.menu
+    einstellungen:
+      description: 'Persönliche und Server-Einstellungen aller Vystorm-Plugins'
+      usage: '/<command> [setup|server|draft|profile <export|import> <name>|<plugin:bereich>]'
+      aliases: [ vsettings, vystormsettings ]
+      permission: vystorm_core.settings
+    nbt:
+      description: 'Setzt einen Core-Tag auf das Item in der Hand (Admin)'
+      usage: '/nbt <key> <value>'
+      aliases: [ nbt]
+      permission: vystorm_core.admin
+    vregion:
+      description: 'Zeigt das gemeinsame Regionsregister'
+      usage: '/vregion at [player] | list [kind]'
+      permission: vystorm_core.admin
+    vworlds:
+      description: 'Plugin-Welten und Besuche (list, visits, restore, check, legacy)'
+      usage: '/vworlds [list|visits|restore <player>|check <player>|legacy <player|uuid> archive|retry]'
+      permission: vystorm_core.admin
+    language:
+      description: 'Sprache wählen (Menü mit allen Sprachen) / choose your language; Admins: /language <spieler> <code>'
+      usage: '/<command> [code|auto|list] · /<command> <player> [code|auto]'
+      aliases: [ lang, sprache, 语言 ]
+      permission: vystorm_core.language
+    web:
+      description: 'Weboberfläche: öffnet eine Seite (mit Client-Mod direkt, sonst Einmal-Login-Link); /web logout beendet alle Web-Sitzungen'
+      usage: '/web [modul|logout|status]'
+      permission: vystorm.web.use
+permissions:
+    vystorm_core.poll:
+      default: true
+    vystorm_core.network.status:
+      description: 'Show network status and servers (/vnet status, /vnet servers)'
+      default: op
+    vystorm_core.network.broadcast:
+      description: 'Announce on every network server (/vnet broadcast)'
+      default: op
+    vystorm_core.network.admin:
+      description: 'Confirm or remove the proxy pairing (/vnet pair accept, /vnet unpair)'
+      default: op
+    vystorm_core.*:
+      description: 'Alle Rechte von Vystorm Core'
+      default: op
+      children:
+        vystorm_core.admin: true
+        vystorm_core.menu: true
+        vystorm_core.network.status: true
+        vystorm_core.network.broadcast: true
+        vystorm_core.network.admin: true
+        vystorm_core.language: true
+        vystorm_core.language.others: true
+        vystorm_core.settings: true
+        vystorm_core.playermenu: true
+        vystorm_core.news: true
+        vystorm_core.news.write: true
+        vystorm_core.inbox: true
+        vystorm_core.profile: true
+        vystorm_core.chat.trade.send: true
+        vystorm_core.chat.trade.receive: true
+        vystorm_core.chat.teleport: true
+        vystorm_core.worlds.bypass: true
+        vystorm.web.use: true
+        vystormCore.debug: true
+        vcore.gui.access.*: true
+        vgui.access.*: true
+        vcore.bookgui.*: true
+    vystorm_core.admin:
+      description: 'Admin-Dashboard (/vadmin), Server-Einstellungen, Plugin-Konfiguration mit Änderungsverlauf, Neuigkeiten, /nbt, /vregion, /vworlds, /web status, /vmenu access, /vadmin permissions'
+      default: op
+      children:
+        vystorm_core.config.*: true
+        vystorm_core.language.others: true
+        vystorm_core.news.write: true
+    vystorm_core.config.*:
+      description: 'Konfiguration aller Plugins im Einstellungsmenü sehen und ändern (je Plugin vystorm_core.config.<plugin>)'
+      default: op
+    vystorm_core.language:
+      description: 'Eigene Sprache mit /language (/lang, /sprache, /语言) wählen'
+      default: true
+    vystorm_core.language.others:
+      description: 'Sprache anderer Spieler ansehen und setzen: /language <spieler> [code|auto]'
+      default: op
+    vystorm_core.menu:
+      description: 'Hauptmenü mit /menu, /vmenu öffnen'
+      default: true
+    vystorm_core.settings:
+      description: 'Einstellungen mit /einstellungen, /vsettings öffnen (Server-Bereiche brauchen zusätzlich Adminrechte)'
+      default: true
+    vystorm_core.playermenu:
+      description: 'Spielermenü: Shift + Rechtsklick mit leerer Hand auf einen Spieler (oder /menu player <spieler>) zeigt Aktionen der Plugins'
+      default: true
+    vystorm_core.news:
+      description: 'Server-Neuigkeiten lesen (/menu news) und beim Betreten über neue Beiträge informiert werden'
+      default: true
+    vystorm_core.news.write:
+      description: 'Neuigkeiten im Spiel schreiben, bearbeiten und löschen (Knopf im Neuigkeiten-Dialog, /vadmin news)'
+      default: op
+    vystorm_core.profile:
+      description: 'Profilkarten ansehen (/menu profile [spieler], Spielermenü)'
+      default: true
+    vystorm_core.inbox:
+      description: 'Persönliches Postfach lesen (/menu inbox): Nachrichten der Plugins, auch über Dinge, die offline passiert sind'
+      default: true
+    vystorm_core.chat.trade.send:
+      description: 'Im Handelskanal schreiben (/vtrade)'
+      default: true
+    vystorm_core.chat.trade.receive:
+      description: 'Nachrichten des Handelskanals empfangen'
+      default: true
+    vystorm_core.chat.teleport:
+      description: 'Klick auf Koordinaten in Chatnachrichten teleportiert dorthin'
+      default: op
+    vystorm.web.use:
+      description: 'Weboberfläche nutzen (Login-Link mit /web)'
+      default: true
+    vystorm_core.worlds.bypass:
+      description: 'Admins im Kreativ-/Zuschauermodus dürfen Plugin-Welten ohne Besuch betreten und bearbeiten'
+      default: op
+    vystormCore.debug:
+      description: 'Core-Debugwarnungen [HIGH] im Chat erhalten'
+      default: op
+    vcore.gui.access.*:
+      description: 'Alle alten Kisten-Menüs öffnen (einzeln vcore.gui.access.<menü>)'
+      default: op
+    vgui.access.*:
+      description: 'Alter Name für vcore.gui.access.<menü> (alle alten Kisten-Menüs)'
+      default: op
+    vcore.bookgui.*:
+      description: 'Alle Core-Bücher öffnen (einzeln vcore.bookgui.<buch>)'
+      default: op
+    vystorm_core.commands.bypass-cooldown:
+      description: 'Befehle ohne Abklingzeit benutzen (Befehle, die über Core registriert sind)'
+      default: op

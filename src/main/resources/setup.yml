@@ -1,0 +1,198 @@
+{
+  "version": 1,
+  "intro": {
+    "en": "A few quick choices for Vystorm Core. Everything else stays on its defaults.",
+    "de": "Ein paar schnelle Entscheidungen für Vystorm Core. Alles andere bleibt auf Standard.",
+    "fr": "Quelques choix rapides pour Vystorm Core. Le reste garde ses valeurs par défaut.",
+    "it": "Alcune scelte rapide per Vystorm Core. Il resto resta predefinito.",
+    "pt_br": "Algumas escolhas rápidas para Vystorm Core. O resto fica no padrão.",
+    "ru": "Несколько быстрых решений для Vystorm Core. Остальное останется по умолчанию.",
+    "zh_cn": "Vystorm Core 的几个快速选项，其余保持默认。"
+  },
+  "questions": [
+    {
+      "id": "updates",
+      "text": {
+        "en": "Check SpigotMC for new versions of Vystorm plugins?",
+        "de": "Bei SpigotMC nach neuen Versionen der Vystorm-Plugins suchen?",
+        "fr": "Chercher les nouvelles versions des plugins Vystorm sur SpigotMC ?",
+        "it": "Cercare nuove versioni dei plugin Vystorm su SpigotMC?",
+        "pt_br": "Procurar novas versões dos plugins Vystorm no SpigotMC?",
+        "ru": "Проверять новые версии плагинов Vystorm на SpigotMC?",
+        "zh_cn": "在 SpigotMC 上检查 Vystorm 插件更新？"
+      },
+      "type": "choice",
+      "recommended": "on",
+      "options": [
+        {
+          "id": "on",
+          "label": {
+            "en": "On",
+            "de": "An",
+            "fr": "Activé",
+            "it": "Attivo",
+            "pt_br": "Ligado",
+            "ru": "Вкл.",
+            "zh_cn": "开启"
+          },
+          "set": {
+            "config.yml:update-check.enabled": true
+          }
+        },
+        {
+          "id": "off",
+          "label": {
+            "en": "Off",
+            "de": "Aus",
+            "fr": "Désactivé",
+            "it": "Disattivo",
+            "pt_br": "Desligado",
+            "ru": "Выкл.",
+            "zh_cn": "关闭"
+          },
+          "set": {
+            "config.yml:update-check.enabled": false
+          }
+        }
+      ]
+    },
+    {
+      "id": "notify",
+      "text": {
+        "en": "Tell admins about updates when they join?",
+        "de": "Admins beim Betreten über Updates informieren?",
+        "fr": "Informer les admins des mises à jour à la connexion ?",
+        "it": "Avvisare gli admin degli aggiornamenti all’accesso?",
+        "pt_br": "Avisar admins sobre atualizações ao entrar?",
+        "ru": "Сообщать админам об обновлениях при входе?",
+        "zh_cn": "管理员加入时提示更新？"
+      },
+      "type": "choice",
+      "recommended": "on",
+      "options": [
+        {
+          "id": "on",
+          "label": {
+            "en": "On",
+            "de": "An",
+            "fr": "Activé",
+            "it": "Attivo",
+            "pt_br": "Ligado",
+            "ru": "Вкл.",
+            "zh_cn": "开启"
+          },
+          "set": {
+            "config.yml:update-check.notify-on-join": true
+          }
+        },
+        {
+          "id": "off",
+          "label": {
+            "en": "Off",
+            "de": "Aus",
+            "fr": "Désactivé",
+            "it": "Disattivo",
+            "pt_br": "Desligado",
+            "ru": "Выкл.",
+            "zh_cn": "关闭"
+          },
+          "set": {
+            "config.yml:update-check.notify-on-join": false
+          }
+        }
+      ]
+    },
+    {
+      "id": "metrics",
+      "text": {
+        "en": "Send anonymous usage statistics?",
+        "de": "Anonyme Nutzungsstatistiken senden?",
+        "fr": "Envoyer des statistiques anonymes ?",
+        "it": "Inviare statistiche anonime?",
+        "pt_br": "Enviar estatísticas anônimas?",
+        "ru": "Отправлять анонимную статистику?",
+        "zh_cn": "发送匿名使用统计？"
+      },
+      "type": "choice",
+      "recommended": "on",
+      "options": [
+        {
+          "id": "on",
+          "label": {
+            "en": "On",
+            "de": "An",
+            "fr": "Activé",
+            "it": "Attivo",
+            "pt_br": "Ligado",
+            "ru": "Вкл.",
+            "zh_cn": "开启"
+          },
+          "set": {
+            "config.yml:metrics": true
+          }
+        },
+        {
+          "id": "off",
+          "label": {
+            "en": "Off",
+            "de": "Aus",
+            "fr": "Désactivé",
+            "it": "Disattivo",
+            "pt_br": "Desligado",
+            "ru": "Выкл.",
+            "zh_cn": "关闭"
+          },
+          "set": {
+            "config.yml:metrics": false
+          }
+        }
+      ]
+    },
+    {
+      "id": "review",
+      "text": {
+        "en": "Show one reminder to leave a review after a week?",
+        "de": "Nach einer Woche einmal an eine Bewertung erinnern?",
+        "fr": "Rappeler une fois de laisser un avis après une semaine ?",
+        "it": "Ricordare una volta di lasciare una recensione dopo una settimana?",
+        "pt_br": "Lembrar uma vez de avaliar após uma semana?",
+        "ru": "Один раз напомнить об отзыве через неделю?",
+        "zh_cn": "一周后提醒一次留下评价？"
+      },
+      "type": "choice",
+      "recommended": "on",
+      "options": [
+        {
+          "id": "on",
+          "label": {
+            "en": "On",
+            "de": "An",
+            "fr": "Activé",
+            "it": "Attivo",
+            "pt_br": "Ligado",
+            "ru": "Вкл.",
+            "zh_cn": "开启"
+          },
+          "set": {
+            "config.yml:review-reminder.enabled": true
+          }
+        },
+        {
+          "id": "off",
+          "label": {
+            "en": "Off",
+            "de": "Aus",
+            "fr": "Désactivé",
+            "it": "Disattivo",
+            "pt_br": "Desligado",
+            "ru": "Выкл.",
+            "zh_cn": "关闭"
+          },
+          "set": {
+            "config.yml:review-reminder.enabled": false
+          }
+        }
+      ]
+    }
+  ]
+}

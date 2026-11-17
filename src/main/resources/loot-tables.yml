@@ -1,0 +1,22 @@
+# Shared by Mobs and WorldForge. Rarity weight: 0 = trash, 10000 = mythic+.
+# mob-weight/chest-weight override weight. Higher values are RARER, not more likely.
+# Selection tickets = 10001 - weight. Probability = tickets / sum of all entry tickets.
+# Empty item means no drop. Table chance (0..1) gates the whole list.
+# Each draw selects one entry with replacement. ItemRefs also supports vystorm:<template>.
+tables:
+  'core:common':
+    min-rolls: 1
+    max-rolls: 3
+    chance: 1.0
+    entries:
+      - {item: 'minecraft:iron_ingot', weight: 3000, min-amount: 1, max-amount: 3}
+      - {item: 'minecraft:gold_ingot', weight: 7000, chest-weight: 6000, amount: 1}
+      - {item: 'minecraft:emerald', weight: 9000, amount: 1}
+      - {item: 'minecraft:diamond', weight: 9900, chest-weight: 9700, amount: 1}
+      - {item: '', weight: 8000, chest-weight: 9900}
+  'core:treasure':
+    rolls: 3
+    entries:
+      - {item: 'minecraft:gold_ingot', weight: 4000, min-amount: 2, max-amount: 5}
+      - {item: 'minecraft:emerald', weight: 7000, min-amount: 1, max-amount: 3}
+      - {item: 'minecraft:diamond', weight: 9000, amount: 1}

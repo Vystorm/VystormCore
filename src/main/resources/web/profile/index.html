@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="{{@lang}}" data-vw-texts="{{@texts}}" data-vw-languages="{{@languages}}">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="referrer" content="no-referrer">
+  <title>{{web.ui.profile.title}}</title>
+  <link rel="icon" href="/core/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/core/web.css">
+  <script src="/core/web.js"></script>
+  <script src="app.js"></script>
+</head>
+<body>
+  <header data-vw-header></header>
+  <main class="vw-main">
+    <h1>{{web.ui.profile.heading}}</h1>
+    <table class="vw-table" aria-label="{{web.ui.profile.heading}}">
+      <tbody id="profile"></tbody>
+    </table>
+    <h2>{{web.ui.profile.live}}</h2>
+    <p class="vw-muted">{{web.ui.profile.live-hint}}</p>
+    <p id="live" class="vw-notice">{{web.ui.profile.connecting}}</p>
+    <h2>{{web.ui.profile.echo}}</h2>
+    <p class="vw-muted">{{web.ui.profile.echo-hint}}</p>
+    <form id="echo" class="vw-row">
+      <input id="message" class="vw-input" maxlength="200" placeholder="{{web.ui.profile.echo-placeholder}}" aria-label="{{web.ui.profile.echo-label}}">
+      <button class="vw-button vw-primary" type="submit">{{web.ui.profile.send}}</button>
+    </form>
+    <p id="echo-result" class="vw-muted"></p>
+  </main>
+</body>
+</html>

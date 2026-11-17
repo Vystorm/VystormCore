@@ -1,0 +1,1359 @@
+# Русский — UTF-8. Keep keys, placeholders and formatting tokens unchanged.
+language:
+  name: Русский
+common:
+  close: Закрыть
+  menu-unavailable: <red>Это меню недоступно.
+  settings-unavailable: <red>Эти настройки недоступны.
+  settings-gone: <red>Эти настройки больше не доступны.
+  previous: ← Назад
+  next: Далее →
+dialog:
+  legacy:
+    input: <yellow>Нажмите, чтобы ввести значение, затем отправьте команду.
+    invalid: <red>Недействительная ценность. Пожалуйста, попробуйте еще раз.
+    'yes': Да
+    'no': Нет
+  cancel: Отмена
+  close: Закрыть
+  apply: Применить
+  confirm: Подтвердить
+chat:
+  teleport-hover: 'Оригинальное название: Teleport There'
+  coordinates: '<gray>Координаты: {world} {coords}'
+  copy-clipboard-hover: 'Клик: копия в буфер обмена'
+  copy-hover: 'Клик: копия'
+  no-permission: <red>У вас нет прав на это действие.
+  already-used: <gray>Это действие уже было использовано.
+  menu-hover: 'Нажмите: открытое меню'
+  settings-hover: 'Click: открытые настройки'
+  teleported: <gray>Телепортировано в {world} {x} {y} {z}.
+menu:
+  screen:
+    search: "Поиск"
+    display: "Экран"
+    close: "Закрыть"
+    hint: "<gray>Колесо мыши: прокрутка · присесть или Закрыть: выйти · страница {page}/{pages}"
+  explorer:
+    clear-recent: Чистые последние меню
+    recent-cleared: <gray>Ваша недавняя история меню была очищена.
+    title: Найти и сохранить меню
+    all: Все
+    favorites: Избранное
+    recent: Недавно открытые
+    search: Поиск
+    pin: ☆ Сохранить
+    unpin: ★ Убрать
+    full: Вы можете сохранить до 20 любимых меню.
+    summary: '{count} меню · страница {page}/{pages}'
+  access:
+    missing-permission: 'Требуемое разрешение отсутствует: {permission}.'
+    provider-failed: Проверка доступа к плагину не удалась.
+    allowed: Доступ разрешен
+    disabled: Предоставляющий плагин отключен.
+    denied: Проверка доступа плагина отказала в доступе; никаких подробных объяснений не было зарегистрировано.
+    no-permission: Для этого нужно vystorm_core.admin.
+    online-only: Пожалуйста, выберите игрока, который сейчас находится в сети.
+    line: '{menu} для {player}: {reason}'
+  panel:
+    subtitle: Все с первого взгляда - нажмите, чтобы открыть
+    general: Генерал
+  home: ⌂ Главное меню
+  back: ← Назад
+  settings-button: ⚙ Настройки
+  players-only: Меню могут открывать только игроки.
+  unavailable: <red>Меню недоступно или нет разрешения.
+  directory:
+    title: Vystorm · Главное меню
+    group-title: Vystorm · {group}
+    welcome: Добро пожаловать, {player}! Выберите область.
+    empty: Сейчас здесь ничего не доступно.
+    choose: Выберите меню.
+  category:
+    character:
+      title: характер
+      description: Навыки, компаньоны и ваше состояние
+    economy:
+      title: Экономика
+      description: Деньги, рынок и хранение
+    community:
+      title: сообщество
+      description: Города, группы и другие игроки
+    world:
+      title: Мир и приключения
+      description: Арены, награды и мировые события
+    building:
+      title: Строительство и технологии
+      description: Строительные инструменты и функциональные блоки
+    tutorials:
+      title: Руководства
+      description: Руководство для всех плагинов
+    admin:
+      title: Администрация
+      description: Инструменты для администраторов
+  settings:
+    title: Настройки
+    description: Ваши настройки - для администраторов также настройки сервера
+pause:
+  pack-description: 'Vystorm Core: Vystorm меню в меню паузы (ESC) и в качестве быстрого действия'
+  external-title: Меню Vystorm
+  body: Все меню, настройки и руководства Vystorm плагинов.
+  main: ⌂ Главное меню
+  main-tooltip: 'Все сферы: характер, экономика, сообщество, мир...'
+  settings: ⚙ Настройки
+  settings-tooltip: Персональные настройки - и для администраторов настройки сервера
+  tutorials: s Учебники
+  tutorials-tooltip: Руководство для всех плагинов
+  back: Назад
+settings:
+  profile:
+    exported: 'Профиль {name}: экспортировано {count} утвержденных значений сервера в настройки-профили. Включены только явно
+      безопасные настройки профиля.'
+    failed: Не удалось обработать профиль. Проверьте имя, формат, версии плагинов и утвержденные значения; детали в журнале
+      сервера.
+    usage: /einstellungen profile <export|import> <name>
+  draft:
+    title: Подготовить изменения сервера
+    intro: '{count} инсценированных изменений. Выберите разделы, пока ничего не сохранилось.'
+    preview: Изменения в обзоре
+    stage: Изменения стадии
+    continue: Добавьте больше изменений
+    apply: Пересмотренные изменения
+    warning: Разрешения и исходные значения проверяются повторно. Отдельные установщики плагинов могут потерпеть неудачу;
+      это не атомная транзакция и не имеет автоматического удаления.
+    expired: Проект истек или заполнен (максимум 96 изменений / 15 минута). Пожалуйста, начните сначала.
+    conflicts: 'Ничего не применялось: значения, разрешения или плагины изменились: {keys}'
+    partial: Некоторые изменения не могут быть применены. Проверьте текущие настройки и журнал сервера.
+    line: '{setting}: {before} → {after} · {activation}'
+    activation-immediate: немедленно
+    activation-reload: После перезагрузки плагина
+    activation-restart: После перезапуска сервера
+    activation-unknown: Плагин не уточнил, когда изменения вступят в силу
+  panel:
+    filter: Поиск
+    filter-hint: Настройка или плагин...
+    no-match: Никакие настройки не соответствуют поиску.
+    all: Все настройки
+    read-failed: Я не мог прочитать это значение.
+  players-only: Открывать настройки могут только игроки.
+  no-server: <red>Настройки сервера отсутствуют.
+  not-found: <red>Настройки не найдены или нет разрешения.
+  title: Настройки
+  choose: Выберите то, что вы хотите изменить.
+  personal: Персональные настройки
+  personal-tooltip: Ваши собственные настройки для всех плагинов
+  server: <gold>Настройки сервера
+  server-title: Настройки сервера
+  server-tooltip: Конфигурация плагина (admin)
+  up: ↑ Настройки
+  web: Открытый веб-сайт
+  web-tooltip: Те же настройки, что и на веб-странице. С модом клиента Vystorm он открывается сразу, в противном случае вы
+    получаете ссылку для входа в чат.
+  empty: Здесь пока нечего устанавливать.
+  personal-text: Выберите область. Изменения касаются только вас.
+  server-text: Выберите плагин. Изменения касаются всего сервера.
+  read-failed: <red>⚠ {label} не могут быть прочитаны.
+  save: <green>✔ Сохранить
+  overview: ← Обзор
+  invalid: '<red>{label}: недействительное значение'
+  error: '<red>✖ {label}: {error}'
+  save-failed: '<red>{label}: ошибка при сохранении'
+  apply-failed: <red>Применить не удалось - см. журнал сервера
+  saved-one: <green>✔ Сэкономлено 1 изменений.
+  saved-many: <green>✔ Сохранилось {count} изменений.
+  no-changes: <gray>Никаких изменений.
+  not-integer: Не целое число
+  not-number: Не число
+  range: 'Разрешено: {min} - {max}'
+  language:
+    title: Язык
+    description: Язык меню и сообщений
+    label: Язык
+    hint: «Автоматический» следует вашему языку Minecraft.
+    auto: Автоматический (игровой язык)
+  menu:
+    description: Меню и меню паузы
+    pause-menu: Меню Vystorm в меню ESC
+    pause-menu-hint: Кнопка в меню паузы и быстрое действие (ключ). Вступает в силу после перезагрузки следующего сервера.
+    restart: <yellow>Меню паузы изменяется после перезагрузки следующего сервера.
+nbt:
+  players-only: Только игроки.
+  no-permission: У вас нет прав на это действие.
+  set: 'NBT установлено: {value}'
+  entry: 'Ключ: {key} Значение: {value}'
+region:
+  no-permission: <red>У тебя нет разрешения.
+  list: '<gold>Регионы: <white>{count}'
+  more: <gray>...{count} больше
+  player-not-found: <red>Игрок не найден.
+  at: '<gold>Регионы в <white>{player} <gray>({x}, {y}, {z}): <white>{count}'
+  none: нет
+  usage: <gray>/vregion at [player] <dark_gray>| <gray>/vregion list [kind]
+web:
+  no-permission: <red>У тебя нет разрешения.
+  status: '<gray>Веб: {status}'
+  modules: '<gray>Модули: {modules}'
+  console-only: <red>Только консоль.
+  link-usage: /web link <player|uuid> [module]
+  unknown-player: 'Неизвестный игрок (имя не кэшируется: используйте UUID).'
+  unknown-module: 'Неизвестный модуль: {module}'
+  link: 'Ссылка для входа для {player} (одноразовое использование, истекает в ближайшее время): {link}'
+  disabled: Веб-интерфейс отключен.
+  players-only: Только игроки.
+  logout-none: <gray>У вас не было активного веб-сессии.
+  logout-done: <gray>Все ваши веб-сессии были завершены ({count}).
+  console-usage: /web status | /web link <player|uuid> [module]
+  unknown-ui: '<red>Неизвестный веб-интерфейс: {name}'
+  not-active: <red>Веб-интерфейс не активен на этом сервере.
+  not-for-you: <red>Этот веб-интерфейс вам недоступен.
+  open-label: Open Web интерфейс
+  link-hover: <gray>Открывает веб-интерфейс в вашем браузере.
+  link-warning: <yellow>Ссылка действительна кратко и только один раз. Не делитесь!
+  link-suffix: <dark_gray> (ссылка {seconds} с, одноразовое использование, не делиться)
+  client-too-fast: Не так быстро.
+  client-not-active: Веб-интерфейс не активен на этом сервере.
+  client-unknown: Такой интерфейс не существует.
+  client-not-for-you: Этот веб-интерфейс вам недоступен.
+  ui:
+    index:
+      loading: Загрузка...
+      not-logged-in: Вы не вошли в систему. Введите /web в игре и нажмите ссылку в чате.
+      choose: 'Зарегистрировано как {player}. Выберите интерфейс:'
+      none: Зарегистрировано как {player}. Интерфейсы вам сейчас не доступны.
+    login:
+      title: Vystorm - вход
+      running: Войти в...
+      overview: К обзору
+      bad-link: Не действительная ссылка для входа. Тип /web В игре и нажмите новую ссылку.
+      failed: Логин вышел из строя (HTTP {status}).
+      success: Зарегистрировано как {player}. Продолжая...
+      unreachable: Сервер недоступен. Пожалуйста, попробуйте еще раз позже.
+    header:
+      logout: Выходи
+      theme: Свет / Темнота
+      theme-toggle: Переключать свет/темноту
+      language: Язык
+      online: в сети
+      offline: не в сети
+    login-hint: Вы не вошли в систему (более того). Введите {command} в игре и нажмите ссылку, чтобы войти снова.
+    profile:
+      title: Vystorm - Профиль
+      heading: профиль
+      live: Жить
+      live-hint: Обновления без перезагрузки (join/quit, level, world change).
+      connecting: Подключение...
+      echo: Испытание на подключение
+      echo-hint: Отправляет текст на сервер и обратно (проверяет логин, защиту CSRF и ограничение скорости).
+      echo-placeholder: Привет, Vystorm
+      echo-label: Текст
+      send: Отправить
+      name: Название
+      status: Состояние
+      online: в сети
+      offline: не в сети
+      world: Мир
+      level: Уровень (XP)
+      health: Здоровье
+      offline-in-game: Оффлайн в игре.
+      online-in: Онлайн в {world}, уровень {level}.
+      answer: 'Ответ: {echo} ({at})'
+      error: 'Ошибка: {message}'
+    app:
+      server-unreachable: Сервер недоступен
+      not-found: Не найдено
+      overview: К обзору
+      auth-lost: Вы не вошли в систему (более того). Тип {command} в игре и нажмите на ссылку.
+      live-title: 'Телеканал: {status}'
+      live-ready: жить
+      live-connecting: соединить...
+      live-offline: не в сети
+      loading: Загрузка...
+      not-logged-in: Не вошли. Тип {command} в игре и нажмите ссылку в чате.
+      components: Обзор компонентов
+      hello: Привет, {player}
+      login-running: Войти в...
+      login-bad-link: Не действительная ссылка для входа. Тип /web В игре и нажмите новую ссылку.
+      login-success: Зарегистрировано как {player}. Продолжая...
+      login-failed: Логин провалился.
+      unavailable: Недоступно
+      no-page: Здесь нет страницы «{id}».
+      no-page-update: Веб-интерфейс этого сервера еще не имеет страницы «{title}». Попросите администратора сервера обновить
+        web UI (новый Vystorm Core или сборка шлюза vystorm-web-ui).
+      login-required: Пожалуйста, войдите в игру с {command}.
+      not-unlocked: Этот интерфейс не разблокирован для вас или сервер не предлагает его прямо сейчас.
+      page-failed: 'Страница не может быть загружена: {message}'
+      loading-page: Загрузка {title}...
+      page:
+        core: профиль
+        skills: Дерево талантов
+        items: Обсуждение Forge & Items
+        kit: Компоненты
+      profile:
+        in-game: В игре
+        offline: Не в сети
+        world-level: '{world}, уровень {level}'
+        live-hint: Обновления без перезагрузки (join/quit, level, world change).
+        waiting: В ожидании живых данных...
+    settings:
+      title: Vystorm - Настройки
+      heading: Настройки
+      personal: Персональные настройки
+      personal-hint: Только для тебя. Изменения в игре вносятся немедленно.
+      server: Настройки сервера
+      server-hint: Конфигурация плагина для всего сервера (администраторов). Изменения вносятся немедленно.
+      offline: Присоединяйтесь к серверу, чтобы увидеть и изменить настройки; они хранятся в игре.
+      unsupported: Этот сервер заменил меню настроек Core. Откройте настройки в игре с {command}.
+      empty: Здесь пока нечего устанавливать.
+      loading: Загрузочные настройки...
+      saving: Спасти...
+      saved: Спасенный
+      invalid: '{label} - недействительное значение'
+      rejected: '{label}: {message}'
+      failed: '{label} - ошибка при сохранении'
+      apply-failed: Сохранили, но применить не удалось - см. журнал сервера.
+      unreadable: Нельзя было читать.
+      updated: Настройки были изменены в игре.
+      gone: Этот раздел больше не доступен.
+      state-on: Включено
+      state-off: Выключено
+      range: '{min} – {max}'
+      filter: Настройки фильтра
+      no-match: Никаких сеттинговых матчей «{query}».
+      sections: Разделы
+    kit:
+      close: Закрыть
+      confirm: Подтвердить
+      ok: OK
+      cancel: Отмена
+      tabs: Разделы
+      canvas: холст
+      zoom-in: Вставай
+      zoom-out: Умереть
+      fit: Показать все
+      center: Центр
+      count: '{count} ПК'
+      pieces: '{name}, {count} ПК'
+      empty-slot: Пустой слот
+      not-possible: Невозможно
+      recipe: рецепт
+      result: 'Результат: {name}'
+      no-result: Нет результата
+      progress: Прогресс
+      done: Сделано
+      remaining: '{time} осталось'
+      level: Уровень
+      max: Макс
+      item-level: Уровень {level}
+      item-level-range: Уровень {from}-{to}
+      unidentified: Неопознанные — неизвестные свойства.
+      vanilla: Ванильный предмет
+      range-title: Диапазон базового значения
+      random-affixes: + случайные аффиксы в зависимости от редкости
+      empty-socket: Пустая розетка ({type})
+      fixed: '[fixed]'
+      set-pieces: ({count} штук)
+      requirements: Требования
+      broken: Разбитый
+      durability: Прочность
+      durability-max: Долговечность {max}
+      quality: Качество {value} %
+      upgrade: Обновление +{value}
+      bound: связанный
+      bound-self: Связано с тобой
+      bound-to: Связано с {name}
+  module:
+    profile:
+      title: профиль
+      description: Ваш профиль Vystorm и тест подключения веб-интерфейса.
+    settings:
+      title: Настройки
+      description: Ваши персональные настройки всех Vystorm плагинов (и настройки сервера для администраторов).
+  error:
+    not-found: Не найдено.
+    method-not-allowed: Метод не допускается.
+    bad-origin: Недействительное происхождение.
+    bad-path: Неверный путь.
+    unexpected-body: Неожиданный запрос тела.
+    internal: Внутренняя ошибка.
+    no-web-permission: У вас нет разрешения на использование веб-интерфейса.
+    too-large: Запрос слишком большой.
+    too-many-requests: Слишком много запросов.
+    bad-target: Недействительная цель.
+    bad-line-end: Недействительный конец линии.
+    bad-json: Недействительно JSON.
+    shutting-down: Сервер отключается.
+    json-expected: Ожидалось JSON.
+    no-permission: У вас нет прав на это действие.
+    bad-csrf: CSRF токенов отсутствует или неправильно.
+    too-many-connects: Слишком много попыток соединения.
+    too-many-params: Слишком много параметров.
+    too-many-live: Слишком много открытых живых связей.
+    too-many-headers: Слишком много заголовков.
+    too-many-logins: Слишком много попыток входа.
+    read-timeout: Приостановлено во время чтения запроса.
+    timeout: Время вышло.
+    bad-utf8: Недействительно UTF-8.
+    bad-param: Недействительный параметр.
+    bad-header-value: Недействительное значение заголовка.
+    bad-header-name: Недействительное имя заголовка.
+    bad-header: Недействительный заголовк.
+    bad-module-list: Недействительный список модулей.
+    bad-method: Недействительный метод.
+    bad-content-length: Недействительный контент.
+    bad-request-line: Недействительная линия запроса.
+    bad-request: Недействительная просьба.
+    unknown-host: Неизвестный ведущий.
+    no-transfer-encoding: Трансфер-кодирование не поддерживается.
+    busy-retry: Сервер занят, пожалуйста, попробуйте еще раз.
+    busy: Сервер занят.
+    param-too-long: Параметр слишком длинный.
+    http11-only: Только HTTP/1.1.
+    not-logged-in: Не вошли.
+    module-not-found: Модуль не найден.
+    live-busy: Прямой канал занят.
+    json-too-deep: JSON вложены слишком глубоко.
+    host-missing: Хозяин пропал.
+    echo-too-long: Всего 200 символов.
+    header-folding: Складка заголовка не допускается.
+    echo-missing: Полевое «сообщение» (текст) отсутствует.
+    no-expect: Ожидание не поддерживается.
+    busy-now: Сервер сейчас занят, пожалуйста, попробуйте еще раз.
+    link-invalid: Ссылка недействительна или истекла. Получить новый в игре с /web.
+    must-be-online: Для этого вам нужно быть онлайн в игре.
+    body-mismatch: Тело запроса не совпадает.
+    body-missing: Запросить тело пропало.
+    aborted: Аборт.
+    url-too-long: Адрес слишком длинный.
+    login-required: Не вошли. Получите ссылку входа в игру с /web.
+    line-too-long: Линия запроса слишком длинная.
+    header-too-large: Заголовки слишком большие.
+    param-missing: 'Недостающий параметр: {name}'
+    settings-unavailable: Настройки не доступны через Интернет на этом сервере.
+    settings-not-found: Раздел настроек не найден или не разрешен.
+pack:
+  prompt: Vystorm нуждается в пакете ресурсов для пользовательских элементов и интерфейсов.
+  declined: снижение
+  failed: Не загружается ({status})
+  problem: <yellow>Пакет ресурсов Vystorm составил {reason}. Некоторые элементы и интерфейсы будут выглядеть неправильно;
+    он будет предложен снова при следующем присоединении.
+tutorial:
+  gif-pinned-only: "<gray>Анимации постройки нужны закреплённые экраны (пакет Core загружен, классические экраны выключены)."
+  menu-title: '{title} · Руководство'
+  choose: Выберите тему. Страница {page}/{pages}
+  topics-back: ← Предыдущие темы
+  topics-more: Больше тем →
+  all-tutorials: Все учебники
+  all-topics: Все темы
+admin:
+  language-audit: '{plugin}/{language}: {total} ключи, {missing} отсутствует, {bundled} в комплекте запасной вариант, {english}
+    английский запасной вариант, {placeholders} несоответствия заполнителей'
+  language-audit-keys: '{kind}: {keys}'
+  menu-title: Административная панель
+  menu-description: Команды и статус всех плагинов
+  no-permission: <red>Для этого нужно vystorm_core.admin.
+  usage: /vadmin <list|status|module|language [reload|audit]|config [plugin]|permissions [plugin]|updates [check]|diagnostics
+    [player]|migration <id>|loot>
+  list-line: <gray>{id} <white>{title} <dark_gray>{state}
+  unknown-module: <red>Неизвестный или не разрешенный модуль. /vadmin list
+  ingame-only: <red>Модули открываются только в игре как диалог.
+  active: активный {version}
+  unavailable: недоступен
+  title: Vystorm Административный
+  page: Модули {page} / {pages}
+  native: Открытый родной интерфейс
+  server-settings: ⚙ Настройки сервера
+  settings-unavailable: <red>Настройки недоступны.
+  overview: ⌂ Обзор
+  module-info: 'Версия: {version} | Командование: /{command}'
+  syntax: |-
+    Синтаксис: /{command} {fixed} {hint}
+    Пример: {example}
+  next: Далее
+  invalid-input: <red>Недействительный или больше не разрешенный вход.
+  confirm-title: Подтвердить действие
+  action-gone: <red>Действия больше не доступны.
+  wrong-owner: <red>Командование не относится к ожидаемому плагину.
+  language: |-
+    <gold>Язык: <white>{default}</white> <gray>(авто = клиентский язык каждого игрока, консоль = en)
+    <gold>Связки: <white>{bundles}
+  language-reloaded: <green>Перезагрузка языковых файлов ({count} плагинов).
+  language-setup: |-
+    <gold>Язык сервера: <white>{server}</white> <gray>· принудительно: {forced} · /language предлагает: <white>{languages}</white> <gray>(мин. покрытие {coverage} %)
+    <gold>Фоллбэкс: <white>{fallbacks}</white> <gray>(Языковая часть, затем)
+  language-usage: <gray>/vadmin language [reload | audit [plugin|*] [lang] | export <plugin> <lang> [yml|csv] | import <file>
+    [plugin] [lang]]
+  language-audit-header: <gold>Проверка перевода <gray>- {plugins} плагинов (плагинов), {languages} язык (языки); клавиши
+    по сравнению с en
+  language-audit-total: <gold>{name} <white>({language})</white> <gray>{coverage} % всех плагинов
+  language-audit-line: '<gray> · <white>{plugin}</white>/<white>{language}</white>: {coverage} % · {total} клавиши · <red>{missing}
+    пропавших без вести</red> · <yellow>{untranslated} не переведено</yellow> • {placeholders} несоответствий между держателями'
+  language-audit-more: <dark_gray>   ... и еще {count}
+  language-audit-hint: '<gray>Подробности с ключевыми списками: /vadmin language audit <plugin> [lang] · Все плагины для одного
+    языка: /vadmin language audit * <lang>'
+  language-kind-missing: пропавший
+  language-kind-untranslated: непереведенный (как английский)
+  language-kind-placeholders: Площадки отличаются
+  language-kind-unfilled-tags: неизвестные метки
+  language-export-button: <aqua><u>[export]</u></aqua>
+  language-export-hover: |-
+    <gray>Клик: {command}
+    Пишет каждый ключ с английским источником и текущим переводом на переводы.
+  language-exported: '<green>✔ {plugin}/{language}: {count} ключей ({missing} отсутствует) <white>{file}</white>.'
+  language-import-button: <aqua><u>[import after review]</u></aqua>
+  language-import-hover: '<gray>Клик: помещает {command} в чат'
+  language-imported: '<green>✔ {file} → {plugin}/{language}: {added} добавлено, {changed} изменено, {unchanged} без изменений,
+    {skipped} пропущено. <gray>Резервное копирование: {backup}'
+  language-import-skipped: '<yellow>  Пропущено {key}: {reason}'
+  language-reason-unknown-key: Ключ не существует в английском источнике
+  language-reason-placeholders: '{placeholders} отличается от английского'
+  language-files: '<gray>Файлы в переводах/: <white>{files}'
+  language-unknown-plugin: '<red>Никакого языкового пакета за {plugin}. Связки: {plugins}'
+  language-error-language: '<red>Недействительный код языка: {detail} (e.g. zh_cn, de, fr; en является исходным языком).'
+  language-error-io: '<red>Читать или писать файл не удалось: {detail}'
+  language-error-file-name: '<red>Недействительное имя файла: {detail} (только имя файла в переводах).'
+  language-error-file-missing: '<red>Файл не найден в переводах: {detail}'
+  language-error-format: '<red>Неизвестный тип файла: {detail} (yml или csv).'
+  language-error-empty: '<red>Файл пуст: {detail}'
+  language-error-csv-header: '<red>{detail}: первая строка CSV нуждается в ключе столбца и переводе.'
+  language-error-invalid: '<red>Файл не действителен YAML: {detail}'
+  language-error-target: '<red>{detail}: Плагин или язык неизвестны. Название файла <plugin>.<lang>.yml или добавить: /vadmin
+    language import <file> <plugin> <lang>'
+  language-error-plugin: <red>Никакого языкового пакета за {detail}.
+  language-error-no-folder: <red>{detail} не имеет редактируемой папки Lang.
+  language-error-source-language: <red>Английский язык является исходным и не может быть импортирован; редактировать lang/en.yml
+    напрямую.
+  language-error-target-invalid: <red>Текущий файл {detail} не действителен YAML; сначала исправьте его, ничего не было изменено.
+  catalog:
+    core:
+      status: Статус панели инструментов
+    economy:
+      info: Состояние экономики
+      set: Установить баланс
+    market:
+      open: Открытый рынок
+    cities:
+      info: Город на месте
+    blocks:
+      status: Состояние
+    inventory:
+      status: Статус сделки
+    trees:
+      status: Состояние
+    arena:
+      admin: Арена admin GUI
+      start: Стартовая арена
+      stop: Стоп арена
+    bounty:
+      list: Активные награды
+      set: Назначение
+    bloodmoon:
+      status: Состояние
+      start: Начать Blood Moon
+      stop: Остановить Blood Moon
+    insomnia:
+      get: Статус игрока
+      rest: Игрок отдыха
+    director:
+      status: Состояние
+      debug: Отладка игрока
+      events: События в Player
+      wave: волна триггера
+      population: Структура населения
+      reload: Перезагрузить
+    farms:
+      status: Состояние
+      inspect: Целенаправленное поле
+    build:
+      dialog: Построить диалог
+    pets:
+      reload: Перезагрузить
+      status: статус Pet admin
+      list: Домашние животные владельца
+      info: Pet Info
+    worlddirector:
+      active: Активные события
+      reservations: Оговорки
+      modifiers: Модификаторы
+      select: Выбор предварительного просмотра
+      weights: Вес
+      start: Начало мероприятия
+      stop: Стоп-событие
+      save: Сохранить
+      storyteller: рассказчик
+    worldforge:
+      info: WorldForge информации
+      population: Население
+      events: События
+      list: Планы и примеры
+      town: Планировать и строить город
+      dungeon: Планировать и строить подземелье
+      plan: Создать план
+      place: Планировка места
+      remove: Удалить структуру
+      recover: Восстановить
+    parties:
+      reload: Перезагрузить
+      disband: Партия расформирования
+      spy: Шпион на группе
+    skills:
+      inspect: Проверить игрока
+      reload: Перезагрузить
+    factions:
+      list: фракции
+      map: Карта фракции
+      regions: Регионы
+      region: Установить регион
+      info: информация
+      members: Участники
+      member: Изменить члена
+      pause: Пауза
+      resume: Резюме
+      capital: Капитал в целевом блоке
+      capitalat: Установить капитал
+      retry: повторять
+panel:
+  no-permission: Вы не можете открыть это.
+  unknown: На сервере такого меню не существует.
+  failed: Это меню натолкнулось на ошибку - администраторам сказали.
+  unavailable: Это меню сейчас недоступно.
+  no-answer: Нет ответа с сервера - попробуйте еще раз.
+  screen:
+    page: "Страница {page}/{pages}"
+    scroll: "<gray>Колесо мыши: прокрутка · присесть или Закрыть: выйти"
+  dialog:
+    apply: Применить
+    web: Открытый веб-сайт
+    rejected: Это значение не подходит.
+    close: Закрыть
+    'yes': Да
+    'no': Нет
+    slow-down: Слишком быстро — попробуйте еще раз.
+worlds:
+  visit:
+    command-blocked: <red>Эта команда здесь не допускается.
+    teleport-blocked: <red>Телепортироваться туда нельзя.
+    restore-failed: <red>Сохраненные предметы не могли быть декодированы. Ваш визит остается активным, обратитесь к администратору.
+    return-failed: <red>Возвращение не удалось - пожалуйста, попробуйте снова через минуту. Ваши вещи в безопасности.
+    enter-aborted: <yellow>Въезд отменили, потому что ваше состояние изменилось или экономия заняла слишком много времени.
+      Попробуйте еще раз, стоя на месте.
+    enter-failed: <red>Телепорт провалился; ваш инвентарь и состояние вернулись.
+    restored: <gray>Ваш инвентарь и состояние от <white>{world}<gray> Они были восстановлены.
+  admin:
+    no-permission: <red>У тебя нет разрешения.
+    usage: <gray>/vworlds list <dark_gray>| <gray>посещения <dark_gray>| <gray>restore <player> <dark_gray>| <gray>check <player>
+      <dark_gray>| <gray>наследие <player|uuid> archive|retry
+    list: '<gold>Управляемые миры: <white>{count}'
+    entry: <gray> · <white>{id} <gray>→ {world} <dark_gray>[{owner}, hash {hash}, {visitors} visitors]
+    visit: <gray> · <white>{player} <gray>в {id} <dark_gray>[{phase}, {seconds} s]
+    no-visits: <gray>Никаких визитов.
+    player-offline: <red>Игрок не онлайн (открытый снимок восстанавливается автоматически при следующем присоединении).
+    check: <gray>{player} - посещение <white>{visit}<gray>Маркер <white>{marker}<gray>Снимок <white>{snapshot}<gray>рука <white>{item}<gray>инструмент
+      <white>{tool}<gray>ограниченный <white>{restricted}<gray>валидация <white>{validation}
+    legacy:
+      archived: <yellow>Снимок наследия для {player} архивированных без восстановления; исходные файлы сохранены.
+      retried: <green>Снимок наследия для {player}, переданный в Core; использовать восстановление или присоединиться к восстановлению.
+      nothing: <gray>Никаких фотографий {player}.
+      failed: <red>Восстановление наследия {player} не удалось. Проверить UUID диагностических и сохраненных исходных файлов.
+      in-progress: <yellow>Вход или посещение для {player} находится в процессе; попробуйте после его окончания.
+    restore:
+      visit-ended: <green>Визит {player} закончился; государство возвращается после телепорта.
+      restored: <green>Снимок {player} восстановлен.
+      discarded: <yellow>Данные {player} игроков уже были за пределами посещения - снимок удален, ничего не восстановлено
+        дважды.
+      evicted: <yellow>Нет считываемого снимка для {player} - инструменты удалены и состояние посещения очищено (проверить
+        посещения / *.broken-*).
+      in-progress: <yellow>Возврат на {player} уже идет.
+      pending: <yellow>Реставрация на {player} находится на рассмотрении, снимок сохранен.
+      nothing: '<gray>За {player} нечего делать: ни снимка, ни посещения штата.'
+diagnostics:
+  title: Проверьте функции
+  line: '{feature} · {provider} · {state}: {reason}'
+  state-active: активный
+  state-fallback: откат
+  state-unavailable: недоступный
+  probe-failed: Диагностика провайдера не удалась; см. журнал сервера.
+  mob-active: Зарегистрировано существо-поставщик.
+  mob-fallback: 'Ни один поставщик существ: потребители используют свою альтернативу ванили / наследства.'
+  database-disabled: Общие базы данных отключены; проверьте локальное хранилище плагинов отдельно.
+  database-connecting: Подключение к базе данных.
+  database-available: Доступна общая база данных.
+  database-failed: Подключение к базе данных не удалось; см. журнал сервера.
+  database-closed: База данных была закрыта.
+  target-required: Выберите онлайн-игрок для проверки клиентов.
+  client-disabled: На сервере отключен клиентский канал, используются диалоги.
+  client-absent: Не требуется рукопожатие клиента, используются диалоги.
+  client-old: Клиенту не хватает панелей или панели отключены на сервере; используются диалоги.
+  client-active: Клиент поддерживает эту функцию, а сервер позволяет.
+  hud-hidden: Игрок спрятал HUD элементов.
+  hud-fallback: HUD каналов отключены или отсутствует клиентская возможность; по-прежнему требуется резервное копирование
+    плагинов.
+migration:
+  available: 'Зарегистрированные проверки данных: {ids}. использование: /vadmin миграция <id>'
+  result: '{id}: рекорды {before} → {after}; всего {before-sums} → {after-sums}; проблемы: {problems}'
+  conserved: Отдельная копия прошла проверку. Прямых данных не было написано; это не автоматически одобряет миграцию.
+  review: Проверка выявила проблемы или различия. Живые данные остаются неизменными.
+onboarding:
+  menu-title: Первые шаги
+  menu-description: Выберите, когда просматривать дополнительное руководство по первому использованию Core.
+  title: Ваши первые шаги
+  intro: Краткое, необязательное руководство по выбору языка и поиску функций плагина. Вы можете уйти в любое время.
+  task-language: 'Выберите язык: {status}'
+  task-first-menu: 'Открыть ключевое меню: {status}'
+  task-plugin-menu: 'Успешно попробуйте функцию плагина: {status}'
+  done: сделанный
+  todo: еще не
+  continue-hint: Участвующие плагины подтверждают эту задачу после успешного действия, например, постановки цели экономии
+    с помощью /xpeconomy goal. Открытие меню само по себе не завершает его.
+  skipped-status: Вы пропустили это руководство. Выберите Show in Core, чтобы начать снова.
+  open-language: Языковые настройки
+  open-menus: Просмотреть меню
+  skip: Гид по прыжкам
+  setting-label: Первые шаги Руководство
+  setting-description: Покажите гида снова или пропустите его.
+  setting-show: Показать / Сбросить
+  setting-skip: пропущенный
+  settings-title: Первые шаги
+  settings-description: Выберите, будет ли доступно дополнительное руководство по первому использованию.
+notifications:
+  preference:
+    title: Рутинные уведомления
+    section-description: Выберите, как основные группы несрочных сообщений статуса.
+    label: Частота доставки
+    description: Срочные подтверждения остаются немедленными.
+    immediate: немедленно
+    15s: Каждые 15 секунд
+    60s: Каждые 60 секунд
+  routine-title: Обновления ({count})
+  routine-repeat: '{message} (повторяется {count} раз)'
+  routine-omitted: '{count} Обновления были объединены, потому что очередь была заполнена.'
+channel-chat:
+  players-only: Только игроки могут отправлять торговые чаты.
+  usage: 'использование: /vtrade <message>'
+  too-long: Используйте не более 240 символов без управляющих символов.
+  wait: Пожалуйста, подождите, прежде чем отправлять другое торговое сообщение.
+  trade-prefix: '[Trade] '
+features:
+  entry: "⚙ Функции"
+  entry-tooltip: "Включать и выключать функции каждого плагина"
+  title: "Функции"
+  title-plugin: "Функции: {plugin}"
+  count: "включено {on}/{total}"
+  state-on: "<green>ВКЛ"
+  state-off: "<red>ВЫКЛ"
+  restart: "действует после перезапуска"
+  hint-overview: "<gray>Нажмите на плагин · колесо мыши: прокрутка · страница {page}/{pages}"
+  hint-plugin: "<gray>Нажмите на строку, чтобы переключить · наведите для подробностей · страница {page}/{pages}"
+  none: "<gray>Нет плагинов с переключателями функций, или у вас нет vystorm_core.config.<plugin>."
+  unknown-plugin: "<red>У {plugin} нет переключателей функций, или вам нельзя его настраивать."
+  ingame-only: "<gray>Переключатели функций открываются в игре. Плагины: {plugins}"
+config:
+  entry: Конфигурация плагина
+  entry-tooltip: Каждое значение конфигурационных файлов каждого плагина (секреты остаются скрытыми)
+  overview-title: Конфигурация плагина
+  overview-text: Выберите плагин. Пароли, доступ к базе данных и токены здесь никогда не отображаются.
+  overview-empty: Ни один плагин не зарегистрировал свою конфигурацию, или вам не хватает vystorm_core.config.<plugin>.
+  plugin-button: 'Конфигурация: {plugin}'
+  plugin-title: 'Конфигурация: {plugin}'
+  plugin-text: '{count} секций из {files}. Сохранение записывает только измененные значения в файл (другие значения, ручное
+    редактирование и комментарии остаются) и перезагружает плагин, если он поддерживает это.'
+  file-only: '<gray>Редактировать в файле ({file}): {keys}'
+  back-overview: ← Все плагины
+  back-server: ↑ Настройки сервера
+  applied: '<green>✔ {plugin}: сохранено и перезагружено.'
+  reload-needed: <yellow>{plugin} - спасены. Вступает в силу после перезагрузки /{command} или перезагрузки.
+  restart-needed: <yellow>{plugin} - спасены. Эти значения вступают в силу после перезагрузки сервера.
+  reload-failed: '<red>. {plugin}: сохранено, но перезагрузка не удалась — см. журнал сервера.'
+  not-saved: '<red>{plugin}: {file} не был изменен - {reason}'
+  reason-invalid-yaml: Файл на диске не действителен YAML. Сначала исправьте это в файле.
+  reason-dotted-keys: Файл содержит клавиши с точкой, которую меню не может сохранить, не изменив их. Отредактируйте в файле.
+  reason-io: Запись не удалась, смотрите журнал сервера.
+  too-long: Слишком долго для меню - отредактируйте его в файле
+  list-commas: Записи содержат запятые - редактируйте их в файле
+  list-invalid: 'Недействительный список: {value}'
+  unknown-plugin: <red>Нет редактируемой конфигурации для {plugin} или у вас нет разрешения.
+  ingame-only: '<red>Конфигурация открывается в игре как диалог. Плагины: {plugins}'
+  usage: <gray>/vadmin config [plugin]
+permissions:
+  usage: <gray>/vadmin разрешения [plugin] [page]
+  plugins: '<gold>Узлы разрешений Vystorm плагинов <gray>(/vadmin разрешения <plugin>):'
+  plugin-line: <gray>· <white>{plugin}</white> <dark_gray>{version}</dark_gray> - {count} узлов
+  header: <gold>{plugin} <gray>- узлы разрешений, страница {page}/{pages} <dark_gray>(✔ = У вас есть это
+  line: '{mark} <white>{node}</white> <dark_gray>[{default}]</dark_gray> <gray>{description}'
+  no-description: Нет описания
+  more: '<gray>Следующая страница: /vadmin разрешения {plugin} {next}'
+  unknown-plugin: '<red>Неизвестный плагин или нет Vystorm: {plugin}'
+  default-true: все
+  default-false: никто
+  default-op: оп
+  default-not_op: неоп
+review:
+  one: '<gold>[Vystorm] <gray>Вы использовали <yellow>{plugin}</yellow> {days} дней. Тебе нравится? Короткий обзор очень помогает:'
+  many: '<gold>[Vystorm] <gray>Спасибо за использование Vystorm! Вам нравятся плагины? Короткий обзор очень помогает:'
+  link: <aqua><u>[⭐ {plugin}]</u></aqua>
+updates:
+  checking: <gray>Проверка SpigotMC на наличие обновлений
+  not-yet: <gray>Проверка обновлений еще не закончена. Использовать /vadmin updates check.
+  disabled: <gray>Проверка обновления отключена (обновление-check.enabled в Core config.yml).
+  line-newer: '<yellow>{plugin}: <white>{installed}</white> → <green>{latest}</green>'
+  download: <aqua><u>[download]</u></aqua>
+  line-current: '<gray>{plugin}: {installed} (текущий)'
+  line-unknown: '<gray>{plugin}: {installed} (не может быть проверен)'
+  all-current: <green>Все Vystorm плагинов обновлены.
+  summary: <yellow>{count} обновление(s) Доступно. Нажмите ссылку выше или посмотрите /vadmin updates.
+  join: '<yellow>[Vystorm] {count} Обновление плагина(s) доступный: <white>{list}</white>. <gray>/vadmin updates'
+  join-hover: <gray>Нажмите, чтобы перечислить обновления со ссылками загрузки
+  ignored: <dark_gray>(проигнорировано)
+  last-check: '<dark_gray>Последняя проверка: {minutes} минут назад.'
+player-menu:
+  title: <dark_gray>{player}
+  header: <yellow>{player}
+  header-lore: <gray>Что ты хочешь сделать?
+  unavailable: <gray>Это действие больше не доступно.
+  failed: <red>Это действие провалилось. Подробности находятся в журнале сервера.
+  offline: <gray>{player} не в сети.
+  empty: <gray>С {player} сейчас ничего не поделаешь.
+  self: <gray>Это меню для других игроков. Присядьте и щелкните правой кнопкой мыши кого-нибудь другого.
+  disabled: <gray>Меню игрока выключено на этом сервере.
+  no-permission: <red>Вы не можете открыть меню игрока.
+  settings:
+    title: Игровое меню
+    description: Действия для других игроков, e.g. группы или городские приглашения.
+    toggle: Открыть с помощью Shift + right-click
+    toggle-hint: Присядьте и щелкните правой рукой другого игрока, чтобы увидеть, что вы можете с ним сделать.
+config-history:
+  button: Изменить историю
+  button-tooltip: Кто изменил, какое значение когда — с помощью клика отменить (в чате)
+  usage: <gray>/vadmin config history [plugin] [page] · /vadmin config undo [number] [force]
+  disabled: <gray>История изменений отключена (конфиг-history.enabled в Core's config.yml).
+  empty: <gray>Пока никаких изменений конфигураций не зафиксировано. Изменения, сохраненные с /vadmin config Появиться здесь.
+  header-all: <gold>Изменение конфигурации <gray>- Новейшая первая, страница {page}/{pages}
+  header-plugin: <gold>Изменения конфигурации {plugin} <gray>- Новейшая первая, страница {page}/{pages}
+  entry: <gold>#{id}</gold> <gray>{time} · <white>{actor}</white> · {plugin}/{file}
+  change: '<dark_gray>   {path}: <red>{before}</red> → <green>{after}'
+  more-changes: <dark_gray>   ... и еще {count}
+  undo-of: <dark_gray>(перенаправлено с «{id}»)
+  undone-by: <dark_gray>(перенаправлено с «{id}»)
+  undo-button: <aqua><u>[↶ undo]</u></aqua>
+  undo-hover: '<gray>Нажмите: верните значения #{id}'
+  next-page: <aqua><u>[Страница {page} →]</u></aqua>
+  unknown: '<red>Нет никакого изменения конфигурации #{id}, или вы не можете изменить этот плагин.'
+  already-undone: '<yellow>#{id} уже был отменен #{by}.'
+  plugin-gone: '<red>{plugin} не работает или {file} больше не может быть отредактирован в игре, поэтому #{id} не может быть
+    отменен.'
+  conflict: '<yellow>С {id} года эти значения снова изменились: <white>{paths}</white>. Отмена перепишет их.'
+  force-button: <red><u>[undo anyway]</u></red>
+  force-hover: '<gray>Кликните: верните старые ценности, даже если они были изменены снова'
+  nothing: '<gray>#{id}: нечего менять.'
+  undone: '<green>✔ #{id} undone ({count} значение(ы) назад), записано как {new}.'
+profile:
+  menu-title: "👤 Профиль"
+  menu-description: "Ваша карточка профиля – и чужие через меню игрока"
+  title: "Профиль: {player}"
+  online: "<green>● в сети</green> <white>{player}"
+  offline: "<gray>○ не в сети</gray> <white>{player}"
+  first-join: "<gray>Впервые зашёл: <white>{date}"
+  last-seen: "<gray>Последний раз: <white>{date}"
+  playtime: "<gray>Время игры: <white>{hours} ч"
+  no-sections: "<gray>Пока ни одному плагину нечего показать."
+  unavailable: "<gray>Карточки профиля отключены или у вас нет доступа."
+  unknown: "<red>Игрок {player} здесь не играл."
+  player-menu: "Профиль {player}"
+inbox:
+  menu-title: "📬 Почта"
+  title: "📬 Почта"
+  menu-title-unread: "📬 Почта ({count} новых)"
+  menu-description: "Сообщения сервера и его плагинов"
+  empty: "Ваша почта пуста."
+  meta: "<gray>{date} · {source}"
+  meta-new: "<gold>● новое</gold> <gray>{date} · {source}"
+  delete-read: "🗑 Удалить прочитанные"
+  deleted: "<green>✔ Удалено прочитанных сообщений: {count}."
+  join: "<gold>📬 [Почта] <yellow>Новых сообщений: {count}</yellow> <gray>– нажмите, чтобы прочитать"
+  arrived: "<gold>📬 [{source}]"
+  hover: "<gray>Нажмите: открыть почту"
+  unavailable: "<gray>Почта отключена или у вас нет к ней доступа."
+  settings:
+    title: "Почта"
+    description: "Личные сообщения плагинов."
+    join: "Сообщать о новых сообщениях при входе"
+    join-hint: "Короткая кликабельная строка в чате, если есть непрочитанные сообщения."
+news:
+  edit-button: 'Редактировать #{id}'
+  edit-title: Редактировать новости
+  edit-hint: Исправьте этот пост. Автор, дата и статус чтения остаются неизменными; новое объявление не отправляется.
+  save: Сохранить изменения
+  edited: '<green>Обновленные новости #{id}: {title}'
+  edit-usage: '<gray>/vadmin news edit [number] [title | text] — Без текста: откройте редактор (players only).'
+  title: Новости
+  menu-title: Новости
+  menu-title-unread: Новости ({count} новых)
+  menu-description: Что нового на сервере
+  empty: Сейчас новостей нет.
+  empty-writer: Новостей пока нет. Используйте «Написать», чтобы опубликовать первый пост.
+  post-title: <gold><b>{title}</b>
+  post-meta: <gray>{date} · {author}
+  write-button: Пишите
+  delete-button: 'Удалить #{id}'
+  delete-tooltip: Удалить "{title}"
+  delete-title: Исключить сообщение
+  delete-question: 'Удалить сообщение #{id} "{title}" для всех?'
+  write-title: Пишите новости
+  write-text: Простой текст, никаких цветовых кодов. Онлайн-игроки получают кликабельное уведомление, все остальные, когда
+    они присоединяются.
+  input-title: Название
+  input-text: Текст
+  publish: публиковать
+  title-missing: <red>Пост нуждается в названии.
+  posted: '<green>✔ Опубликованы новости #{id} "{title}".'
+  deleted: '<green>✔ Новости #{id} "{title}" удалены.'
+  unknown: '<red>Нет новостей #{id}.'
+  join: '<gold>📰 [News] <yellow>{count} новых: <white>{titles}</white> <gray>- click to read'
+  announce: <gold>📰 [News] <white>{title}</white> <gray>{author} - нажмите, чтобы прочитать
+  hover: '<gray>Click: Откройте новости'
+  unavailable: <gray>Информационная доска выключена или вы не можете ее прочитать.
+  disabled: <gray>Новостная доска отключена (news.enabled в config.yml).
+  no-permission: <red>Вы не можете писать новости.
+  usage: <gray>/vadmin news [list] · Написать · пост [title] | [text] · delete [number] · edit [number] [title | text]
+  list-empty: <gray>Никаких новостей.
+  list-header: '<gold>Новости ({count}):'
+  list-line: <gold>#{id}</gold> <gray>{date} · {author} · <white>{title}
+  list-delete: <red>[delete]
+  list-delete-hover: '<gray>Click: помещает команду удаления в чат'
+  settings:
+    title: Новости
+    description: Информационная доска сервера.
+    join: Показать новые посты, когда я присоединяюсь
+    join-hint: Короткая кликабельная линия чата, когда есть сообщения, которые вы еще не читали.
+loot:
+  usage: <gray>/vadmin loot list [tables|categories] · show [id] · roll [id] [luck=1 tier=rare pity=epic rolls=3 seed=42 self=table
+    level=30] · simulate [id] [count] [options] · give [id] [player] [options] · reload
+  invalid: '<red>Недействительная добыча: {error}'
+  unknown: '<red>Неизвестная таблица добычи или категория: {id}'
+  list-header: '<gold>Таблицы и категории добычи ({count}):'
+  list-line: <gray>{id} <dark_gray>· {entries} записей · рулоны {rolls} · {owner}
+  show-header: <gold>{id} <gray>· роллы {rolls} · шанс {chance}
+  show-line: <gray>{item} x{amount} <dark_gray>· вес {weight} ({tier}) · {percent} на ничью
+  roll-header: '<gold>Превью {id}: {count} hit(s) <dark_gray>(Ничего не дается)'
+  roll-empty: <gray>Ничего не упало.
+  roll-line: <gray>{amount}x {item} <dark_gray>· {tier} · {percent} · от {table}
+  problem: <yellow>⚠ {text}
+  sim-header: '<gold>{id}: {n} рулон <gray>• {hits} попаданий за рулон; пустой {empty}'
+  sim-tier: '<gray>  {tier}: {percent} попаданий'
+  sim-line: <gray>  {item} <dark_gray>· в {percent} рулонов · avg {avg} на рулон
+  reloaded: <green>Перезагрузка таблиц лута ({count} таблиц и категорий).
+  reload-failed: '<red>Таблицы лута не перезагружаются, предыдущие остаются активными: {error}'
+  give-done: <green>Дал {count} единиц (ов) от {id} до {player}.
+  give-no-player: '<red>Игрок {player} не онлайн (с консоли): /vadmin loot give [id] [player]).'
+command:
+  help:
+    name: помощь
+    aliases: []
+    header: <gold>── <yellow>{command}</yellow> ── <gray>Помощь {page}/{pages}
+    description: <gray>{description}
+    line: <yellow>{usage}</yellow><dark_gray> – <gray>{description}
+    line-plain: <yellow>{usage}
+    hover-run: |-
+      <gray>{description}
+      <yellow>Нажмите, чтобы запустить {command}
+    hover-suggest: |-
+      <gray>{description}
+      <yellow>Нажмите на тип {command}
+    previous: <yellow>[« Предыдущая страница
+    next: <yellow>[следующая страница] »]
+    empty: <gray>Здесь ничего нельзя использовать.
+  error:
+    no-permission: <red>У вас нет прав на это действие.
+    player-only: <red>Это могут сделать только игроки.
+    unknown-sub: '<red>Неизвестный подкомандующий: <white>{input}'
+    did-you-mean: <gray>Ты имел в виду <yellow>{suggestion}</yellow>? <dark_gray>(щелчок)
+    see-help: '<gray>Все команды: <yellow>{command}'
+    missing-arg: '<red>Пропавшие: <white>{arg}'
+    too-many: <red>Слишком много аргументов.
+    usage: '<gray>Использование: <yellow>{usage}'
+    not-a-number: <red>{input} не является числом.
+    number-range: <red>{input} должно быть между {min} и {max}.
+    player-not-found: <red>Игрок под названием {input} не находится в сети.
+    world-not-found: <red>Не существует мира под названием {input}.
+    bad-choice: '<red>{input} здесь невозможно. Выберите: <white>{choices}'
+    cooldown: <red>Пожалуйста, подождите {seconds} с, прежде чем использовать это снова.
+    disabled: <red>Эта команда сейчас недоступна.
+    internal: <red>Что-то пошло не так. Ошибка была зарегистрирована для администраторов.
+  values:
+    'on': включено
+    'off': выключено
+    'true': истинный
+    'false': ложный
+    'yes': да
+    'no': нет
+    clear: очистить
+    list: список
+    all: все
+  overview:
+    header: <gold>── <yellow>командование</yellow> ── <gray>страница {page}/{pages}
+    plugin: <aqua><bold>{plugin}
+    line: <yellow>/{command}</yellow>{also}<dark_gray> – <gray>{description}
+    also: <dark_gray> (/{aliases})
+    hover: |-
+      <gray>{description}
+      <yellow>Клик: {action}
+    action-help: Показать помощь
+    action-type: Введите команду
+    empty: <gray>Нет команд, которые вы можете использовать.
+    unknown-plugin: <red>Нет плагина с командами {plugin}.
+    footer: '<dark_gray>Нажмите команду. Только один плагин: /vhelp PLUGIN'
+  admin:
+    header: <gold>── <yellow>Зарегистрированные команды</yellow> ── <gray>{count} деревьев, страница {page}/{pages}
+    mode: '<gray>Локализованные корневые псевдонимы: <white>{mode}</white> <dark_gray>(язык сервера: {language})'
+    mode-option: <yellow>[{mode}]
+    mode-hover: 'Нажмите: использовать {mode}'
+    line: <aqua>{plugin}</aqua> <yellow>/{command}</yellow> <dark_gray>({mount})</dark_gray><gray>{fixed}
+    fixed: ' псевдонимы: {aliases}'
+    label-conflict: <red>  /{command} взято {owner}; только /{prefix}:{command} работы.
+    fixed-conflict: <red>  Фиксированный псевдоним /{alias} взят {owner}; он управляет этой командой, а не этой.
+    alias: '<gray>  {language}: <white>/{alias}</white> {state}'
+    state-active: <green>активный
+    state-off_by_policy: <dark_gray>Выключено (язык не включен)
+    state-disabled: <red>выключен
+    state-collision: <gold>Пропущено, взято {owner}
+    state-pending: <gray>Применяется после запуска
+    turn-off: <red>[switch off]
+    turn-on: <green>[switch on]
+    toggle-hover: 'щелкнуть: /vadmin commands псевдоним {alias} {value}'
+    conflict: <gold>  Название конфликта {conflict}
+    other: '<gray>Еще не мигрировали (plugin.yml): <white>{commands}'
+    mode-set: '<green>Локализованные псевдонимы корней: {mode}. Применяется.'
+    alias-set: <green>/{alias} теперь {state}.
+    alias-unknown: <red>Нет локализованного псевдонима /{alias}. Видишь? /vadmin commands.
+    usage: <gray>/vadmin commands [PAGE] | mode all|default|none | псевдоним ALIAS on|off
+commands:
+  screen:
+    description: "Screens: close an open screen; admins: demo screen"
+    sub:
+      settings:
+        name: "settings"
+        args:
+          resolution: "WIDTHxHEIGHT"
+        description: "Display settings for screens: aspect ratio, field of view, size"
+      classic:
+        name: "classic"
+        args:
+          state: "on|off"
+        description: "Classic screens on/off (for shader packs)"
+      close:
+        name: "close"
+        description: "Close your open screen"
+      demo:
+        name: "demo"
+        args:
+          mode: "MODE"
+          backdrop: "BACKDROP"
+        description: "Open the screen demo (pinned or floating)"
+  vpoll:
+    description: Серверные опросы
+    sub:
+      start:
+        name: start
+        args:
+          seconds: SECONDS
+          question: QUESTION | ANSWER | ANSWER
+        description: 'Начните опрос: секундный вопрос | ответ | ответ'
+      vote:
+        name: vote
+        args:
+          id: POLL-ID
+          option: ANSWER
+        description: Голосуйте, используя кликабельные ответы в /vpoll
+      close:
+        name: close
+        description: Завершить опрос и опубликовать результаты
+      cancel:
+        name: cancel
+        description: Отменить без публикации результатов
+      results:
+        name: results
+        description: Показать последний завершенный опрос
+  vnet:
+    description: "Сеть серверов (хаб прокси)"
+    sub:
+      status:
+        name: "status"
+        description: "Подключение к хабу прокси"
+      servers:
+        name: "servers"
+        description: "Серверы сети и число игроков"
+      broadcast:
+        name: "broadcast"
+        args:
+          message: "СООБЩЕНИЕ"
+        description: "Объявление на всех серверах (MiniMessage)"
+      pair:
+        name: "pair"
+        description: "Связать этот сервер с прокси"
+        sub:
+          accept:
+            name: "accept"
+            args:
+              code: "КОД"
+            description: "Подтвердить связывание кодом из обеих консолей"
+      unpair:
+        name: "unpair"
+        description: "Забыть ключ связывания"
+  vhelp:
+    description: Все команды, которые вы можете использовать с помощью плагина
+    aliases:
+    - vcommands
+    args:
+      filter: PLUGIN
+      page: PAGE
+  menu:
+    description: Открыто главное меню Vystorm
+  vadmin:
+    description: Vystorm admin приборная панель
+  admin:
+    description: Vystorm admin приборная панель
+  einstellungen:
+    description: Персональные и серверные настройки всех Vystorm плагинов
+  web:
+    description: 'Веб-интерфейс: открывает страницу или отправляет одноразовую ссылку для входа'
+  vtrade:
+    description: 'Торговый канал: сообщение всем, кто его получает'
+  nbt:
+    description: Установите ядро на элементе в руке (админ)
+  vregion:
+    description: Показать раздельный региональный регистр
+  vworlds:
+    description: Плагиновые миры и посещения
+  language:
+    description: Выберите язык (меню со всеми языками)
+language-select:
+  current: "Сейчас"
+  choice: "Твой выбор"
+  menu-title: Язык
+  info-name: <gold>Язык
+  info-lore:
+  - '<gray>Теперь: <white>{language}'
+  - '<gray>Ваш выбор: <white>{choice}'
+  - ''
+  - <gray>Нажмите на флаг, чтобы переключиться или ввести /language <code>. Та же установка находится в /vsettings.
+  auto-name: <aqua>Автоматический (язык клиента)
+  auto-lore:
+  - '<gray>Язык Minecraft ({client}): <white>{language}'
+  code: '<gray>Код: <white>{code}'
+  coverage: '<gray>В переводе: <white>{coverage} %'
+  in-use: <gray>Используется сейчас
+  selected: <green>✔ выбранный
+  click: <yellow>Нажмите, чтобы выбрать
+  changed: '<green>✔ Язык: <white>{language}</white>.'
+  changed-auto: <green>✔ Язык следует за вашим языком Minecraft (сейчас) <white>{language}</white>).
+  admin-set: '<green>✔ Язык {player}: {language}'
+  status: '<gold>{player}: <white>{language}</white> <gray>(выбор: {choice}, Minecraft язык: {client})'
+  unknown: '<red>Неизвестный язык: {input}. <gray>Доступно: {languages}'
+  forced: '<yellow>Этот сервер использует один язык для всех: {language}.'
+  failed: <red>Язык спасти не удалось.
+  list-header: '<gold>Языки <gray>(/language <code> · Авто = язык Minecraft):'
+  list-line: <gray>· <white>{name}</white> <dark_gray>{code}</dark_gray> <gray>– {coverage} %{marker}
+  current-marker: ' <green>✔'
+  console-usage: '<gray>Из консоли: /language <player> <code|auto> · /language <player> · /language list'
+  others-no-permission: <red>Вы не можете изменить язык других игроков.
+  player-offline: <red>{player} не в сети.
+poll:
+  question: <yellow>{question} <gray>({seconds}). Нажмите на ответ, вы можете изменить свой голос.
+  option: <aqua>[{number}] {option}
+  voted: '<green>Ваш голос: {option}'
+  unavailable: <red>Этот опрос больше не открыт или ответ недействителен. Использовать /vpoll.
+  running: <yellow>Опрос уже идет.
+  disabled: <red>Опросы отключены.
+  duration: <red>Продолжительность должна составлять от 10 до {max} секунды.
+  invalid: <red>Используйте вопрос | ответ | ответ, с 2–{max} различными ответами и максимум {length} символами на часть.
+  started: <green>Опрос начался.
+  cancelled: <yellow>Опрос отменен.
+  no-results: <gray>Опрос еще не завершен.
+  results: '<gold>Результаты: {question} <gray>({total} избиратели)'
+  result-option: '<yellow>{option}: <white>{votes}'
+
+setup:
+  title: "Настройка плагинов"
+  intro: "Установленные плагины с доступными настройками: {plugins}. Изменения сохраняются только после подтверждения просмотра."
+  empty: "Шаблонов пока нет. Сохраните безопасные текущие настройки под именем или создайте черновик."
+  choose: "Выберите общий шаблон, затем плагины для настройки."
+  capture: "Сохранить текущий шаблон"
+  custom: "Свой черновик настроек"
+  name: "Имя шаблона (a-z, 0-9, _ и -)"
+  select: "Шаблон {name}. Доступны: {plugins}. Остальные плагины не изменятся."
+  plugins: "Имена плагинов через запятую"
+  unchanged: "Выбранные настройки уже соответствуют шаблону."
+  sections: "Доступные разделы: {sections}. Не более 96 безопасных значений."
+  capture-sections: "Разделы для сохранения через запятую"
+network:
+  off: "<gray>Сеть отключена (network.enabled: false)."
+  not-connected: "<red>Нет подключения к хабу прокси."
+  status-connected: "<green>Подключено</green> <gray>как <white>{server}</white> к хабу <white>{hub}</white> · ключ {key} · пинг {latency}"
+  status-disconnected: "<red>Не подключено</red> <gray>· сервер <white>{server}</white> · хаб <white>{hub}</white> · ключ {key}"
+  pair-pending: "<yellow>Связывание ждёт подтверждения, код <white>{code}</white>: /vnet pair accept {code}"
+  server-line-online: "<green>●</green> <white>{server}</white> <gray>игроков: {players}"
+  server-line-offline: "<gray>○ {server} · игроков: {players} (Core не подключён)"
+  broadcast: "<gold>[Сеть]</gold> {message}"
+  broadcast-local-only: "<yellow>Нет подключения: объявление показано только на этом сервере."
+  paired: "<green>Связано. Подключение к хабу…"
+  pair-wrong-code: "<red>Нет открытого связывания с этим кодом (неверный код или истекли 10 минут)."
+  unpaired: "<yellow>Ключ связывания удалён. Следующее предложение прокси можно будет подтвердить."
+  selector-title: "Серверы"
+  selector-entry: "<white>{server}"
+  selector-players: "<gray>игроков: {players}"
+  selector-current: "<green>Вы здесь"
+  selector-offline: "<red>Сейчас недоступен"
+  selector-click: "<yellow>Нажмите, чтобы войти"
+  selector-moving: "<gray>Отправляем вас на {server}…"
+  selector-failed: "<red>Не удалось отправить вас на {server}."
+trace:
+  on: "<yellow>Трассировка включена для {player}: видно, какой плагин отменяет или разрешает его ломание, установку блоков и клики и какой плагин шлёт ему сообщения. Повторите команду, чтобы выключить."
+  off: "<gray>Трассировка выключена для {player}."
+  usage: "<gray>/vadmin trace [игрок] [break place damage interact messages | off] <dark_gray>— без фильтра: всё, вкл/выкл"
+  cancelled: "<red>[Трасса]</red> <white>{event}</white> <gray>в {block} ({material}) <red>отменено</red> плагином <gold>{plugin}</gold> <dark_gray>({listener}, {priority})"
+  allowed: "<green>[Трасса]</green> <white>{event}</white> <gray>в {block} ({material}) <green>снова разрешено</green> плагином <gold>{plugin}</gold> <dark_gray>({listener}, {priority})"
+  message: "<aqua>[Трасса]</aqua> <gray>{player} получил сообщение от <gold>{plugin}</gold> <dark_gray>({key})</dark_gray>: <white>{text}"
+  source-hover: "<gray>Отправлено плагином <gold>{plugin}"
+  filter: "<yellow>Трассировка {player} теперь показывает только: <white>{kinds}</white>. <gray>Без фильтра — всё; <white>off</white> выключает."
+config-menu:
+  overview-title: "Настройки плагинов"
+  plugin-title: "Настройки: {plugin}"
+  plugin-lore: "<gray>Изменено значений: {changed}"
+  setup-open: "<gold>Настройка не завершена"
+  category-lore: "<gray>Параметров: {count}, изменено: {changed}"
+  current: "<gray>Сейчас: <white>{value}"
+  default: "<gray>По умолчанию: <white>{value}"
+  restart: "<red>Нужен перезапуск сервера"
+  hint-edit: "<yellow>ЛКМ: изменить"
+  hint-structure: "<yellow>ЛКМ: изменить записи"
+  hint-file: "<gray>Можно изменить только в файле"
+  hint-reset: "<yellow>ПКМ: сбросить"
+  file-only: "<gray>Измените <white>{path}</white> в <white>{file}</white>."
+  error: "<red>Не изменено: {error}"
+  prompt-title: "Изменить значение"
+  search: "Поиск"
+  search-title: "Поиск: {query}"
+  only-changed: "Только изменённые"
+  no-results: "<gray>Ничего не найдено."
+  close: "Закрыть"
+  history: "История изменений"
+  setup: "Пошаговая настройка"
+  back: "Назад"
+  previous: "Предыдущая страница"
+  next: "Следующая страница"
+  add: "Добавить запись"
+  entry-name: "Запись {index}"
+  entry-open: "<yellow>ЛКМ: изменить"
+  entry-delete: "<yellow>ПКМ: удалить"
+  delete-title: "Удалить запись"
+  delete-confirm: "Удалить запись? Её можно вернуть через историю изменений."
+  stale: "<yellow>Файл успел измениться. Попробуйте ещё раз."
+  invalid-value: "<red>Это значение не подходит."
+  failed: "<red>Не получилось. Подробности в журнале сервера."
+  not-registered: "этот файл недоступен в редакторе"
+setup-flow:
+  hint-one: "<gold>{plugin} только что установлен. <yellow><u>Нажмите для настройки"
+  hint-many: "<gold>Плагинов ждут настройки: {count}. <yellow><u>Нажмите, чтобы открыть"
+  hint-hover: "<gray>Ничего не изменится, пока вы не подтвердите."
+  unknown: "<red>Для {plugin} нет настройки."
+  none: "<gray>Ни один плагин не предлагает настройку."
+  list-title: "Настройка плагинов"
+  list-text: "Выберите плагин. Звезда отмечает незавершённую настройку."
+  list-open: "★ {plugin}"
+  list-done: "{plugin}"
+  intro-title: "Настройка {plugin}"
+  intro-note: "Вы увидите все изменения до сохранения."
+  recommended: "Рекомендуемые"
+  questions: "Ответить на вопросы"
+  later: "Позже"
+  later-note: "<gray>Открыть снова: <white>/vadmin setup {plugin}</white>."
+  skip: "Пропустить"
+  skipped: "<gray>Настройка {plugin} пропущена. Значения остаются прежними."
+  question-title: "{plugin}: вопрос {index} из {total}"
+  next: "Далее"
+  invalid: "<red>Такое значение здесь недопустимо."
+  keep: "Оставить"
+  preview-title: "{plugin}: предпросмотр"
+  preview-text: "Изменятся эти значения:"
+  preview-line: "{target}: {before} → {after}"
+  preview-more: "… и ещё {count}"
+  unchanged: "Всё уже совпадает, менять нечего."
+  finish: "Готово"
+  apply: "Сохранить"
+  back: "Назад"
+  done: "<green>{plugin} настроен. Всё можно изменить в <white>/vadmin config {plugin}</white>."
+
+screen:
+  inventory:
+    hint: "<gray>Клик: как в сундуке · ПКМ: правый клик · присесть или Закрыть: выйти"
+    chest: "Сундук"
+    chest-hint: "<gray>Показать это меню как обычный сундук: чтобы класть предметы, shift-клик или выбросить."
+  settings:
+    saved: "<green>Экран сохранён: соотношение {aspect}."
+    title: "<gold>Экран"
+    current: "<gray>Сейчас: {aspect} · поле зрения {fov}° · размер {scale} %"
+    aspect: "Соотношение сторон"
+    custom: "Своё…"
+    fov-label: "Поле зрения"
+    fov: "{fov}°"
+    scale-label: "Размер"
+    scale: "{scale} %"
+    hint: "<gray>Укажи то же поле зрения, что и в настройках графики Minecraft."
+    done: "Готово"
+    custom-title: "Твоё разрешение"
+    custom-label: "Ширина x высота (например 2560x1440)"
+    custom-ok: "Применить"
+    custom-bad: "<red>Введи так: 2560x1440"
+    unavailable: "<yellow>Для настроек экрана нужен экран; попробуй снова на земле и вне боя."
+  classic:
+    on: "<gray>Классические экраны включены: экраны висят перед тобой, а прицел служит курсором (работает с любыми шейдерами)."
+    off: "<gray>Классические экраны выключены: меню закреплены на экране и управляются указателем."
+  none: "<gray>У тебя нет открытого экрана."
+  refused:
+    disabled: "<yellow>Экраны на этом сервере выключены; используется классическое меню."
+    busy: "<yellow>Экран уже открыт."
+    riding: "<yellow>Сначала слезь с транспорта."
+    gliding: "<yellow>Сначала приземлись."
+    falling: "<yellow>Не во время падения."
+    liquid: "<yellow>Не в воде или лаве."
+    combat: "<yellow>Не сразу после получения урона. Попробуй через несколько секунд."
+    unsupported: "<yellow>Экраны здесь недоступны; используется классическое меню."
+  demo:
+    gif:
+      title: "<gold>{name}"
+      list: "<gray>GIF в {folder}: <white>{names}</white> – запуск: /screen demo gif ИМЯ"
+      missing: "<red>Нет {name}.gif в {folder}."
+      loading: "<gray>Загрузка {name}.gif …"
+      broken: "<red>{name}.gif не читается: {error}"
+      info: "<gray>{frames} кадров на {grid} плитках карты · получаешь только ты"
+    opened: "<gray>Экран открыт ({mode}). Оглядывайся, чтобы двигать указатель, кликай левой или правой кнопкой, присядь, чтобы закрыть."
+    title: "<gold>Vystorm Screens"
+    hello: "Поздороваться"
+    count: "Считать"
+    close: "Закрыть"
+    name: "Имя: {name}"
+    counter: "<gray>Нажато {count} раз"
+    hello-message: "<green>Привет с экрана!"
+    name-title: "Твоё имя"
+    name-label: "Имя"
+    name-ok: "Сохранить"
+    map:
+      title: "<gold>Демо карты"
+      placeholder: "<gray>Карте нужны закреплённые экраны (пакет Core загружен, классические экраны выключены)."
+      zoom: "<gray>{scale} блоков на пиксель"
+      in: "Приблизить (Shift)"
+      out: "Отдалить (прыжок)"
+      hint: "<gray>Нажми на карту, чтобы увидеть координаты."
+      clicked: "<gray>x {x}, z {z}"
+      opened: "<gray>Экран карты открыт ({mode}). Shift приближает, прыжок отдаляет, закрыть — кнопкой или /screen close."
+
+screens-admin:
+  status-on: "<green>Экраны Vystorm включены."
+  status-off: "<red>Экраны Vystorm выключены для всего сервера: каждое меню показывает запасной вид (диалог или сундук)."
+  listed: "<gray>Выключены по отдельности: <white>{names}"
+  seen: "<gray>Меню, открытые с запуска: <white>{names}"
+  usage: "<gray>/vadmin screens all on|off <dark_gray>·</dark_gray> /vadmin screens off NAME <dark_gray>·</dark_gray> /vadmin screens on NAME <dark_gray>(NAME: плагин, panel, inventory или меню из списка)"
+  all-on: "<green>Экраны снова включены."
+  all-off: "<yellow>Экраны выключены для всего сервера. Теперь меню показывают запасной вид."
+  switched-off: "<yellow>{name} теперь остаётся в запасном виде."
+  switched-on: "<green>{name} снова открывается как экран."
+  not-listed: "<red>{name} не выключено."

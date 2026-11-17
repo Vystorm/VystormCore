@@ -1,0 +1,4920 @@
+## The managers (0.64.0)
+
+Capability `CoreApi.Capability.MANAGERS` (`managers`, since `0.64.0`).
+
+Vystorm Core has one hub, the class `Vystorm.vystorm_core.API`, and every area of Core is a **manager** reached
+through one accessor on it: `api.gui()`, `api.settings()`, `api.compat()` and so on. **The managers are the way to
+use Core.** The static classes that the rest of this document names (`PlatformCompat`, `AtomicFiles`, `ConfigEditor`,
+`ChatActions`, `Panels` ...) remain for compatibility and behave exactly as before, so a plugin built against an
+older jar keeps running. Every static method is available on its manager under the same name with the same
+arguments.
+
+Get the hub once, as the first thing in `onEnable`, and keep it in a field:
+
+```java
+import Vystorm.vystorm_core.API;
+import Vystorm.vystorm_core.CoreApi;
+
+private API core;
+
+@Override
+public void onEnable() {
+    if (!CoreApi.atLeast("0.64.0")) {
+        getLogger().severe("Vystorm Core 0.64.0 or newer is required; please update Core first.");
+        getServer().getPluginManager().disablePlugin(this);
+        return;
+    }
+    core = CoreApi.api().orElseThrow();   // empty while Core is not enabled
+    ...
+}
+```
+
+Other classes of your plugin receive `core`, or just the part they use, through their constructor.
+
+Before and after:
+
+```java
+// before 0.64.0: free-standing static classes
+ConfigEditor.register(this, "config.yml", this::reload);
+UpdateSources.spigot(this, 140627);
+CoreCommands.register(this, lang, spec);
+AtomicFiles.write(file, yaml);
+BlockState state = PlatformCompat.getState(block, false);
+player.sendMessage(ChatActions.button("Open", "Opens the menu", p -> open(p)));
+
+// since 0.64.0: through the managers
+core.settings().config().register(this, "config.yml", this::reload);
+core.admin().updates().spigot(this, 140627);
+core.command().register(this, lang, spec);
+core.data().files().write(file, yaml);
+BlockState state = core.compat().platform().getState(block, false);
+player.sendMessage(core.message().chat().button("Open", "Opens the menu", p -> open(p)));
+```
+
+| Accessor | What it covers | Static class it replaces |
+| --- | --- | --- |
+| `api.compat().platform()` | Text, items, inventories, chunks, scoreboards and server facts on every supported server | `compat.PlatformCompat` |
+| `api.compat().server()` | Feature detection, renamed materials, entities, sounds and attributes | `compat.ServerCompat` |
+| `api.compat().inventory()` | Top and bottom inventory of a view | `compat.InventoryCompat` |
+| `api.compat().gameplay()` | Attributes, damage, game rules, entity state | `compat.GameplayCompat` |
+| `api.compat().world()` | Worlds by key, biomes, view distance, world creation | `compat.WorldCompat` |
+| `api.compat().storage()` | Items and entities as bytes | `compat.StorageCompat` |
+| `api.compat().items()` | Item model keys, item arrays as bytes | `compat.ItemCompat` |
+| `api.compat().navigation()` | Mob pathfinding | `compat.MobNavigation` |
+| `api.compat().passengers()` | Teleporting a vehicle with its passengers | `compat.PassengerTeleport` |
+| `api.compat().json()` | Strict JSON reading across Gson versions | `compat.JsonCompat` |
+| `api.compat().clicks()` | Click callbacks for chat components | `compat.ClickActions` |
+| `api.compat().clientEvents()` | Which chunks a client has received | `compat.ClientEvents` |
+| `api.tasks()` | Task groups of a plugin part | `schedule.TaskGroup` |
+| `api.data().files()` | Atomic file writes, safe YAML reads | `_coreMethods.dataStorage.AtomicFiles` |
+| `api.data().versioned()` | Versioned JSON stores with migrations | `storage.VersionedStore` |
+| `api.data().migrationPreviews()` | Previews of data migrations | `storage.MigrationPreviews` |
+| `api.settings().config()` | Plugin YAML files in the admin menu, feature switches, change history | `_uiMethods.settings.ConfigEditor` |
+| `api.settings().prefs()` | Personal preferences stored on the player | `_uiMethods.settings.PlayerPrefs` |
+| `api.command()` | Command trees with localized subcommands, help and aliases (`register`, `adopt`, `find`, `registrations` ...) | `commands.CoreCommands` |
+| `api.message().chat()` | Clickable chat components: buttons, commands, locations | `_uiMethods.chat.ChatActions` |
+| `api.message().channels()` | Tagged chat channels | `chat.ChatChannels` |
+| `api.message().inbox()` | Personal messages for online and offline players | `inbox.Inbox` |
+| `api.message().news()` | The server news board | `news.News` |
+| `api.message().routine()` | Routine notifications a player can switch off | `_uiMethods.notifications.RoutineMessages` |
+| `api.gui().panels()` | Native panels of the client mod with their fallbacks | `panel.Panels` |
+| `api.gui().screens()` | Clickable screens in the player's view | `screen.Screens` |
+| `api.gui().huds()` | HUD corner windows | `screen.Huds` |
+| `api.gui().playerMenu()` | Entries in the menu about another player | `playermenu.PlayerMenu` |
+| `api.gui().profiles()` | Sections on the player profile card | `profile.Profiles` |
+| `api.gui().menuExplorer()` | Recent menus | `_uiMethods.menu.MenuExplorer` |
+| `api.gui().onboarding()` | Milestones of the first-steps guide | `_uiMethods.tutorial.CoreOnboarding` |
+| `api.dialogs().buttons()` | Navigation buttons for dialogs: home, back, category, settings | `_uiMethods.menu.CompatMenuButtons` |
+| `api.area().regions()` | Regions with shapes, priorities, enter and leave events | `region.RegionService.get()` |
+| `api.area().spawnPoints()` | Fixed spawn points per region | `spawn.SpawnPointService.get()` |
+| `api.worldGenerator().worlds()` | Plugin worlds with rebuild on a changed layout, visits | `worlds.ManagedWorlds` |
+| `api.worldGenerator().environments()` | World profiles and detectors | `world.WorldEnvironmentRegistry.get()` |
+| `api.particle().visuals()` | Per-player block projections and particles | `visual.Visuals` |
+| `api.particle().paths()` | Point lists for lines and outlines | `visual.ParticlePaths` |
+| `api.packages().clientBiomes()` | Biomes that only one client sees | `packet.ClientBiomes` |
+| `api.packages().clientChunks()` | Chunks that only one client sees | `packet.ClientChunks` |
+| `api.packages().clientDisplays()` | Map walls that only one client sees | `display.ClientDisplays` |
+| `api.admin().updates()` | Update check sources of plugins | `lifecycle.UpdateSources` |
+| `api.admin().diagnostics()` | Feature diagnostics shown to admins | `lifecycle.FeatureDiagnostics` |
+| `api.debug().low/mid/high(message)`, `api.debug().messages()` | Debug messages without passing the time; `messages()` also has the variants with a failure | `_parsersDebuggerEtc.debugger.DebugMessages` |
+| `api.debug().failures()` | Contained provider failures | `lifecycle.ProviderFailures` |
+| `api.ressource().packs()` | The merged server resource pack | `pack.ResourcePacks` |
+| `api.database().shared()`, `sharedReady()`, `sharedTableName(..)`, `sharedStatus()`, `sharedFailure()` | The shared database pool | `database.SharedDatabase` |
+| `api.player().character()` | Character level and character XP | `progression.CharacterServices` |
+| `api.player().disciplines()` | Disciplines: levels, unlocks, XP | `progression.DisciplineServices` |
+| `api.structureGenerator().supportsFungus(..)`, `supportsWorldTree(..)`, `worldTreeFootprint(..)`, `worldTreeDepth(..)` | Questions about growth plans (next to `fungus(..)` and `worldTree(..)`) | `FungusPlan`, `WorldTreePlan` |
+| `api.events().services()` | World events provided by other plugins | `worldevent.WorldEventServices` |
+| `api.lang().coreLanguage()` | A player's language choice, native names, reload | `lang.CoreLanguage` |
+| `api.priority().stages()` | The order in which plugins handle a shared event (next section) | new |
+| `api.loot()` | Shared loot tables | `loot.LootTables` |
+| `api.loot().rolls()` | Rolls with luck, tiers, pity and conditions | `loot.LootRoll` |
+| `api.loot().mobs()` | Mob drops: ownership, level, rank, extra parts | `loot.MobLoot` |
+| `api.loot().luck()` | Luck sources per player | `loot.LootLuck` |
+| `api.loot().config()` | Loading tables from `loot-tables.yml` | `loot.LootTableConfig` |
+| `api.loot().pouches()` | Durable reward pouches | `item.RewardPouch` |
+| `api.loot().eligibility()` | Whether an entity may give rewards | `progression.RewardEligibility` |
+| `api.web()` | Web modules, login links, live events, game data | `web.WebServices` |
+| `api.web().client()` | The client mod of a player: handshake, capabilities, overlay | `web.ClientServices` |
+| `api.web().clientUi()` | Native elements of the client mod | `web.ClientUi` |
+| `api.parties()` | Parties of players | `party.PartyServices` |
+| `api.items()` | Managed items: create, validate, encode, repair, anvil | `item.ItemServices` |
+| `api.items().refs()` | Item references by namespace | `item.ItemRefs` |
+| `api.items().restrictions()` | Core lock for items | `item.ItemRestrictions` |
+| `api.items().mmoItems()` | MMOItems, if installed | `mythic.MmoItemsBridge` |
+| `api.mobs()` | The mob provider | `mob.MobServices` |
+| `api.mobs().extensions()` | Mechanics, targeters, conditions, triggers, brains, traits, effects | `mob.extension.MobExtensions` |
+| `api.mobs().refs()` | Mob references: Vystorm mobs before MythicMobs | `mob.MobRefs` |
+| `api.mobs().context()` | Context layers for spawning | `mob.MobContextServices` |
+| `api.mobs().relations()` | Who is friend or foe | `mob.RelationServices` |
+| `api.mobs().mythic()` | MythicMobs, if installed | `mythic.MythicMobsBridge` |
+| `api.runtime().actions()` | The action hub | `runtime.RuntimeActionHub.get()` |
+| `api.runtime().context()` | The context hub | `runtime.RuntimeContextHub.get()` |
+| `api.runtime().combat()` | Player-versus-player policies | `combat.CombatRegistry` |
+| `api.runtime().threat()` | Threat scores | `threat.ThreatServices` |
+| `api.runtime().curves()` | Named curves | `curve.CurveRegistry` |
+
+Managers that existed before and are unchanged: `api.vault()`, `api.luckperms()`, `api.nbt()`,
+`api.inventoryInteractor()`, `api.inventoryEvents()`, `api.interactionGenerator()`.
+
+### One way for each job
+
+Some jobs had two entries, an older and a newer one. For each there is one way to use; the older one is marked
+`@Deprecated(since = "0.64.0")`. It is **not** removed and behaves as before, so existing plugins keep running;
+new code should not call it.
+
+| Job | The way to use | Deprecated older way |
+| --- | --- | --- |
+| Commands | `api.command().register(plugin, lang, spec)` (command trees; `adopt`, `find`, `registrations`) | `api.command().registerCommand(..)`, `runCommand(..)`, `getCommandsMenu(player)` |
+| Files of a plugin | `api.data().files()` (atomic writes, safe YAML reads) and `api.data().versioned()` (JSON stores with migrations) | `api.data().loader()`, `creator()`, `saver()`, `deleter()`, `dataEntry(..)`, `dataEntryPut(..)`, `dataEntryRemove(..)`, `getDataSaveState(..)` |
+| Preferences of a player | `api.settings().prefs()` (`bool`, `number`, `text` and their setters; `toggle`, `number`, `choice` for the settings menu) | `api.player().getSetting(..)`, `setSetting(..)`, `addStandardSettings(..)` |
+| Sending text | `api.lang().register(plugin)` once, then `lang.send(viewer, key, placeholders)`; a component that is already built goes out with `api.compat().platform().sendMessage(..)`, `sendActionBar(..)`, `showTitle(..)` | `api.message().sendMessage(player, key)`, `sendMessage(player, key, info)`, `addPlaceholder(..)`, `removePlaceholder(..)` |
+| Regions | `api.area().regions()` (`register`, `at`, `top`, `flag`, enter and leave events) | `api.area().getArea()`, `register(area)`, `update(area)`, `unregister(area)`, `find(location)`, `clear()`, `compare(player)` |
+| Worlds of a plugin | `api.worldGenerator().worlds()` (`register(owner, spec)`, `unregister(owner, id)`, visits) | `api.worldGenerator().create(creator, generator)`, `unload(world, save)` |
+| World events | run them with `api.events().domain(owner, id)`, ask what is running with `api.events().services()` (`active`, `activeAt`, `modifier`) | `api.events().services().register(owner, source)`, `unregister(owner)` and the same two methods on `WorldEventServices` |
+| Navigation buttons of dialogs | `api.dialogs().buttons()` | the class `_uiMethods.menu.MenuButtons` |
+| Typed item tags | `api.nbt().getTag(item, key, type)`, `setTag(item, key, type, value)` | `api.inventoryInteractor().getTag(..)`, `setTag(..)` |
+| Debug output | `api.debug().low/mid/high(message)`, `api.debug().messages()` | `api.debug().low/mid/high(message, time)` for callers; a replacement debugger still implements them |
+
+Not affected: the value encoder `api.data().dataEncoder()`, `api.data().saveAll()`, the per-player data entries of
+`api.player()`, the chunk generators of `api.worldGenerator()` (`register`, `get`, `voidGenerator`, `flatGenerator`)
+and `api.debug().shutdown(message, time)`. They have no second entry.
+
+Rules:
+
+- **Types.** The part for a static class `X` is the interface `XInterface` in the same package
+  (`PlatformCompatInterface`, `AtomicFilesInterface`, `ConfigEditorInterface`). Every part has a constant `DEFAULT`
+  that calls the static class. In unit tests, where no hub exists, pass `XInterface.DEFAULT` or your own fake to the
+  class under test.
+- **Same contracts.** Thread rules, limits and failure handling of a manager method are those of the static
+  method with the same name, as described in the sections below.
+- **What stays static:** `CoreApi` (it finds the hub), builders and value types (`Lang`, `CommandSpec`, `Arg`,
+  `PanelSpec`, `Ui`, `Region`, `WebRoute`, records and enums), the test helpers `PanelTesting`, `CommandTesting`,
+  `ClientUiTesting` and `EventStageTesting`, and pure functions such as `TextWidth`. `DebugMessages` may also still be called directly, for
+  example from a static initialiser.
+- **Core only.** Methods named `initialize`, `shutdown`, `start` or `stop` on the static classes are called by Core
+  itself and are not offered by the managers.
+- **Replacing a manager.** The new managers have `api.overrideCompatHandler(..)`, `overrideTaskHandler`,
+  `overrideLootHandler`, `overrideWebHandler`, `overridePartyHandler`, `overrideItemHandler`, `overrideMobHandler`
+  and `overrideRuntimeHandler`, like the older ones. A part of an existing manager is replaced by overriding the
+  manager and returning another part. All methods have default bodies, so a replacement overrides only what it
+  changes. Replacing a manager affects callers that go through the manager; callers of the static class are not
+  redirected.
+- **Hot paths.** In loops and per-tick code take the part once: `var platform = core.compat().platform();`.
+
+## Event order between plugins (0.64.0)
+
+Capability `CoreApi.Capability.EVENT_STAGES` (`event-stages`, since `0.64.0`).
+
+When several plugins handle the same Bukkit event (block break, interact, damage ...), the order used to depend on
+the `EventPriority` each author happened to choose. Through `api.priority().stages()` a plugin registers a handler
+with a named **stage** that says what the handler does; Core owns the Bukkit listener and calls the handlers of all
+plugins in one order.
+
+```java
+import Vystorm.vystorm_core._coreMethods.eventRegulator.EventStage;
+
+// in onEnable; the methods need no @EventHandler
+core.priority().stages().handle(this, BlockBreakEvent.class, EventStage.PROTECT, this::denyForeignLocks);
+core.priority().stages().handle(this, BlockBreakEvent.class, EventStage.OBSERVE, this::forgetBrokenLock);
+```
+
+| Stage | Use it for | Bukkit priority of Core's listener |
+| --- | --- | --- |
+| `PREPARE` | Preparing data for later handlers; never decides | LOWEST |
+| `PROTECT` | Allowing or denying the action: locks, claims, regions | LOW |
+| `ADJUST` | Changing the outcome (drops, damage, target), gameplay rules | NORMAL |
+| `ACT` | The feature's own work on an allowed action; may consume the event | HIGH |
+| `FINISH` | Last corrections after every feature has acted | HIGHEST |
+| `OBSERVE` | Reading the final result: rewards, statistics, logs | MONITOR |
+
+`EventStages` (package `_coreMethods.eventRegulator`):
+
+| Method | Description |
+| --- | --- |
+| `Registration handle(Plugin owner, Class<E> type, EventStage stage, Consumer<? super E> handler)` | Registers a handler that is skipped while the event is cancelled (like `ignoreCancelled = true`). |
+| `Registration handle(Plugin owner, Class<E> type, EventStage stage, boolean receiveCancelled, Consumer<? super E> handler)` | With `true` the handler also receives cancelled events. |
+| `boolean remove(Registration registration)` | Removes one handler. |
+| `int removeAll(Plugin owner)` | Removes all handlers of a plugin; Core does this when the plugin is disabled. |
+| `List<Registration> handlers(Class<? extends Event> type)` | The handlers that receive this event, in the order Core calls them. |
+| `void order(List<String> pluginNames)` / `void order(String event, List<String> pluginNames)` | Sets the plugin order in general or for one event (normally done in Core's config). |
+| `List<String> order(Class<? extends Event> type)` | The configured order that applies to an event. |
+
+Order of the calls:
+
+1. by stage, in the order of the table;
+2. inside a stage by the list in Core's `config.yml`: `event-order.events.<Event>` if present, else
+   `event-order.plugins`; listed plugins run first, in list order;
+3. plugins that are not listed run by plugin name (case-insensitive), so the order does not depend on the load
+   order of the server;
+4. several handlers of one plugin run in the order they were registered.
+
+```yaml
+# Core config.yml
+event-order:
+  plugins: [VystormWorlds, VystormEstates, VystormLocks]
+  events:
+    BlockBreakEvent: [VystormLocks, VystormEstates]
+```
+
+Cancelling and failures:
+
+- A handler cancels with `event.setCancelled(true)`. Core checks the state before every single handler, so a handler
+  that un-cancels makes the following ones run again.
+- A handler of `OBSERVE` cannot change the cancelled state: Core puts it back and reports the handler.
+- An exception in one handler is logged (at most once a minute per handler) and the other handlers still run.
+- Handlers of a disabled plugin are not called. Handlers run on the thread that fires the event.
+- A handler for an event class also receives its subclasses; `EntityDamageEvent` and `EntityDamageByEntityEvent`
+  share one order. Abstract event classes without a handler list (`PlayerEvent`) are rejected.
+- A handler moved to a stage must lose its `@EventHandler`, or it runs twice.
+
+Nothing changes for an event until a plugin registers a handler for it here; Core then registers one listener per
+stage in use. Handlers of plugins that do not use Core keep their Bukkit priority and therefore their place between
+the stages. Core's own listeners and the NBT actions of `api.priority()` are unchanged; the NBT actions run at
+NORMAL before the `ADJUST` handlers.
+
+### Testing staged handlers without a server
+
+`EventStageTesting` (same package) gives a unit test a registry of its own that is not connected to Bukkit: no
+server, no static mocks, nothing shared with the real registry or with another test. Handlers are registered exactly
+as in a plugin, and `fire(event)` runs Core's real dispatcher, so the order (stage, configured plugin order, plugin
+name, registration), cancelling, the `OBSERVE` rule and the failure handling are those of the server.
+
+```java
+EventStageTesting stages = EventStageTesting.detached();
+Plugin other = EventStageTesting.plugin("OtherPlugin");               // an enabled plugin with that name
+stages.handle(other, BlockBreakEvent.class, EventStage.ACT, event -> calls.add("act"));
+locks.handleBlockEvents(stages.stages());                             // the method that registers your handlers
+
+BlockBreakEvent event = stages.fire(new BlockBreakEvent(chest, stranger));
+assertTrue(event.isCancelled());
+assertEquals(List.of(), calls);                                       // PROTECT denied before ACT ran
+```
+
+If the plugin asks the hub itself (`core.priority().stages()`), stub the hub with the detached registry:
+
+```java
+API core = mock(API.class);
+when(core.priority()).thenReturn(stages.priority());
+```
+
+| Method | Description |
+| --- | --- |
+| `static EventStageTesting detached()` | A new, empty registry without a server. |
+| `static Plugin plugin(String name)` | An enabled plugin with this name to own handlers (no mocking library needed); a mocked owner must answer `getName()` and `isEnabled() = true`. |
+| `EventStages stages()` | The registry itself, to pass to the code under test. |
+| `PriorityInterface priority()` | A priority manager whose `stages()` is this registry, for a stubbed hub; its NBT actions do nothing. |
+| `Registration handle(...)` (both overloads), `boolean remove(Registration)`, `int removeAll(Plugin)`, `List<Registration> handlers(Class<? extends Event> type)` | The same methods as on `EventStages`, applied to this registry. |
+| `EventStageTesting order(List<String> pluginNames)` / `order(String event, List<String> pluginNames)` | Sets the plugin order that Core's `config.yml` sets on a server. |
+| `<E extends Event> E fire(E event)` | Calls the handlers like the server (one dispatch per stage in use, LOWEST to MONITOR) and returns the event. An exception in a handler is logged, not thrown. |
+
+Only staged handlers exist in such a test: listeners registered with `@EventHandler` are not called by `fire`.
+
+## Core 0.51.0: shared Bukkit adapters
+
+Capability `CoreApi.Capability.BUKKIT_COMPAT` (`bukkit-compat`, since `0.51.0`). New adapters are additive and live in `Vystorm.vystorm_core.compat`. Paper uses its native implementations when available; Bukkit/Spigot equivalents use real server operations. World/entity mutations and callback registration run on the server thread. `teleportAsync` and `getChunkAtAsync` return futures and marshal Bukkit operations to that thread.
+
+| Class | Public entry points |
+| --- | --- |
+| `PlatformCompat` | `sendMessage(CommandSender, Component/String/String...)`, `sendActionBar(Player, Component/String)`, `showTitle(Player, Title)`, `showBossBar/hideBossBar(Player, BossBar)`, `playSound(Player, adventure.sound.Sound)` |
+| `PlatformCompat` | `displayName(ItemMeta/Player, Component)` and getters; `lore(ItemMeta/ItemStack, List<Component>)` and getters; `editMeta(ItemStack, Consumer<ItemMeta>)` and typed overload; `createInventory(InventoryHolder, int/InventoryType, Component/String)`; `customName(Nameable, Component)` and getter; `text(TextDisplay, Component)` |
+| `PlatformCompat` | `locale(Player)`, `getPlayerProfile(Player): org.bukkit.profile.PlayerProfile`, `translationKey(Material/EntityType)`, `getCurrentTick()`, `getMinecraftVersion()`, `getTPS()`, `getAverageTickTime()`, `isStopping()`, `getCommandMap()`, `getKnownCommands(CommandMap)` |
+| `PlatformCompat` | `getChunkAtAsync(World,int,int[,boolean])`, `teleportAsync(Entity,Location[,TeleportCause])`, `getOfflinePlayerIfCached(String)`, `getNearbyPlayers(Location,double)`, `getNearbyEntitiesByType(World,Class<T>,Location,double)`, `getChunkKey(Chunk/int,int)`, `getState(Block,boolean)`, `getSendViewDistance(Player)`, `isChunkLoaded(Location)` |
+| `PlatformCompat` | `lockFreezeTicks(Player,boolean)`, `setFreezeTicks(Player,int)`, `calculateTotalExperiencePoints(Player)`, `setExperienceLevelAndProgress(Player,int)`, `enchantWithLevels(ItemStack,int,boolean,Random)`, `setResourcePack(Player,UUID,String,byte[],Component,boolean)`, `sendMultiBlockChange(Player,Map<Location,BlockData>)` |
+| `PlatformCompat` | `registerNewObjective(Scoreboard,String,Criteria,Component)`, `customName(Score,Component)`, `blankNumberFormat(Objective)` |
+| `StorageCompat` | `serializeAsBytes(ItemStack)`, `deserializeBytes(byte[])`, `serializeEntity(Entity)`, `deserializeEntity(byte[],World)`, `spawnAt(Entity,Location)` |
+| `WorldCompat` | keyed world lookup/creation, `computedBiome(World,int,int,int)`, world view/simulation distances, coordinate scale, chunk-send state, fluid scheduling, replaceability, falling-block spawning, loot-table and biome-provider access |
+| `GameplayCompat` | Bukkit equivalents for item quantities/durability, healing, nearby living entities, target ray traces, equipment, attributes, weather exposure and spawn provenance; see the public method Javadocs for specific signatures |
+| `MobNavigation` | `moveTo(Mob,Location,double)`, `stop(Mob)` and goal management through the real server navigator |
+| `PassengerTeleport` | `teleportRetainingPassengers(Entity,Location): boolean`; restores the passenger tree and attempts rollback when a teleport is cancelled |
+| `ClientEvents` | Bukkit events `Loaded`, `Unloaded` (`getPlayer/getChunk/getWorld`) and `Interact` (`getEntityId/isAttack/getHand`), plus `sent(Player,long)`, `sentKeys(Player)`, `sentChunks(Player)` |
+| `ClickActions` | `callback(Plugin,Consumer<Player>,int,Duration)` returns an expiring `ClickEvent`; `-1` means unlimited uses; disabled owners cannot execute and Core releases their callbacks |
+
+Use `PlatformCompat.setFreezeTicks` while a freeze lock is active so the Bukkit maintenance task retains plugin changes. Cache-only offline-player lookup never invokes the name lookup that can contact Mojang. Native item/entity persistence retains data components and PDC, assigns a new entity UUID, and does not spawn during deserialization. Newer Minecraft data cannot be assumed downgrade-safe. `ItemCompat.deserialize` additionally reads both Paper's version-1 inventory array and Core's older framed array.
+
+`compat.dialog.DialogInput.Builder.labelFormat(String)` retains optional slider label formats on native Paper dialogs; the previous record constructor remains available.
+
+The Bukkit fallback keeps styled text in item names and inventory titles; full JSON components are retained for player chat, including click/hover events. Spigot uses clickable chat forms when Paper dialogs are unavailable. `ClientEvents` observes actual outbound chunks rather than assuming that all loaded server chunks are visible. Native packet features still require their runtime adapters to report support.
+
+## Compatibility helpers (since 0.48.0)
+
+Capability: `CoreApi.Capability.SERVER_COMPAT` (`server-compat`, since `0.48.0`). Core supports Paper 1.20.6–26.x with Java 21 bytecode. Feature checks describe the running server, independently of Core's version/capability list.
+
+```java
+import Vystorm.vystorm_core.compat.ServerCompat;
+
+boolean nativeDialogs = ServerCompat.hasDialogs();
+boolean available = ServerCompat.hasClass("some.optional.ServerType");
+Material wood = ServerCompat.material("minecraft:pale_oak_log", Material.OAK_LOG);
+EntityType mob = ServerCompat.entity("minecraft:creaking", EntityType.ZOMBIE);
+Sound sound = ServerCompat.sound("minecraft:entity.creaking.ambient", Sound.ENTITY_ZOMBIE_AMBIENT);
+```
+
+Signatures: `boolean hasDialogs()`, `boolean hasClass(String name)`, `Material material(String key, Material fallback)`, `EntityType entity(String key, EntityType fallback)`, `Sound sound(String key, Sound fallback)`, and `Attribute attribute(String modernConstant, String legacyConstant)`. Missing values return the supplied fallback (which may be null); `attribute` returns null when neither name exists. Class detection does not initialize the optional class. Registry lookups require an initialized server. Use namespaced registry keys for entities/sounds, not references to new constants in shared code.
+
+Portable forms use `Vystorm.vystorm_core.compat.dialog.DialogInterface`, `DialogRequest`, `DialogButton`, `DialogBody`, `DialogInput` and `DialogResponseView`. `CoreApi.api().orElseThrow().dialogs()` implements this interface in addition to the unchanged historical native-dialog API. All form operations run on the server thread. The new overload `open(Plugin, Player, compat.dialog.DialogRequest)` converts to native dialogs where supported and otherwise uses expiring, player-bound chat forms. `prompt`, `confirm`, `close`, `removeAll` and `clear` also work on 1.20.6. Plugin disable releases owned sessions through the existing lifecycle cleanup.
+
+```java
+Vystorm.vystorm_core.compat.dialog.DialogInterface forms = CoreApi.api().orElseThrow().dialogs();
+forms.prompt(plugin, player, "Title", "Value", "initial",
+        value -> save(value), () -> {}, Player::isOnline);
+```
+
+`DialogRequest` carries title, body, inputs, buttons, validity predicate, cancel callback, cancel label and columns; the six-argument constructor supplies the normal exit label and three columns. Body factories: `plainMessage(Component[, int width])`, `item(ItemStack).build()`. Input factories: `text(key, label)`, `bool(key, label)`, `numberRange(key, label, start, end)`, `singleOption(key, label, entries)`; builders accept initial value and relevant width/length/step constraints. `DialogResponseView` exposes `getText`, `getBoolean` and `getFloat`. Chat forms collect inputs sequentially and show action buttons afterwards; multiline layout and item illustrations require native dialogs. Existing plugins constructing Paper `DialogBody`/`DialogInput` objects must guard those code paths with `hasDialogs()`.
+
+`ItemCompat.model(ItemMeta)` returns a model key or null. `ItemCompat.serialize(ItemStack[])` / `deserialize(byte[])` preserve slots using native serialization on modern servers and a framed per-item format on 1.20.6. Newer Core reads the legacy frame after upgrade; this does not make newer Minecraft item data downgrade-safe. `JsonCompat.reader(String)` validates strict JSON lexical syntax and configures the reader for the available Gson version; read through a Gson type adapter to avoid older `JsonParser` methods switching back to lenient mode.
+# Vystorm Core 0.30.0 – Plugin API Reference
+
+A self-contained reference for building Paper/Purpur plugins on top of **Vystorm Core** – written for humans and for AI
+coding assistants ("vibe coding"). With this file and the Core jar on the compile classpath you should be able to write
+a working plugin without reading Core's source.
+
+Compatibility update in 0.28.1: the server descriptor allows Paper/Purpur from 1.21.8, still requiring Java 25.
+Compile against the Paper 1.21.11 / Adventure 4 API when targeting that range: Adventure 5 builder call
+descriptors are not backward compatible. Modern login events are isolated from the common world protection listener.
+World storage uses named folders on 1.21.x and keyed dimension folders on 26.x; public Core API signatures are unchanged.
+See [tested builds and limitations](../COMPATIBILITY.md). The older reference baseline below remains historical.
+
+New in 0.28.0: optional paid-plugin RAM modules and customer leases, capability
+`CoreApi.Capability.LICENSED_MODULES` (`licensed-modules`, since `0.28.0`). Public API:
+`new ModuleRequest(URI, String product, String version, String customerKey, PublicKey, String packagePrefix, String entryPoint)`,
+`LicensedModules.start(Plugin, ModuleRequest, Consumer<State>) -> Session`, `Session.active()/state()/close()`,
+`LicensedModules.release(Plugin)/shutdown()`, and remote entry point `LicensedModule.start(Plugin, BooleanSupplier)/stop()`.
+All types are in `Vystorm.vystorm_core.licensing`; lifecycle calls run on the server thread. A compatible backend is
+required; the existing shop license verification endpoint is insufficient. Full protocol, integration example,
+limits and cleanup requirements are in the linked reference. The older baseline verification statement below applies
+to the original reference; this additive section documents 0.28.0.
+
+- Core version documented here: **0.24.0** (`0.24.0-Vystorm-Core-26.2`), Minecraft/Paper **26.2**, Java **25**.
+- Every class, method and limit below was checked against the 0.24.0 jar and source. If something is not listed here,
+  treat it as internal.
+- Package root: `Vystorm.vystorm_core` (capital `V`). Some legacy names contain typos on purpose – they are public API
+  and never change: `GuiInteface`, `singeltons`, `AdminComand`, `ressource()`, `luckperms()`, main class `main`.
+- In signatures below, `Player`, `Plugin`, `Component`, `JsonElement` etc. are the usual Bukkit/Paper/Adventure/Gson types.
+
+## Contents
+
+1. [Setup](#1-setup)
+2. [Build a plugin in 10 minutes](#2-build-a-plugin-in-10-minutes)
+3. [Ground rules: threads, lifecycle, errors](#3-ground-rules-threads-lifecycle-errors)
+4. [Localization (`api.lang()`)](#4-localization-apilang)
+5. [Settings (`api.settings()`)](#5-settings-apisettings)
+6. [Menus and managed inventories (`api.gui()`)](#6-menus-and-managed-inventories-apigui)
+7. [Native dialogs (`api.dialogs()`)](#7-native-dialogs-apidialogs)
+8. [Chat actions and menu buttons](#8-chat-actions-and-menu-buttons)
+9. [Tutorials](#9-tutorials)
+10. [Admin dashboard modules (`api.admin()`)](#10-admin-dashboard-modules-apiadmin)
+11. [Shared database](#11-shared-database)
+12. [Player data, XP, preferences, file storage](#12-player-data-xp-preferences-file-storage)
+13. [Debug messages](#13-debug-messages)
+14. [Web platform](#14-web-platform)
+15. [Client mod: overlay and native HUD elements](#15-client-mod-overlay-and-native-hud-elements)
+16. [Items, regions, curves, NBT and legacy handlers](#16-items-regions-curves-nbt-and-legacy-handlers)
+17. [Cross-plugin services](#17-cross-plugin-services)
+18. [Native panels](#18-native-panels-vystormvystorm_corepanel)
+19. [Not public API](#19-not-public-api)
+20. [Rules for AI assistants](#20-rules-for-ai-assistants)
+21. [Versioning and compatibility](#21-versioning-and-compatibility)
+22. [Appendix: Core commands and permissions](#22-appendix-core-commands-and-permissions)
+23. [Managed worlds and visits](#23-managed-worlds-and-visits-vystormvystorm_coreworlds)
+24. [Commands](#24-commands-vystormvystorm_corecommands)
+
+---
+
+## 1. Setup
+
+### 1.1 Gradle (compile against the local Core jar)
+
+Core is not published to a Maven repository. Put the jar next to your project (e.g. `libs/Vystorm_Core.jar`) and use
+it **compileOnly** – never shade it; the server loads Core as its own plugin.
+
+```kotlin
+// build.gradle.kts
+plugins { java }
+
+group = "com.example"
+version = "1.0.0"
+
+// -PvystormCoreJar=/path/to/VystormCore-0.24.0.jar overrides the default location
+val coreJar = file(providers.gradleProperty("vystormCoreJar").getOrElse("libs/Vystorm_Core.jar"))
+
+repositories {
+    mavenCentral()
+    maven("https://repo.papermc.io/repository/maven-public/")
+}
+
+dependencies {
+    compileOnly("io.papermc.paper:paper-api:26.2.build.121-stable")
+    compileOnly(files(coreJar))
+    testImplementation(files(coreJar))            // optional, for unit tests (e.g. Lang.create)
+}
+
+java { toolchain.languageVersion = JavaLanguageVersion.of(25) }
+
+tasks.withType<JavaCompile>().configureEach {
+    options.encoding = "UTF-8"
+    options.release = 25
+}
+
+tasks.processResources {
+    val v = project.version.toString()
+    inputs.property("version", v)
+    filesMatching("plugin.yml") { expand("version" to v) }
+}
+
+tasks.compileJava {
+    doFirst { require(coreJar.isFile) { "Vystorm Core jar missing: -PvystormCoreJar=/path/to/core.jar" } }
+}
+```
+
+Notes:
+- Gson (`com.google.gson`) and Adventure/MiniMessage come with Paper; you do not need extra dependencies for the web or
+  lang APIs.
+- Only the legacy `api.database().getDataSource(id)` returns a `HikariDataSource`; if you call it, add
+  `compileOnly("com.zaxxer:HikariCP:5.1.0")`. The shared-database API (`shared()`, `sharedReady()`) only uses
+  `javax.sql.DataSource`.
+
+### 1.2 `plugin.yml`
+
+```yaml
+name: MyPlugin
+version: '${version}'
+main: com.example.myplugin.MyPlugin
+api-version: '26.2'
+depend: [vystorm_core]        # or softdepend if Core is optional for you
+```
+
+Core's plugin name is **`vystorm_core`** and it loads with `load: STARTUP`, so with `depend` it is always enabled before
+your `onEnable`. Use `softdepend` only if your plugin also works without Core – then guard every Core call (1.4).
+
+### 1.3 Getting the API
+
+```java
+import Vystorm.vystorm_core.API;
+import Vystorm.vystorm_core.CoreApi;
+
+API core = CoreApi.api().orElseThrow(() -> new IllegalStateException("Vystorm Core is not enabled"));
+```
+
+| Access | Returns | Notes |
+| --- | --- | --- |
+| `CoreApi.api()` | `Optional<API>` | Empty before Core's `onEnable` and after its `onDisable`. Preferred. |
+| `getServer().getServicesManager().load(API.class)` | `API` or `null` | Same instance (Core registers it as a Bukkit service). |
+| `main.getApi()` | `API` | Legacy; may return a stale instance after Core was disabled. Avoid in new code. |
+
+`API` is the entry point for the per-feature handlers (`api.lang()`, `api.settings()`, `api.gui()`, …). Many newer
+services are static facades in their own packages (`WebServices`, `ClientUi`, `SharedDatabase`, `ItemRefs`, …) and do
+not need the `API` instance.
+
+### 1.4 Version and capability checks
+
+`Vystorm.vystorm_core.CoreApi` (since 0.11.0, all methods thread-safe):
+
+| Member | Description |
+| --- | --- |
+| `static final String VERSION` | Running Core version, e.g. `0.24.0-Vystorm-Core-26.2` (`0.0.0` if unknown). Not a compile-time constant, so you always see the runtime value. |
+| `static String version()` | Same as `VERSION`. |
+| `static boolean atLeast(String minimum)` | Compares only the numeric `x.y.z` part. |
+| `static boolean has(String capability)` | Whether this Core has the capability; unknown names → `false`. Case-insensitive. |
+| `static Optional<String> since(String capability)` | Version that introduced the capability. |
+| `static Map<String, String> capabilities()` | All capabilities → since-version (unmodifiable). |
+| `static int compare(String a, String b)` | Numeric version comparison. |
+| `static Optional<API> api()` | See 1.3. |
+| `static Plugin plugin()` | Core's `Plugin`, or `null` if not loaded. |
+
+Capability names are strings in `CoreApi.Capability` (use the constants, e.g. `CoreApi.Capability.WEB`):
+
+| Constant | Name | Since | What it guarantees |
+| --- | --- | --- | --- |
+| `RUNTIME_HUBS` | `runtime-hubs` | 0.2.0 | `runtime.RuntimeContextHub`, `RuntimeActionHub` |
+| `COMBAT_REGISTRY` | `combat-registry` | 0.2.0 | `combat.CombatRegistry` |
+| `THREAT` | `threat` | 0.2.0 | `threat.ThreatServices` |
+| `WORLD_EVENTS` | `world-events` | 0.3.0 | `worldevent.WorldEventServices` |
+| `VERSIONED_STORE` | `versioned-store` | 0.3.0 | `storage.VersionedStore` |
+| `CONFIG_MIGRATOR` | `config-migrator` | 0.3.0 | `config.ConfigMigrator` |
+| `TASK_GROUPS` | `task-groups` | 0.3.0 | `schedule.TaskGroup` |
+| `MYTHIC_BRIDGE` | `mythic-bridge` | 0.3.0 | `mythic.MythicMobsBridge` |
+| `REGIONS` | `regions` | 0.4.0 | `region.RegionService` |
+| `CURVES` | `curves` | 0.5.0 | `curve.Curve`, `CurveRegistry`, `RelativeStat` |
+| `PARTY` | `party` | 0.6.0 | `party.PartyServices` |
+| `SETTINGS` | `settings` | 0.7.0 | `api.settings()` |
+| `CHAT_ACTIONS` | `chat-actions` | 0.8.0 | `_uiMethods.chat.ChatActions` |
+| `MOB_SERVICES` | `mob-services` | 0.9.0 | `mob.MobServices`, `RelationServices`, `MobContextServices`, `MobExtensions` |
+| `ITEM_REFS` | `item-refs` | 0.9.0 | `item.ItemRefs` |
+| `ITEM_SERVICES` | `item-services` | 0.10.0 | `item.ItemServices` |
+| `RESOURCE_PACK` | `resource-pack` | 0.10.0 | `pack.ResourcePacks` |
+| `DISCIPLINES` | `disciplines` | 0.10.0 | `progression.DisciplineServices` |
+| `LIFECYCLE_CLEANUP` | `lifecycle-cleanup` | 0.10.3 | Registries are released automatically on plugin disable |
+| `TRIGGER_SINK_OWNER` | `trigger-sink-owner` | 0.10.3 | `MobExtensions.sink(Plugin, TriggerSink)` |
+| `CORE_API` | `core-api` | 0.11.0 | `CoreApi` itself |
+| `MANAGERS` | `managers` | 0.64.0 | Every static service class is reachable through a manager of `API` under the same method names: `api.compat()`, `api.tasks()`, `api.loot()`, `api.web()`, `api.parties()`, `api.items()`, `api.mobs()`, `api.runtime()` and parts of the existing managers such as `api.data().files()`, `api.settings().config()`, `api.message().chat()`, `api.gui().panels()` (see "The managers (0.64.0)" at the top) |
+| `EVENT_STAGES` | `event-stages` | 0.64.0 | `api.priority().stages()`: handlers of shared Bukkit events registered with a named stage (`EventStage`), called by Core in one configured plugin order, `event-order` in Core's `config.yml`; `EventStageTesting` for unit tests without a server (see "Event order between plugins (0.64.0)" at the top) |
+| `ITEM_REF_PRIORITY` | `item-ref-priority` | 0.12.0 | Several `ItemRefs` providers per namespace with priority |
+| `MOB_REFS` | `mob-refs` | 0.12.0 | `mob.MobRefs` |
+| `SPAWN_POINTS` | `spawn-points` | 0.13.0 | `spawn.SpawnPointService` |
+| `SHARED_DATABASE` | `shared-database` | 0.14.0 | `database.SharedDatabase`, `SchemaMigrator`, `api.database().shared()` |
+| `CHARACTER` | `character` | 0.16.0 | `progression.CharacterServices` |
+| `WEB` | `web` | 0.17.0 | `web.WebServices`, `WebModule`, `WebRoute` |
+| `WEB_LIVE` | `web-live` | 0.18.0 | `WebServices.push`, `publishData`, `WebModule.Builder.snapshot` |
+| `WEB_CLIENT` | `web-client` | 0.19.0 | `web.ClientServices` (overlay instead of menu) |
+| `WEB_CLIENT_UI` | `web-client-ui` | 0.20.0 | `web.ClientUi`, `ClientElement`, client events |
+| `WEB_CLIENT_TRUST` | `web-client-trust` | 0.21.0 | `ClientServices.originTrusted`, protocol 2 |
+| `LOCALIZATION` | `localization` | 0.22.0 | `api.lang()`, `lang.Lang`, `lang.Localization` |
+| `WEB_LOCALIZATION` | `web-localization` | 0.23.0 | `WebContext.language()`, `/core/i18n`, `{{…}}` tokens, `Lang.ref` in web titles/errors |
+| `WEB_OPEN` | `web-open` | 0.24.0 | `WebServices.openOrLink/openOrElse/overlayPage/broadcast`, bundled web UI |
+| `WEB_SETTINGS` | `web-settings` | 0.24.0 | Web page `/app/settings`, `SettingsInterface.changed(player)` |
+| `PANELS` | `panels` | 0.25.1 | `panel.Panels`/`PanelSpec`/`Ui`: native panels of the client mod (§18), panel events, `GuiInteface.menuEntries` |
+| `MANAGED_WORLDS` | `managed-worlds` | 0.26.0 | `worlds.ManagedWorlds`, `WorldSpec`, `VisitService`, `VisitPolicy` (§23), `/vworlds` |
+| `ASYNC_DURABLE_VISITS` | `async-durable-visits` | 0.26.2 | Durable background admission; valuables/identity revalidation since 0.26.3 (§23) |
+| `VISIT_RESTORE_OUTCOME` | `visit-restore-outcome` | 0.26.1 | `VisitService.restoreOutcome(Player)`, public `RestoreOutcome` (§23) |
+| `ADMIN_MODULES` | `admin-modules` | 0.26.4\* | `api.admin()` modules (§10), incl. replacing a built-in catalog entry by id |
+| `TUTORIALS` | `tutorials` | 0.26.4\* | `api.registerTutorial(Plugin)`, `TutorialGuide` (§9) |
+| `ATOMIC_FILES` | `atomic-files` | 0.26.4\* | `_coreMethods.dataStorage.AtomicFiles` (exists since 0.11.0) |
+| `TASK_GROUP_ONE_SHOTS` | `task-group-one-shots` | 0.26.4 | `TaskGroup` forgets one-shot tasks after they ran; schedules via the plugin's server |
+| `MMOITEMS_IDS` | `mmoitems-ids` | 0.26.4 | `MmoItemsBridge.idOf(ItemStack)` → `TYPE:ID` of an MMOItems stack |
+| `WEB_OPEN_LABEL` | `web-open-label` | 0.26.4 | `WebServices.openOrLink(player, module, subPath, label, fallback)` with own chat-link label |
+| `COMBAT_KINDS` | `combat-kinds` | 0.26.4 | `CombatRegistry.Kind` (`HARM`/`SUPPORT`) in `Context`, `evaluate(attacker, target, kind)`, `kindOf(effects)` |
+| `MOB_SPAWN_RULES` | `mob-spawn-rules` | 0.26.4\* | `MobService.spawnRules()`, `MobSpawnRule` (exist since 0.15.0) |
+| `CLIENT_UI_EXTENSIONS` | `client-ui-extensions` | 0.26.4 | Native elements for client ≥ 0.9.0 (`ClientServices.CAP_UI_EXTENSIONS`): `ClientElement.list`, `Bar.rate/countdown` + label placeholders, `Hud.stack`, `Marker.entity/yOffset/ground`, tooltip placeholders `ClientElement.data(path)`, `matchCustomDataPresent/Viewer` (AND), `Icon.item(ItemStack)`, `ClientUi.visible` (§15.5) |
+| `CLIENT_TOAST_ACTIONS` | `client-toast-actions` | 0.26.4 | `ClientUi.toast(Player, Toast, Consumer<Player>)`, `Toast.action(label)` (§15.6) |
+| `CLIENT_UI_TESTING` | `client-ui-testing` | 0.26.4 | `panel.PanelTesting`, `web.ClientUiTesting` for plugin unit tests without a server (§15.7, §18.11) |
+| `CONFIG_EDITOR` | `config-editor` | 0.27.0 | `_uiMethods.settings.ConfigEditor`: whole plugin YAML files in the native admin settings, secrets hidden, permission `vystorm_core.config.<plugin>`, missing defaults merged with backup (§5.6) |
+| `PERMISSION_LIST` | `permission-list` | 0.27.0 | `/vadmin permissions [plugin] [page]`, `_uiMethods.admin.PermissionList` (§22) |
+| `CONFIG_EDITOR_MERGE_OPTION` | `config-editor-merge-option` | 0.27.1 | `ConfigEditor.register(owner, file, reload, mergeDefaults)`; only `config.yml` gets missing defaults merged automatically (§5.6) |
+| `MYTHIC_ITEM_DROPS` | `mythic-item-drops` | 0.27.2 | Optional MythicMobs custom drops resolve `vystorm{id=...}` through ItemRefs; legacy `mmoitems{type=...;id=...}` when MMOItems is absent. ItemRefs unique-item and single-stack quantity rules apply. |
+| `PLAYER_MENU` | `player-menu` | 0.43.0 | `playermenu.PlayerMenu`, `PlayerMenuEntry`: your entries in the shift-right-click menu about another player, `/menu player <name>` (see "Player menu (0.43.0)" at the end) |
+| `SERVER_COMPAT` | `server-compat` | 0.48.0 | Server feature detection, key lookups and portable forms for Paper 1.20.6–26.x. |
+| `SERVER_POLLS` | `server-polls` | 0.47.0 | Timed server polls via `/vpoll` with configurable limits and localized voting. |
+| `PROFILES` | `profiles` | 0.56.0 | `profile.Profiles`: add lines about a player to the profile card (`/menu profile`), see "Profile cards (0.56.0)" at the end |
+| `INBOX` | `inbox` | 0.55.0 | `inbox.Inbox`: personal messages for a player, rendered from your language bundle when read, `/menu inbox` (see "Inbox (0.55.0)" at the end) |
+| `NEWS_EDIT` | `news-edit` | 0.46.0 | Edit news in place with the news dialog or `/vadmin news edit`; no new Java API required. |
+| `NEWS` | `news` | 0.44.0 | `news.News`: post to the server news board players see on join and in `/menu news` (see "News board (0.44.0)" at the end) |
+| `CLIENT_DISPLAYS` | `client-displays` | 0.44.0 | `display.ClientDisplays`/`MapWall`: client-only walls of item frames with maps (packets only, no server entities or maps), Paper/Purpur 1.21.8 to 26.2, runtime check `ClientDisplays.supported()` (see "Client-only displays (0.44.0)" at the end) |
+| `CLIENT_CHUNKS` | `client-chunks` | 0.45.0 | `packet.ClientChunks`: whole chunks that exist only on one player's client (previews of terrain the server has not generated), Paper/Purpur 1.21.8 to 26.3, runtime check `ClientChunks.supported()` (see "Client-only chunks (0.45.0)" at the end) |
+| `CONFIG_HISTORY` | `config-history` | 0.44.0 | `ConfigEditor.history(viewer, plugin, page)`, `ConfigEditor.undo(viewer, id, force)`: change history of the config editor with undo, `/vadmin config history` (§5.6) |
+| `FEATURE_SWITCHES` | `feature-switches` | 0.60.0 | Feature switches of a plugin as a screen (`/vadmin features`): every boolean `enabled` key of a registered `config.yml` plus `ConfigEditor.feature(owner, path[, label, description])`; `notFeature(owner, path)` excludes a key, `openFeatures(player[, plugin])` opens the screen (§5.6) |
+| `CONFIG_MENU` | `config-menu` | 0.54.0 | Chest menu for all registered configs, `ConfigEditor.registerAll(owner, reload)`, first-run setups from `setup.yml` in the plugin jar, `/vadmin setup [plugin]` (§5.6) |
+| `LANGUAGE_SELECTION` | `language-selection` | 0.45.0 | `/language` menu and command, `lang/zh_cn.yml`, `Localization.fallbackChain/coverage/selectableLanguages/serverLanguage/forced`, `Lang.coverage/keys/translation/wrappedLines`, `PlayerLanguageChangeEvent`, `CoreLanguage.setChoice`, `TextWidth`, `/vadmin language audit\|export\|import` (§4.3) |
+| `COMMANDS` | `commands` | 0.45.0 | `commands.CoreCommands`, `CommandSpec`, `Arg`, `CommandContext`, `CommandRegistration`, `CommandTesting`: command trees with localized subcommands, keyword values, help and root aliases, `/vhelp`, `/vadmin commands`, plugin.yml adapter (§24) |
+| `PANEL_EXTRAS` | `panel-extras` | 0.26.4 | `Result.pending()` + `PanelAction.complete`, `PanelAction.closeAndThen`, `Ui.Progress.rate`, `Ui.Form.confirm`, `ListView/Table.selected`, `ListItem.selected`, `Button.openSettings`, `Ui.item(ItemStack)` (§18.4–18.6) |
+| `ITEM_RESTRICTIONS` | `item-restrictions` | 0.26.0 | `item.ItemRestrictions`; `ItemServices.validate` reports restricted items as `QUARANTINED` |
+| `BUKKIT_COMPAT` | `bukkit-compat` | 0.51.0 | `compat.PlatformCompat`, `compat.StorageCompat`, `compat.WorldCompat`, `compat.GameplayCompat`, `compat.MobNavigation`, `compat.PassengerTeleport`, `compat.ClientEvents`, `compat.ClickActions` |
+| `FEATURE_DIAGNOSTICS` | `feature-diagnostics` | 0.26.5 | `lifecycle.FeatureDiagnostics.register`, `lifecycle.FeatureDiagnostics.inspect` |
+| `UPDATE_CHECK` | `update-check` | 0.40.0 | Built-in `/vadmin updates`; `CoreApi.has` checks the flag, `UpdateSources.spigot` registers consumer resources since 0.40.2 |
+| `UPDATE_SOURCES` | `update-sources` | 0.40.2 | `lifecycle.UpdateSources.spigot` |
+| `LICENSED_MODULES` | `licensed-modules` | 0.28.0 | `licensing.LicensedModules`, `licensing.ModuleRequest`, `licensing.LicensedModule` |
+| `NETWORK` | `network` | 0.53.0 | `CoreApi.network`, `network.Network` |
+| `LANGUAGE_AUDIT` | `language-audit` | 0.26.5 | `lang.Lang.audit` |
+| `SETTINGS_DRAFTS` | `settings-drafts` | 0.26.5 | `_uiMethods.settings.SettingsDraft` |
+| `SETTINGS_PROFILES` | `settings-profiles` | 0.26.5 | `_uiMethods.settings.SettingsProfiles`, `_uiMethods.settings.SettingPolicy` |
+| `SETUP_WIZARD` | `setup-wizard` | 0.52.0 | `_uiMethods.settings.SetupWizard.open`, `_uiMethods.settings.SettingsProfiles` |
+| `MENU_EXPLORER` | `menu-explorer` | 0.26.5 | `_uiMethods.menu.MenuExplorer.open`, `_uiMethods.autoGui.GuiInteface.menuEntries` |
+| `MENU_HISTORY_CLEAR` | `menu-history-clear` | 0.49.0 | `_uiMethods.menu.MenuExplorer.clearRecent` |
+| `MENU_ACCESS_DIAGNOSTICS` | `menu-access-diagnostics` | 0.26.5 | `_uiMethods.autoGui.GuiInteface.inspectMenus`, `_uiMethods.autoGui.GuiInteface.menuAccessReason`, `_uiMethods.autoGui.GuiInteface.menuRequiredPermission` |
+| `CHAT_CHANNELS` | `chat-channels` | 0.26.6 | `chat.ChatChannels.tag`, `chat.ChatChannels.send`: tag ordinary chat; callers select recipients |
+| `ONBOARDING` | `onboarding` | 0.26.5 | `_uiMethods.tutorial.CoreOnboarding.markFeature` |
+| `ROUTINE_MESSAGES` | `routine-messages` | 0.26.5 | `_uiMethods.notifications.RoutineMessages.send` |
+| `SCREENS` | `screens` | 0.57.0 | `screen.Screens`, `screen.ScreenSpec`, `screen.ScreenLayout`, `screen.ScreenWidget`, `screen.ScreenSession` |
+| `HUD_WINDOW` | `hud-window` | 0.59.0 | `screen.Huds`, `screen.HudCard` (corner window at the top right from boss bar titles, placed by the Core pack shader; works with shader packs) |
+| `MIGRATION_PREVIEWS` | `migration-previews` | 0.26.5 | `storage.MigrationPreviews.register`, `storage.MigrationPreviews.run` |
+| `REWARD_POUCH` | `reward-pouch` | 0.32.0 | `item.RewardPouch` |
+| `ITEM_ANVIL` | `item-anvil` | 0.40.1 | `item.ItemServices.prepareAnvil`, `item.ItemServices.commitAnvil` |
+| `LOOT_TABLES` | `loot-tables` | 0.34.0 | `loot.LootTables`, `loot.LootTable` |
+| `LOOT_ROLLS` | `loot-rolls` | 0.44.0 | `loot.LootRoll`, `loot.LootResult`, `loot.LootTableConfig`, `loot.LootLuck` |
+| `MOB_LOOT` | `mob-loot` | 0.44.0 | `loot.MobLoot`, `loot.LootRoll.forMob` |
+| `STAT_SUMS` | `stat-sums` | 0.35.0 | `stat.StatSum`, `item.ItemServices.equipmentStatContributions` |
+| `PARTY_ACTIVITIES` | `party-activities` | 0.26.5 | `party.PartyServices.readyCheck`, `party.PartyServices.recordProgress` |
+| `REWARD_ELIGIBILITY` | `reward-eligibility` | 0.26.5 | `progression.RewardEligibility.allowed` |
+| `WORLD_EVENT_RUNTIME` | `world-event-runtime` | 0.31.0 | `API.events`, `worldevent.WorldEvents` |
+| `TREE_GROWTH_PROFILES` | `tree-growth-profiles` | 0.26.5 | `_advancedMethods.structureGeneratorHandler.StructureGeneratorInterface.tree`, `_advancedMethods.structureGeneratorHandler.TreeGrowthProfile` |
+| `WORLD_TREE_PLANS` | `world-tree-plans` | 0.37.0 | `_advancedMethods.structureGeneratorHandler.StructureGeneratorInterface.worldTree`, `_advancedMethods.structureGeneratorHandler.WorldTreePlan` |
+| `FUNGUS_GROWTH_PLANS` | `fungus-growth-plans` | 0.38.0 | `_advancedMethods.structureGeneratorHandler.StructureGeneratorInterface.fungus` |
+| `GIANT_WORLD_TREES` | `giant-world-trees` | 0.39.0 | `_advancedMethods.structureGeneratorHandler.WorldTreePlan` |
+| `UNDERGROUND_TREE_ROOTS` | `underground-tree-roots` | 0.39.1 | `_advancedMethods.structureGeneratorHandler.WorldTreePlan.depth` |
+| `VISUALS` | `visuals` | 0.29.0 | `visual.Visuals`, `visual.ViewFrame`, `visual.BlockView`, `visual.ParticlePaths` |
+| `HORIZONTAL_VISUALS` | `horizontal-visuals` | 0.30.0 | `visual.HorizontalFrame`, `visual.Visuals.projection` |
+| `CLIENT_BIOMES` | `client-biomes` | 0.33.0 | `packet.ClientBiomes.supported`, `packet.ClientBiomes.snow` |
+| `PROJECTED_BIOMES` | `projected-biomes` | 0.36.0 | `packet.ClientBiomes.project`, `visual.BlockView.replacePrioritized` |
+
+\* The feature is older than its flag. On older Cores `has(...)` returns `false`; fall back to `atLeast(...)` or call it
+inside `try { … } catch (LinkageError e)`.
+
+**The guard pattern.** `CoreApi` itself exists since 0.11.0. On an older Core, touching it throws a `LinkageError`
+(`NoClassDefFoundError`), so wrap the first check:
+
+```java
+boolean web;
+try { web = CoreApi.has(CoreApi.Capability.WEB_OPEN); } catch (LinkageError tooOld) { web = false; }
+if (!web) {
+    getLogger().severe("Vystorm Core >= 0.24.0 required (running: " + safeCoreVersion() + ")");
+    getServer().getPluginManager().disablePlugin(this);
+    return;
+}
+
+static String safeCoreVersion() {
+    try { return CoreApi.VERSION; } catch (LinkageError tooOld) { return "< 0.11.0"; }
+}
+```
+
+Keep code that references newer Core classes in separate classes/methods that you only call after the check; a
+`NoSuchMethodError`/`NoClassDefFoundError` is thrown lazily when such code first runs. For optional features, check the
+capability and fall back (e.g. no web page → chat menu only).
+
+---
+
+## 2. Build a plugin in 10 minutes
+
+A complete plugin "Greeter": localized `/greet` command, a server settings section bound to `config.yml`, a personal
+setting, and a web page with one API route. Requires Core ≥ 0.24.0.
+
+```
+greeter/
+├── build.gradle.kts                  (as in 1.1, rootProject.name = "greeter" in settings.gradle.kts)
+├── libs/Vystorm_Core.jar
+└── src/main/
+    ├── java/com/example/greeter/GreeterPlugin.java
+    └── resources/
+        ├── plugin.yml
+        ├── config.yml
+        ├── lang/en.yml
+        ├── lang/de.yml
+        └── web/greeter/index.html, app.js
+```
+
+**`plugin.yml`**
+
+```yaml
+name: Greeter
+version: '${version}'
+main: com.example.greeter.GreeterPlugin
+api-version: '26.2'
+depend: [vystorm_core]
+commands:
+  greet:
+    description: Greets you
+    usage: /greet [web]
+permissions:
+  greeter.admin:
+    description: Edit Greeter server settings
+    default: op
+```
+
+**`config.yml`**
+
+```yaml
+greeting:
+  enabled: true
+  suffix: "!"
+```
+
+**`lang/en.yml`** (English is the required fallback; every key your code uses must exist here)
+
+```yaml
+greet:
+  hello: "<green>Hello, {player}{suffix}</green>"
+  disabled: "<gray>Greetings are switched off."
+  quiet: "<gray>You turned greetings off in /vsettings."
+  players-only: "Only players can be greeted."
+settings:
+  title: "Greeter"
+  description: "Greeting options"
+  enabled: "Greetings enabled"
+  enabled-desc: "Allow /greet on this server"
+  suffix: "Suffix"
+  suffix-desc: "Text after the player name"
+  personal-title: "Greeter"
+  personal-description: "Your greeting options"
+  receive: "Greet me"
+  receive-desc: "Show greetings to me"
+web:
+  module:
+    title: "Greeter"
+    description: "Greeting statistics"
+  ui:
+    title: "Greeter"
+    loading: "Loading…"
+    stats: "{count} greetings so far, {player}."
+```
+
+**`lang/de.yml`** (same keys; missing keys fall back to English)
+
+```yaml
+greet:
+  hello: "<green>Hallo, {player}{suffix}</green>"
+  disabled: "<gray>Begrüßungen sind ausgeschaltet."
+  quiet: "<gray>Du hast Begrüßungen in /vsettings ausgeschaltet."
+  players-only: "Nur Spieler können begrüßt werden."
+settings:
+  title: "Greeter"
+  description: "Begrüßungsoptionen"
+  enabled: "Begrüßungen an"
+  enabled-desc: "/greet auf diesem Server erlauben"
+  suffix: "Endung"
+  suffix-desc: "Text nach dem Spielernamen"
+  personal-title: "Greeter"
+  personal-description: "Deine Begrüßungsoptionen"
+  receive: "Mich begrüßen"
+  receive-desc: "Begrüßungen für mich anzeigen"
+web:
+  module:
+    title: "Greeter"
+    description: "Begrüßungsstatistik"
+  ui:
+    title: "Greeter"
+    loading: "Lädt …"
+    stats: "Bisher {count} Begrüßungen, {player}."
+```
+
+**`GreeterPlugin.java`**
+
+```java
+package com.example.greeter;
+
+import Vystorm.vystorm_core.API;
+import Vystorm.vystorm_core.CoreApi;
+import Vystorm.vystorm_core._uiMethods.settings.ConfigSettings;
+import Vystorm.vystorm_core._uiMethods.settings.PlayerPrefs;
+import Vystorm.vystorm_core._uiMethods.settings.SettingsSection;
+import Vystorm.vystorm_core.lang.Lang;
+import Vystorm.vystorm_core.web.WebModule;
+import Vystorm.vystorm_core.web.WebResponse;
+import Vystorm.vystorm_core.web.WebRoute;
+import Vystorm.vystorm_core.web.WebServices;
+import com.google.gson.JsonObject;
+import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
+import org.bukkit.command.Command;
+import org.bukkit.command.CommandSender;
+import org.bukkit.entity.Player;
+import org.bukkit.plugin.java.JavaPlugin;
+
+public final class GreeterPlugin extends JavaPlugin {
+    private final AtomicInteger greetings = new AtomicInteger();   // read from web threads -> thread-safe type
+    private Lang lang;
+
+    @Override
+    public void onEnable() {
+        boolean ok;
+        try { ok = CoreApi.has(CoreApi.Capability.WEB_OPEN); } catch (LinkageError tooOld) { ok = false; }
+        if (!ok) {
+            getLogger().severe("Vystorm Core >= 0.24.0 required");
+            getServer().getPluginManager().disablePlugin(this);
+            return;
+        }
+        API core = CoreApi.api().orElseThrow();
+        saveDefaultConfig();
+
+        // 1) Language bundle: lang/*.yml from this jar, copied to plugins/Greeter/lang/ for admins
+        lang = core.lang().register(this);
+
+        // 2) Settings (server thread; shown in /vsettings and on the web page /app/settings)
+        core.settings().register(this, ConfigSettings.of(this)
+                .toggle("greeting.enabled", lang.ref("settings.enabled"), lang.ref("settings.enabled-desc"))
+                .text("greeting.suffix", lang.ref("settings.suffix"), lang.ref("settings.suffix-desc"), 16)
+                .section("server", lang.ref("settings.title"), lang.ref("settings.description"), "greeter.admin", null));
+        core.settings().register(this, SettingsSection.player("personal",
+                lang.ref("settings.personal-title"), lang.ref("settings.personal-description"),
+                List.of(PlayerPrefs.toggle(this, "receive", lang.ref("settings.receive"), lang.ref("settings.receive-desc"), true))));
+
+        // 3) Web module: static page from web/greeter/ in this jar + one JSON route at /api/greeter/stats
+        WebServices.register(this, WebModule.builder("greeter", lang.ref("web.module.title"))
+                .description(lang.ref("web.module.description"))
+                .assets("web/greeter/")
+                .route(WebRoute.get("/stats", request -> {
+                    // Web handlers run OFF the server thread: Bukkit/config access only via request.sync(...)
+                    boolean enabled = request.sync(() -> getConfig().getBoolean("greeting.enabled"));
+                    JsonObject out = new JsonObject();
+                    out.addProperty("count", greetings.get());
+                    out.addProperty("player", request.playerName());
+                    out.addProperty("enabled", enabled);
+                    return WebResponse.json(out);
+                }).rateLimit(60).build())
+                .build());
+        // Nothing to undo in onDisable: Core removes settings, lang bundle and web module of a disabled plugin.
+    }
+
+    @Override
+    public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
+        if (!(sender instanceof Player player)) { lang.send(sender, "greet.players-only"); return true; }
+        if (args.length == 1 && args[0].equalsIgnoreCase("web")) {
+            // Overlay (client mod) if possible, else a one-time login link in chat, else Core's hint
+            WebServices.openOrLink(player, "greeter", "", null);
+            return true;
+        }
+        if (!getConfig().getBoolean("greeting.enabled")) { lang.send(player, "greet.disabled"); return true; }
+        if (!PlayerPrefs.bool(this, player, "receive", true)) { lang.send(player, "greet.quiet"); return true; }
+        greetings.incrementAndGet();
+        lang.send(player, "greet.hello", "player", player.getName(), "suffix", getConfig().getString("greeting.suffix", "!"));
+        return true;
+    }
+}
+```
+
+**`web/greeter/index.html`** (static assets are public; data comes only from the API; no inline scripts/styles – CSP)
+
+```html
+<!doctype html>
+<html lang="{{@lang}}" data-vw-texts="{{@texts}}" data-vw-languages="{{@languages}}">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="referrer" content="no-referrer">
+  <title>{{greeter:web.ui.title}}</title>
+  <link rel="stylesheet" href="/core/web.css">
+  <script src="/core/web.js"></script>
+  <script src="app.js"></script>
+</head>
+<body>
+  <header data-vw-header></header>
+  <main class="vw-main">
+    <h1>{{greeter:web.ui.title}}</h1>
+    <p id="stats" class="vw-muted" data-template="{{greeter:web.ui.stats}}">{{greeter:web.ui.loading}}</p>
+  </main>
+</body>
+</html>
+```
+
+**`web/greeter/app.js`**
+
+```js
+(function () {
+  'use strict';
+  var W = window.VystormWeb;
+  document.addEventListener('DOMContentLoaded', async function () {
+    var box = document.getElementById('stats');
+    try {
+      var s = await W.get('/api/greeter/stats');          // JSON from the route above
+      box.textContent = box.dataset.template               // textContent, never innerHTML
+        .replace('{count}', String(s.count))
+        .replace('{player}', s.player);
+    } catch (e) {
+      if (e.status !== 401) W.showError(e);               // 401 = not logged in, Core shows a hint
+    }
+  });
+})();
+```
+
+Try it: set `web.enabled: true` in `plugins/vystorm_core/config.yml` (embedded mode, local), restart, then in game
+`/greet`, `/vsettings` (Greeter sections), `/greet web` or `/web greeter` and open the link on the same machine. The
+bundled web UI sends `/app/greeter` to your static page `/m/greeter/` because it has no built-in page for your module.
+
+---
+
+## 3. Ground rules: threads, lifecycle, errors
+
+### 3.1 Threads
+
+| API | Thread |
+| --- | --- |
+| `api.gui()`, `api.dialogs()`, `api.settings()` (register/open), `ChatActions` callbacks, `ClientServices`, `ClientUi`, `WebServices.loginLink/issueLogin/sendLink/openOrLink/openOrElse` | **Server thread only.** Most throw `IllegalStateException` otherwise. |
+| `Lang` / `Localization`, `CoreApi`, `SharedDatabase`, `WebServices.register/push/broadcast/publishData`, `api.settings().changed(...)` | Any thread (thread-safe). |
+| `WebHandler`, `WebSnapshot` callbacks | Run **off** the server thread (Core's handler pool). Use `request.sync(...)` for Bukkit. |
+| JDBC connections from the shared pool | **Never** on the server thread. |
+| `SharedDatabase.whenReady()` / `sharedReady()` callbacks | Core's init thread or the calling thread – never assume the server thread. |
+| Legacy handlers (`area`, `particle`, `interactionGenerator`, `packages`, world lifecycle, XP helpers) | Server thread. |
+
+To get back to the server thread: `Bukkit.getScheduler().runTask(plugin, () -> …)`. To leave it:
+`runTaskAsynchronously`.
+
+### 3.2 Lifecycle
+
+Register everything in `onEnable`. When your plugin is disabled, Core releases its registrations automatically
+(`lifecycle.CoreLifecycle` and Core's disable listeners): settings sections, menus (`gui().unregisterMenus`), open
+dialogs, admin modules, inventory watchers, structure generators, interaction hitboxes, messaging channels, web modules,
+client HUD elements, the lang bundle, and all provider registries (items, mobs, parties, world events, regions, spawn
+points, runtime hubs, …). You only clean up your own tasks, files and connections – plus these registries that have
+no owner and are **not** released automatically:
+
+| Registry | Clean up in `onDisable` / on reload |
+| --- | --- |
+| `CurveRegistry` curves | `CurveRegistry.unregisterPrefix("curve.myplugin.")` |
+| `api.inventoryInteractor()` entries | `unregister(entry)` |
+| `api.area()` areas | `api.area().unregister(area)` |
+| `api.worldGenerator()` named generators | `api.worldGenerator().unregister(name)` |
+| Threat modifiers | `ThreatServices.get().removeOwner(this)` (only released automatically in some cases) |
+
+Re-registering the same key while still enabled (e.g. from your own `/myplugin reload`) usually throws
+`IllegalArgumentException` ("already registered") – unregister first (`api.settings().unregister(this)`,
+`api.gui().unregisterMenus(this)`), or better: register once in `onEnable` and only reload values.
+
+### 3.3 Errors
+
+- Registries validate eagerly: invalid ids/sizes throw `IllegalArgumentException`/`NullPointerException` at
+  registration time, not later.
+- Exceptions thrown by *your* providers/callbacks are contained and logged by Core (`lifecycle.ProviderFailures`);
+  they do not break other plugins. Do not rely on that – handle your own errors.
+- `Lang` lookups never return `null` and never throw; a missing key renders as the key itself.
+
+---
+
+## 4. Localization (`api.lang()`)
+
+Capability `localization` (0.22.0). Every plugin ships its own language files and gets one `Lang` bundle; Core picks the
+language per viewer.
+
+Since **0.50.0**, Core and the active Vystorm plugins also bundle French (`fr`), Brazilian Portuguese
+(`pt_br`), Italian (`it`) and Russian (`ru`), including translated tutorials where available.
+Select them with `/language fr`, `/language pt_br`, `/language it`, `/language ru`, or use `/language auto`
+to follow the Minecraft client. Regional locales use the existing fallback chain, including `pt_pt → pt_br`.
+
+**Files.** `src/main/resources/lang/en.yml` (required, final fallback), `lang/de.yml`, `lang/zh_cn.yml`, any
+`lang/<code>.yml`. Codes are Minecraft locale codes in lower case (`de`, `fr`, `zh_cn`, `zh_tw`, `pt_br`): a client
+locale picks a file by exact code first, then along the fallback chain. On register Core copies missing files to
+`plugins/<Plugin>/lang/` (the admin's override folder), where admins edit them or add languages. Existing admin
+files are never overwritten: when a plugin update brings new keys, Core adds only those keys to the admin's file (the
+previous file is kept as `<code>.yml.before-update`); edited texts stay as they are.
+
+**Simplified Chinese (0.45.0).** Core ships `lang/zh_cn.yml`; ship `src/main/resources/lang/zh_cn.yml` in your plugin
+the same way (same keys as `en.yml`, every `{placeholder}`, MiniMessage tag and `&` code unchanged). Clients with
+`zh_cn` get it automatically; `zh_tw`, `zh_hk`, `zh_mo` and `zh_sg` clients too as long as no own file exists.
+
+**Lookup** for language `L`, key by key: for each code of the fallback chain of `L` (see below) disk file → jar file,
+ending with `en`; then the key itself. With the defaults: `zh_tw → zh_cn → en`, `de_at → de → en`, `de_ch → de → en`.
+
+**Fallback chain** (`Localization.fallbackChain(code)`, 0.45.0): the code itself, its `language.fallback` step from
+Core's `config.yml` (recursively), then its language part (`de_at` → `de`) with that part's steps, finally `en`.
+Built-in steps: `zh_hk`/`zh_mo` → `zh_tw`, `zh_tw`/`zh_sg`/`zh` → `zh_cn`, `pt`/`pt_pt` → `pt_br`, `nn`/`nb` → `no`;
+admins add their own (`fr_ca: fr`) or remove one (`zh_tw: none`). Cycles are cut.
+
+**Language per viewer:** (1) the player's personal choice (`/language` or `/vsettings` → Language, one shared
+setting), (2) your plugin override `lang.setLanguage(code)` if set, else Core's `config.yml` `language.default`
+(`auto` = client locale along the fallback chain; or a fixed code), (3) `language.server` (default `en`) when none of
+these has a file, (4) `en`. Console/RCON get `language.server` unless the default is a fixed code. With
+`language.force: true` every player gets `language.server` (your plugin override still applies); personal choices are
+kept but ignored until force is switched off.
+
+**Format:** MiniMessage (`<red>`, `<bold>`, `<#ff8800>`, `<hover:…>`, `<click:…>`) and legacy `&c`/`§c`. Placeholders are
+named – `{player}` – and passed as name/value pairs. Values are inserted literally (no tag injection from player
+input); a `ComponentLike` value is inserted as a component.
+
+### 4.1 `Localization` (service, `api.lang()` or `Localization.get()`)
+
+| Method | Description |
+| --- | --- |
+| `Lang register(Plugin plugin)` | Registers (or returns the existing) bundle. Call in `onEnable`. |
+| `Optional<Lang> bundle(Plugin plugin)` / `bundle(String namespace)` | Look up a registered bundle. |
+| `Lang core()` | Core's own bundle (namespace `vystorm_core`). |
+| `Set<String> languages()` | Language codes known to Core (union of the files of all bundles). |
+| `Set<String> selectableLanguages()` | Codes offered in `/language`: Core's own languages plus those reaching `language.min-coverage` over all bundles (0.45.0). |
+| `double coverage(String lang)` | Percent (0–100) of all bundles' English keys that `lang` has an own text for, weighted by bundle size (0.45.0). |
+| `List<String> fallbackChain(String lang)` | Codes tried for `lang`, best first, ending with `en` (0.45.0). |
+| `Map<String, String> fallbacks()` | Effective fallback steps (`language.fallback` over `DEFAULT_FALLBACKS`) (0.45.0). |
+| `String serverLanguage()` / `boolean forced()` / `double minCoverage()` | `language.server`, `language.force`, `language.min-coverage` (0.45.0). |
+| `String defaultLanguage()` | Current `language.default` (`auto` or a code). |
+| `Optional<String> personalLanguage(UUID)` | A player's own choice, if any. |
+| `String language(CommandSender)` | Language Core would use for the sender. |
+| `static boolean isRef(String)` | Whether a string is a `Lang.ref(...)` reference. |
+| `String resolve(CommandSender, String textOrRef)` | Resolves a ref (or returns the text) for a viewer. |
+| constants `AUTO = "auto"`, `FALLBACK = "en"`, `KEY_PREFIX = "vlang:"`, `DEFAULT_FALLBACKS`, `DEFAULT_MIN_COVERAGE = 50` | |
+
+`setDefaultLanguage`, `setServerLanguage`, `setForced`, `setMinCoverage`, `setFallbacks`, `setPersonalLanguage`,
+`rememberClientLocale`, `configure`, `installTranslator`, `uninstallTranslator`, `clearPlayers`, `unregister`,
+`reloadAll` are managed by Core (`/vadmin language reload`, lifecycle) – don't call them from plugins. To change a
+player's choice use `CoreLanguage.setChoice` (§4.3).
+
+### 4.2 `Lang` (your bundle) – thread-safe, cached
+
+| Method | Description |
+| --- | --- |
+| `Component component(CommandSender viewer, String key, Object... placeholders)` | Formatted text in the viewer's language. |
+| `Component component(String language, String key, Object... placeholders)` | In a given language code. |
+| `String text(CommandSender viewer, String key, Object...)` / `text(String language, …)` | Legacy `§` string for String APIs (inventory titles, `setDisplayName`). |
+| `String plain(CommandSender viewer, String key, Object...)` / `plain(String language, …)` | No formatting (logs, tab completion, web JSON). |
+| `List<Component> lines(CommandSender viewer, String key, Object...)` / `lines(String language, …)` | One component per line (YAML list or `\n`), e.g. lore. |
+| `void send(CommandSender viewer, String key, Object...)` | Chat message (console too). |
+| `void actionBar(CommandSender viewer, String key, Object...)` | Action bar (console gets chat). |
+| `ItemStack name(ItemStack item, CommandSender viewer, String key, Object...)` | Sets display name (non-italic). Returns the same stack. |
+| `ItemStack lore(ItemStack item, CommandSender viewer, String key, Object...)` | Sets lore from `lines`. |
+| `String ref(String key)` | `{lang:<namespace>:<key>}` – for text you register once and Core shows to many viewers (see below). |
+| `Component translatable(String key, Object... args)` | Component rendered per viewer in Core dialogs and in chat; positional `{0}`, `{1}` in the text. |
+| `void setLanguage(String codeOrAuto)` | Plugin-level override (`null`/blank/`auto` = follow Core). Personal choice still wins. |
+| `String language(CommandSender)` | Code this bundle uses for the viewer (available language, else `en`). |
+| `String languageFor(Locale)` / `languageFor(UUID player, List<String> browserLanguages)` | Code for a locale / an (offline) player. |
+| `String resolveLanguage(String code)` | Available code for a wanted code (`de_at` → `de`, unknown → `en`). |
+| `Map<String, String> texts(String language, String prefix)` | Raw texts below a prefix (prefix removed), English fills gaps. |
+| `boolean has(String key)` / `String raw(String language, String key)` | Key present? / unformatted template. |
+| `Set<String> languages()` / `String namespace()` | Available codes / lower-case plugin name (spaces → `_`). |
+| `double coverage(String lang)` / `Counts counts(String lang)` | Percent of this bundle's English keys with an own text in `lang` / `(total, translated)` (0.45.0). |
+| `Set<String> keys()` | The English source keys (0.45.0). |
+| `Optional<Object> translation(String lang, String key)` / `bundledTranslation(…)` | Text in exactly that language (disk → jar, or jar only), no fallback; `String` or `List<String>` (0.45.0). |
+| `Optional<File> folder()` | The editable override folder `plugins/<Plugin>/lang` (0.45.0). |
+| `List<Component> wrappedLines(CommandSender viewer, String key, int maxColumns, Object...)` | `lines`, each wrapped to `maxColumns` display columns (CJK-aware, colours carried over) – for item lore (0.45.0). |
+| `List<Audit> audit()` / `Audit audit(String lang)` | Coverage snapshot per language: `missing`, `bundledFallback`, `englishFallback`, `placeholderMismatch`, `unfilledTags`, `untranslated` (same as English, 0.45.0), `coverage()`. |
+| `void reload()` | Re-reads files (call from your reload command). |
+| `static Lang create(String namespace, Map<String, String> yamlByCode)` | Standalone bundle for unit tests (not registered; `ref` won't resolve). Overload with a `File folder`. |
+
+```java
+Lang lang = CoreApi.api().orElseThrow().lang().register(this);
+lang.send(player, "shop.bought", "amount", 3, "item", itemName);
+Component title = lang.component(player, "menu.title");
+lang.name(item, player, "item.sword.name");
+lang.lore(item, player, "item.sword.lore", "damage", 7);
+```
+
+**Text registered once, shown to many** – pass `lang.ref("key")` instead of a literal: menu titles/descriptions
+(`gui().registerMenu`), settings section titles/labels/option labels/descriptions, admin module/action labels,
+`dialogs().prompt/confirm` titles and questions, `MenuButtons.settings` labels, `ChatActions` labels/hovers, web module
+titles/descriptions, `WebException` messages. Core resolves them per viewer. For components you build once (e.g. a
+`DialogButton` label in a field) use `lang.translatable("key", args…)`.
+
+**Web texts:** keys under `web.ui.` are available to web pages (`{{<namespace>:web.ui.key}}` in HTML, `GET
+/core/i18n?ns=<namespace>`); they are sent as *raw* text – write them without MiniMessage tags.
+
+**More details (moved here from the README):**
+
+- A legacy per-player Core setting `language` other than the shipped `en_US` also counts as the player's own choice.
+  With `language.default: auto`, a client language without a file falls back to `en`.
+- Core never overwrites an admin's edited text. Keys added in a newer plugin version are appended to the admin's file
+  on the next start or `/vadmin language reload` (backup `<code>.yml.before-update`).
+- Items in shared inventories (one inventory, many viewers) can't be per viewer: render them per viewer when opening.
+- **Language of a web request** (capability `web-localization`, 0.23.0): the page's language switch (cookie
+  `vystorm_lang`), then for a logged-in player the same resolution as in game (own choice, fixed `language.default`,
+  last known client locale, also while offline), then the browser's `Accept-Language`, then `en`. HTML assets with
+  `{{…}}` tokens are rendered per request with one ETag per language. Core's own pages use `VystormWeb.t(key, vars)` and
+  `VystormWeb.setLanguage(code)`.
+- Server error texts of the web platform are keys `web.error.*` in Core's lang files; admins edit them like any other
+  text.
+- Core itself ships `lang/en.yml`, `lang/de.yml` and `lang/zh_cn.yml` (keys under `common.*`, `dialog.*`, `menu.*`,
+  `settings.*`, …). `/vadmin language` shows the setup, `/vadmin language reload` re-reads the `language.*` settings
+  and all registered bundles without a restart. `/core/i18n` serves every language Core has a file for, `zh_cn`
+  included (`Accept-Language: zh-CN`, `zh-TW` and `zh` resolve to it).
+
+### 4.3 `/language`, live refresh, width and translator workflow (0.45.0)
+
+Capability `CoreApi.Capability.LANGUAGE_SELECTION` (`language-selection`).
+
+**`/language`** (aliases `/lang`, `/sprache`, `/语言`, permission `vystorm_core.language`, everyone) opens a chest menu:
+"Automatic (client language)" plus one flag-like banner per `Localization.selectableLanguages()` entry with its own
+name (`language.name` of the file), code and coverage. `/language <code|auto>` sets it directly (codes, `zh-CN`,
+`de_at` → `de`, or the language's name; tab completion), `/language list` lists. Admins
+(`vystorm_core.language.others`, part of `vystorm_core.admin`) use `/language <player> [code|auto]`, also from the
+console. The choice is the same player-data value `/vsettings` → Language uses (`vystorm_core:pref.language`).
+
+**Live refresh.** Core switches its own texts at once. Everything *you* rendered once per player (scoreboards, boss
+bars, tab list, holograms, open inventories, cached lore) has to be redrawn – listen to `PlayerLanguageChangeEvent`
+(server thread, after the change; `getPreviousLanguage()`, `getLanguage()`, `getChoice()`, `getCause()` =
+`COMMAND`/`SETTINGS`/`ADMIN`/`CLIENT_LOCALE`/`RELOAD`/`API`, `isLanguageChanged()`):
+
+```java
+@EventHandler
+public void onLanguage(Vystorm.vystorm_core.lang.PlayerLanguageChangeEvent event) {
+    if (!event.isLanguageChanged()) return;
+    board.redraw(event.getPlayer());               // lang.text(player, …) already returns the new language
+    if (event.getPlayer().getOpenInventory().getTopInventory().getHolder() instanceof MyMenu menu) menu.reopen();
+}
+```
+
+Guard it with `CoreApi.has(CoreApi.Capability.LANGUAGE_SELECTION)` when you support older Cores (register the
+listener in a separate class so the event class is only loaded on 0.45.0+). To set a choice from your plugin:
+`CoreLanguage.setChoice(player, "zh_cn" | "auto", PlayerLanguageChangeEvent.Cause.API)`.
+
+**Width of CJK text** – `lang.TextWidth`: Minecraft wraps chat, dialogs and books itself, but not item lore, and
+centring or fixed columns need the real width. Chinese/Japanese/Korean characters are about twice as wide as Latin
+letters.
+
+| Method | Description |
+| --- | --- |
+| `int columns(String)` / `columns(Component)` / `columns(int codePoint)` | East Asian width: wide/full-width 2, combining 0, else 1; legacy `§`/`&` codes 0. |
+| `int pixels(String)` / `pixels(int)` | Approximate default-font pixels (Latin 6, `i`/`l` 2, space 4, CJK 9, bold +1). `CHAT_PIXELS = 320`, `SIGN_PIXELS = 90`, `BOOK_PIXELS = 114`. |
+| `List<String> wrap(String, int maxColumns)` | Breaks Latin text at spaces, CJK between characters, never starts a line with `，。！？）…` or ends one with `（“《`; carries `§` codes over. `LORE_COLUMNS = 30`. |
+| `center(String, int columns)` / `centerChat(String)` / `centerPixels(String, int)` / `padRight` / `truncate` | Centring, padding, cutting with `…`. |
+| `boolean isWide(int)` / `isZeroWidth(int)` / `String strip(String)` | Helpers. |
+
+`Lang.wrappedLines(viewer, key, TextWidth.LORE_COLUMNS, …)` gives wrapped lore lines directly.
+
+**Translator workflow** (admins, `vystorm_core.admin`):
+
+- `/vadmin language audit [plugin|*] [lang]`: per plugin and language the coverage, missing keys, untranslated keys
+  (same text as English), placeholder mismatches and unknown tags, each line with a clickable **[export]**.
+- `/vadmin language export <plugin> <lang> [yml|csv]` writes `plugins/vystorm_core/translations/<plugin>.<lang>.yml`
+  (or `.csv` with BOM for spreadsheets): every English key with `source`, current `translation` and `status`.
+- `/vadmin language import <file> [plugin] [lang]` merges a reviewed file into `plugins/<Plugin>/lang/<lang>.yml` (the
+  override folder; the jar is never touched): only non-empty translations of known keys with the same placeholders as
+  the English source; the previous file is kept as `<lang>.yml.bak-<yyyyMMdd-HHmmss>`, the bundle reloads at once.
+
+---
+
+## 5. Settings (`api.settings()`)
+
+Capability `settings` (0.7.0), web page `web-settings` (0.24.0). Plugins register **sections**; Core renders them as
+native dialogs (`/vsettings`, `/einstellungen`, main menu, pause menu) and – since 0.24.0 – on the web page
+`/app/settings`. Values stay in your storage: you supply getter and setter. With the client mod (0.8.0+) the same
+sections appear as a native panel (`/vsettings`), saved through `SettingsRegistry.save(…, "panel")` (§18.9).
+
+### 5.1 `SettingsInterface`
+
+| Method | Description |
+| --- | --- |
+| `void register(Plugin owner, SettingsSection section)` | Server thread. Key = `<lowercase plugin name>:<section id>`; duplicate → `IllegalArgumentException`. |
+| `void unregister(Plugin owner)` | Removes all your sections (automatic on disable). |
+| `List<SettingsSection> sections(Player, SettingScope)` | Sections the player may open. |
+| `void openOverview(Player)` / `void openScope(Player, SettingScope)` | Open Core's settings dialogs. |
+| `boolean openSection(Player, String key)` | Open `owner:id` (or a unique `id`); `false` if missing/not allowed. |
+| `List<String> keys(Player)` | Keys the player may open. |
+| `default void changed(Player player)` | (0.24.0) Tell open settings views that values changed outside Core's dialogs/web page; `null` = server-wide values. Any thread. |
+
+### 5.2 `SettingsSection` (record)
+
+`SettingsSection(String id, String title, String description, SettingScope scope, String permission, List<Setting> settings, Consumer<Player> afterSave)`
+
+- `static SettingsSection player(String id, String title, String description, List<Setting> settings)` – personal.
+- `static SettingsSection server(String id, String title, String description, String permission, List<Setting> settings, Consumer<Player> afterSave)` – server-wide; blank permission = `vystorm_core.admin`.
+- `id` `[a-z0-9_-]{1,40}`; 1..`MAX_SETTINGS` (48) settings; unique setting ids. `afterSave` runs **once** after at
+  least one value changed (e.g. save the file, reload runtime state).
+- `SettingScope`: `PLAYER`, `SERVER`.
+
+### 5.3 `Setting` (record)
+
+Factories (getter/setter get the viewing `Player`; for server settings that is the editing admin). The setter returns
+`null` on success or a short error message shown to the player (may be a `Lang.ref`).
+
+```java
+static Setting toggle(String id, String label, String description, Function<Player, Boolean> getter, BiFunction<Player, Boolean, String> setter)
+static Setting number(String id, String label, String description, double min, double max, double step, Function<Player, Double> getter, BiFunction<Player, Double, String> setter)
+static Setting choice(String id, String label, String description, LinkedHashMap<String, String> options, Function<Player, String> getter, BiFunction<Player, String, String> setter)
+static Setting text(String id, String label, String description, int maxLength, Function<Player, String> getter, BiFunction<Player, String, String> setter)
+Setting permission(String node)   // restrict just this setting
+```
+
+Rules: id `[a-z0-9_.-]{1,64}`; option id `[A-Za-z0-9_.:-]{1,64}` (options map id → label, insertion order); number
+needs `min < max`, `step > 0`, finite (whole-number steps deliver whole `Double`s); text `maxLength` 1..256. Kinds:
+`Setting.Kind.TOGGLE/NUMBER/CHOICE/TEXT`.
+
+### 5.4 Helpers
+
+`ConfigSettings` – a **server** section bound to config keys (written into the config, saved once after a save, then
+your `reload` callback runs):
+
+```java
+static ConfigSettings of(Plugin plugin)                                        // getConfig()/saveConfig()
+static ConfigSettings of(Supplier<FileConfiguration> config, Runnable save)    // any YAML file
+ConfigSettings toggle(String path, String label, String description)
+ConfigSettings integer(String path, String label, String description, int min, int max, int step)
+ConfigSettings decimal(String path, String label, String description, double min, double max, double step)
+ConfigSettings choice(String path, String label, String description, LinkedHashMap<String, String> options)
+ConfigSettings text(String path, String label, String description, int maxLength)
+ConfigSettings text(String path, String label, String description, int maxLength, Function<String, String> validator)
+ConfigSettings integerText(String path, String label, String description, long min, long max)
+ConfigSettings decimalText(String path, String label, String description, double min, double max)
+ConfigSettings add(Setting setting)
+SettingsSection section(String id, String title, String description, String permission, Consumer<Player> reload)
+static String id(String path)                                                  // setting id derived from a path
+```
+
+`PlayerPrefs` – small per-player values in the player's persistent data (for plugins without own player storage):
+
+```java
+static boolean bool(Plugin owner, Player player, String id, boolean fallback)
+static void setBool(Plugin owner, Player player, String id, boolean value)
+static double number(Plugin owner, Player player, String id, double fallback)
+static void setNumber(Plugin owner, Player player, String id, double value)
+static String text(Plugin owner, Player player, String id, String fallback)
+static void setText(Plugin owner, Player player, String id, String value)
+static void clear(Plugin owner, Player player, String id)      // back to the fallback
+static boolean has(Plugin owner, Player player, String id)
+static Setting toggle(Plugin owner, String id, String label, String description, boolean fallback)
+static Setting number(Plugin owner, String id, String label, String description, double min, double max, double step, double fallback)
+static Setting choice(Plugin owner, String id, String label, String description, LinkedHashMap<String, String> options, String fallback)
+```
+
+### 5.5 Web settings page (0.24.0)
+
+Every registered section automatically appears on `/app/settings` (`/web settings`): personal sections for everyone,
+server sections only with their permission. Reads and saves run on the server thread through the same checks as the
+dialog (section/setting permission, type, range, options, length, your setter's error, `afterSave` once). Values are
+shown and changed only while the player is online. If your plugin changes a value elsewhere (own command/menu), call
+`api.settings().changed(player)` (or `changed(null)` for server values) so open pages refresh.
+The settings dialog also has an "Open web page" button. Server sections default to the permission
+`vystorm_core.admin`. Labels, options and descriptions should be `lang.ref(...)`, so they show in the viewer's language.
+Saves in game or on the web push the live event `settings/changed`.
+
+```java
+LinkedHashMap<String, String> modes = new LinkedHashMap<>();
+modes.put("compact", lang.ref("settings.mode.compact"));
+modes.put("full", lang.ref("settings.mode.full"));
+core.settings().register(this, SettingsSection.player("display", lang.ref("settings.title"), lang.ref("settings.desc"), List.of(
+        PlayerPrefs.choice(this, "mode", lang.ref("settings.mode"), lang.ref("settings.mode-desc"), modes, "full"),
+        Setting.number("range", lang.ref("settings.range"), "", 4, 64, 4,
+                p -> (double) store.range(p.getUniqueId()),
+                (p, v) -> v > store.maxRange() ? lang.ref("settings.too-far") : store.setRange(p.getUniqueId(), v.intValue()) ? null : lang.ref("settings.failed")))));
+```
+
+### 5.6 Config editor: your whole `config.yml` in the admin menu (0.27.0, merge rule 0.27.1)
+
+Capability `config-editor`. One call makes every value of a plugin YAML file editable in Core's native admin settings
+(`/vadmin config <plugin>`, `/vsettings` → server settings → "Plugin configuration", the plugin's `/vadmin` module, the
+web settings page). You do not write one `Setting` per key.
+
+**The snippet every plugin uses** (in `onEnable`, after your config is loaded; on older Cores it is skipped silently):
+
+```java
+import Vystorm.vystorm_core.CoreApi;
+import Vystorm.vystorm_core._uiMethods.settings.ConfigEditor;
+
+private void registerConfigEditor() {
+    boolean editor;
+    try { editor = CoreApi.has(CoreApi.Capability.CONFIG_EDITOR); } catch (LinkageError tooOld) { editor = false; }
+    if (!editor) return;
+    ConfigEditor.register(this, "config.yml", this::reloadSettings);   // your existing reload logic (re-read getConfig())
+    // optional polish, before or after register:
+    ConfigEditor.label(this, "fields.max-size", lang.ref("config.max-size"), lang.ref("config.max-size-desc"));
+    ConfigEditor.range(this, "fields.max-size", 16, 4096, 16);
+}
+```
+
+Keep the call in its own method (as above) so a Core without `ConfigEditor` never loads the class.
+
+```java
+static boolean register(Plugin owner)                                         // config.yml, no reload hook
+static boolean register(Plugin owner, String file, Runnable reload)           // any .yml with a default in the jar; false if none
+static boolean register(Plugin owner, String file, Runnable reload, boolean mergeDefaults)   // 0.27.1: explicit merge choice
+static void reloadHook(Plugin owner, Runnable reload)                         // hook for files registered without one
+static void label(Plugin owner, String path, String labelOrLangRef, String descriptionRef)   // null = derived label / comment
+static void range(Plugin owner, String path, double min, double max, double step)
+static void choices(Plugin owner, String path, LinkedHashMap<String, String> choices)        // stored value -> label
+static void hidden(Plugin owner, String path)                                 // never show this key or its subtree
+static void activation(Plugin owner, String path, SettingPolicy.Activation activation)      // IMMEDIATE/RELOAD/RESTART per key or subtree
+static int mergeDefaults(Plugin owner)                                        // config.yml; returns added values
+static int mergeDefaults(Plugin owner, String file)
+static void unregister(Plugin owner)                                          // automatic on disable
+static List<String> plugins(CommandSender viewer)                             // editable plugin names for the viewer
+static void openOverview(Player player)
+static boolean open(Player player, String plugin)
+static String permission(Plugin owner)                                        // vystorm_core.config.<name lower-case>
+static boolean secret(String path)
+// constants: PERMISSION_PREFIX "vystorm_core.config.", PERMISSION_ALL "vystorm_core.config.*", MAX_PER_SECTION 24, GROUP "config"
+```
+
+How it works:
+
+- **Schema = the default file in your jar** (`getResource(file)`): key order, value types, and the comments above or next
+  to a key (shown as description). Values come from the file in your data folder; missing keys show the jar default.
+  Keys that exist only in the server's file (not in the default) are not shown.
+- **Inputs:** `boolean` → toggle; whole number → slider when a small range is known (`range(...)` or a comment such as
+  `(1-64)`, `0..100`, `range 2 to 10`; at most 1000 steps), otherwise a checked whole-number text field (int stays int,
+  long stays long); decimal → checked decimal text field (slider only with `range`; write defaults as `1.0`, not `1`, if a
+  key is a decimal); string → text ≤ 256 characters, or `choices`; list of plain values → comma-separated text, saved
+  back as a list of the default's element type; lists of maps and other structures are listed as "edit in the file" and
+  never rewritten. A string longer than 256 characters cannot be shortened by an untouched save.
+- **Sections:** one per top-level key (plain top-level values form a "General" section), titled
+  `<Plugin> · <Key>`; groups above 24 values are split into parts (`(1/2)`), keeping second-level groups together.
+  Each section is a normal server `SettingsSection` with id `cfg-<key>[-<part>]` (other files: `cfg-<file>-<key>`).
+  `SettingsRegistry.group(key)` (0.27.0) returns `"config"` for them; they are listed behind one entry, not one button
+  each. `SettingsRegistry.unregister(Plugin owner, String sectionId)` (0.27.0) removes a single section of your own.
+- **Secrets are never shown, saved through the editor or exported:** last key part `password`, `passwort`, `secret`,
+  `token`, `api-key`, `apikey`, `key`, `jdbc`, `url`, `username`, `user`, `host` (also as suffix like `db-password`,
+  `auth_token`), any part named `credentials`, and everything below `database.shared` and `storage.mysql`. Use
+  `hidden(...)` for anything else that must stay private. Since 0.27.1 also `pass`, `pwd`, `uri`, `dsn`, `jdbc-url`,
+  `webhook` (and `*-webhook`, `*-webhook-url`), `private-key`, `access-key`, `secret-key`, `connection-string`, and
+  camelCase names count like kebab-case (`dbPassword` = `db-password`, `botToken` = `bot-token`).
+- **Not in settings profiles** (0.27.1): editor values are not profile-safe; a whole config is far above the 96-value
+  limit of `SettingsProfiles`. Back up config files as files (the editor writes `.bak-` copies itself).
+- **Permission:** `vystorm_core.config.<plugin name lower-case>`, registered at `register` time as a child of
+  `vystorm_core.config.*` (child of `vystorm_core.admin`), default op. Holding `vystorm_core.admin` or
+  `vystorm_core.config.*` therefore grants every plugin's config node; grant single nodes for per-plugin admins.
+- **Saving:** values are set in the configuration (`getConfig()` for `config.yml`, so your in-memory config stays the
+  same object). Since 0.27.1 only the **changed keys** are then written into the file as it is on disk: other keys, hand
+  edits the plugin has not reloaded yet and comments stay; Core never dumps your in-memory config over the file (no
+  `saveConfig()`). Before the first save of a file per enable the old file is copied to `<file>.bak-<date>`; file
+  permissions are kept. Nothing is written (and the in-memory value is put back, the admin is told) when the file on
+  disk is not valid YAML or contains keys with a dot (Bukkit would turn `"1.5": x` into nested keys). A save without a
+  real change writes nothing and does not run the hook. A file that does not exist yet is created from the complete jar
+  default plus the change. Then your reload hook runs. A failing hook is logged through `ProviderFailures` and the admin
+  is told; the file is still saved. Without a hook the admin reads "takes effect after /<plugin> reload or a restart";
+  keys marked `activation(..., RESTART)` say "after a server restart". If your plugin keeps its own copy of another
+  file and saves it later, re-read the file in your reload hook, otherwise your save overwrites the admin's change.
+- **Missing defaults (0.27.1):** registering **`config.yml`** runs `mergeDefaults` once per enable: every key of the jar
+  default that is missing in the server file is added with its comments, existing values are never changed (also not if
+  their type differs), and the old file is copied to `config.yml.bak-<yyyy-MM-dd_HHmmss>` first. A missing file is
+  created from the default. An invalid YAML file or one with dotted keys is left alone (logged). **Other files are not
+  merged** (0.27.1; in 0.27.0 every registered file was), because in table-like files (spawn/loot/mob/xp tables) a
+  missing entry usually means an admin deleted it on purpose: keys missing there still show the jar default in the
+  editor, but nothing is written until an admin saves a value. A settings file that should receive new keys from plugin
+  updates opts in:
+
+  ```java
+  if (CoreApi.has(CoreApi.Capability.CONFIG_EDITOR_MERGE_OPTION))
+      ConfigEditor.register(this, "messages.yml", this::reloadMessages, true);   // merge missing defaults
+  else
+      ConfigEditor.register(this, "messages.yml", this::reloadMessages);
+  ```
+
+  `register(owner, "config.yml", reload, false)` opts out for `config.yml`.
+- **Change history (0.44.0, `CONFIG_HISTORY`):** every save through the editor (sections, drafts, profiles) is recorded
+  in `plugins/vystorm_core/config-history.yml` with admin, time, plugin, file and each value before and after (secret
+  paths never). `/vadmin config history [plugin] [page]` lists it newest first with a clickable undo per entry;
+  `/vadmin config undo <id> [force]` puts the old values back with the usual backup and reload and records the undo
+  as a new entry. Values changed again since then block the undo unless `force`. Nothing to do for your plugin; the
+  same is available as `ConfigEditor.history(CommandSender, String plugin, int page)` and
+  `ConfigEditor.undo(CommandSender, int id, boolean force)` (messages go to the viewer, permission
+  `vystorm_core.config.<plugin>` applies). Off with `config-history.enabled: false`.
+- All calls on the **server thread**; registrations are released when your plugin is disabled.
+
+---
+
+## 6. Menus and managed inventories (`api.gui()`)
+
+`GuiInteface` (sic). All GUI operations: **server thread**.
+
+
+#### First-run setup (`setup.yml`, since 0.54.0)
+
+Put a `setup.yml` at the root of the jar; no code is needed. Core shows admins a clickable hint for new installs, asks the questions, previews every change and writes only after confirmation. Older Cores ignore the file. Targets are `file:path` and must exist in the jar defaults of a file registered with the config editor; secrets are refused.
+
+```yaml
+version: 1
+intro: { en: "Welcome", de: "Willkommen" }
+questions:
+  - id: strength
+    text: { en: "How strong?", de: "Wie stark?" }
+    type: choice          # choice | number | text
+    recommended: normal
+    options:
+      - id: normal
+        label: { en: "Normal", de: "Normal" }
+        set: { "config.yml:cold.damage": 1.0 }
+      - id: hard
+        label: { en: "Hard", de: "Hart" }
+        set: { "config.yml:cold.damage": 2.0 }
+  - id: radius
+    text: { en: "Radius", de: "Radius" }
+    type: number
+    target: "config.yml:search.radius"
+    min: 1
+    max: 64
+```
+
+### 6.1 Main menu entries (`/vmenu`)
+
+```java
+void registerMenu(Plugin owner, String key, String title, Material icon, Predicate<Player> access, Consumer<Player> opener)
+void registerMenu(Plugin owner, String key, String title, Material icon, Predicate<Player> access, Consumer<Player> opener, String group)
+void registerMenu(Plugin owner, String key, String title, Material icon, Predicate<Player> access, Consumer<Player> opener, String group, String description)
+void registerMenu(Plugin owner, String key, Function<Player, String> title, Material icon, Predicate<Player> access, Consumer<Player> opener, String group, Function<Player, String> description)   // 0.22.0, per viewer
+boolean openMenu(Player player, String key)            // "plugin:key"; re-checks access
+boolean hasVisibleMenus(Player player, String group)
+void openDirectory(Player player, int page) / openDirectory(Player player, int page, String group)
+List<String> menuKeys(Player player)
+List<MenuEntryView> menuEntries(Player player, String group)   // 0.25.0: visible entries of a group (key, title, icon, group, description)
+void unregisterMenus(Plugin owner)                     // automatic on disable
+```
+
+With the client mod (0.8.0+) `/vmenu` and key K show the main menu as a native panel grid (§18.9); entries registered
+through `PanelSpec.menu(...)` open natively, all others call their `opener` as before.
+
+- Entry id = `NamespacedKey(owner, key)` → `<lowercase plugin name>:<key>`; `key` must be a valid `NamespacedKey` key
+  (`[a-z0-9/._-]`). Duplicate → `IllegalArgumentException`.
+- `group`: use `MenuCategory.X.group()` for the standard categories (`CHARACTER`, `ECONOMY`, `COMMUNITY`, `WORLD`,
+  `BUILDING`, `TUTORIALS`, `ADMIN`); `""` = main directory. A category shows only while it has visible entries.
+  `MenuCategory` also has `title(CommandSender)`, `langKey()`, `icon()`, `key()`, `static ordered()`, `static byGroup(String)`.
+- `access` is checked when listing and again on open. `title`/`description` may be `lang.ref(...)`.
+
+```java
+core.gui().registerMenu(this, "shop", lang.ref("menu.shop"), Material.EMERALD,
+        p -> p.hasPermission("myshop.use"), this::openShop,
+        MenuCategory.ECONOMY.group(), lang.ref("menu.shop-desc"));
+```
+
+### 6.2 Managed inventories (chest GUIs with real items)
+
+```java
+Inventory createInventory(Plugin owner, InventoryHolder holder, UUID viewer, int size, String title, GuiCallbacks callbacks)
+boolean isManaged(Inventory inventory)
+void releaseInventory(Inventory inventory)   // for shared inventories (viewer == null)
+```
+
+`GuiCallbacks` (all `default`): `click(InventoryClickEvent)`, `drag(InventoryDragEvent)`, `close(InventoryCloseEvent)`,
+`discarded(Inventory)`. Defaults **cancel** clicks and drags. Core dispatches events by inventory identity; a personal
+inventory (`viewer` UUID) ignores clicks from others. Menu items do not trigger Core's global NBT interaction. Schedule
+inventory switches after the current event (`runTask`). `viewer = null` binds a shared real inventory until
+`releaseInventory`. The owner must be enabled (`IllegalStateException` otherwise).
+
+Personal sessions are removed on close and when opening is denied; `discarded(inventory)` lets you clean up your own
+context after a denied open. On plugin disable Core removes the plugin's menus and closes their views;
+`unregisterMenus(plugin)` does this earlier, e.g. before you shut down your own storage. Replacing the GUI handler also
+cleans up the existing sessions. Controlled item transfers: override the callbacks and keep your own transaction and
+permission checks.
+
+```java
+Inventory inv = core.gui().createInventory(this, null, player.getUniqueId(), 27, lang.text(player, "shop.title"),
+        new GuiCallbacks() {
+            @Override public void click(InventoryClickEvent e) {
+                e.setCancelled(true);
+                if (e.getRawSlot() == 13) Bukkit.getScheduler().runTask(plugin, () -> buy((Player) e.getWhoClicked()));
+            }
+        });
+inv.setItem(13, lang.name(new ItemStack(Material.DIAMOND), player, "shop.diamond"));
+player.openInventory(inv);
+```
+
+The older `createGui/addItem/addMenu/removeMenu/removeItem/setSpecificItem/getGui/getInventory/getMenuNames` methods and
+`handleClick/handleDrag/handleOpen/handleOpenResult/handleClose` belong to the legacy auto-GUI and Core's own listeners –
+don't use them in new plugins.
+
+---
+
+## 7. Native dialogs (`api.dialogs()`)
+
+`DialogInterface`, Paper native dialogs. **Server thread.** Each dialog is bound to plugin, player and a one-time
+token; opening and answers are deferred to the next tick; `valid` is re-checked; duplicate answers, expired dialogs
+(60 s), a disabled owner or a replacing dialog never run old actions.
+
+```java
+void open(Plugin owner, Player player, DialogRequest request)
+void prompt(Plugin owner, Player player, String title, String question, String initial, Consumer<String> submit, Runnable cancel, Predicate<Player> valid)
+void confirm(Plugin owner, Player player, String title, String message, Runnable submit, Runnable cancel, Predicate<Player> valid)
+void close(Player player)
+void removeAll(Plugin owner)    // automatic on disable
+```
+
+`prompt`/`confirm` titles and texts may be `lang.ref(...)`; `prompt` input max length is 256.
+
+`DialogRequest(Component title, List<DialogBody> body, List<DialogInput> inputs, List<DialogButton> buttons, Predicate<Player> valid, Runnable cancel, String cancelLabel, int columns)`
+– short form without `cancelLabel`/`columns` (defaults: `DEFAULT_CANCEL`, 3 columns). `columns` 1..4; all lists and
+`valid`/`cancel` non-null. `DialogBody`/`DialogInput` are Paper types (`io.papermc.paper.registry.data.dialog.*`).
+The always-present exit button runs `cancel`; `cancel` also runs on ESC and on the 60 s timeout, **not** when replaced,
+closed via `close(...)` or when the owner is disabled.
+
+`DialogButton(Component label, Component tooltip, BiConsumer<Player, DialogResponseView> action)` / without tooltip.
+Read inputs with `response.getText("id")`, `getFloat`, `getBoolean` (Paper `DialogResponseView`).
+
+```java
+core.dialogs().open(this, player, new DialogRequest(
+        lang.component(player, "rename.title"), List.of(),
+        List.of(DialogInput.text("name", lang.component(player, "rename.label")).maxLength(32).build()),
+        List.of(new DialogButton(lang.translatable("common.save"), (p, r) -> rename(p, r.getText("name")))),
+        p -> p.isOnline(), () -> {}));
+
+core.dialogs().confirm(this, player, lang.ref("sell.title"), lang.ref("sell.question"),
+        () -> sell(player), () -> {}, p -> p.getInventory().contains(Material.DIAMOND));
+```
+
+Validate every input server-side (price, ownership, stock); the dialog only checks shape. After a dialog, create
+inventory menus fresh.
+
+Since 0.26.0 the client closes the dialog itself when a button is clicked (`DialogAfterAction.CLOSE`); before, Vanilla
+26.2 stayed on "Waiting for server" because `closeDialog()` does not close that screen. Open follow-up dialogs or menus
+from the button action as before.
+
+---
+
+## 8. Chat actions and menu buttons
+
+### 8.1 `_uiMethods.chat.ChatActions` (0.8.0)
+
+Clickable chat components. Callbacks run on the server thread, check permissions at click time and live for
+`LIFETIME` (30 min). Labels/hovers may be `lang.ref(...)`.
+
+| Method | Description |
+| --- | --- |
+| `static TextComponent text(String legacy)` | Legacy `§` text as component, to append actions. |
+| `static Component location(Location)` / `location(World, double, double, double)` / `location(Location, String permission)` | `[world x y z]`; click teleports with `TELEPORT_PERMISSION` (`vystorm_core.chat.teleport`, default op) or the given permission (empty = everyone). |
+| `static Component button(String label, String hover, Consumer<Player> action)` | Runs every click, no permission check. |
+| `static Component button(String label, String hover, String permission, Consumer<Player> action)` | Click-time permission check. |
+| `static Component buttonOnce(String label, String hover, Consumer<Player> action)` / `+ String permission` | At most once in total (rewards, confirmations). |
+| `static Component menu(String label, String menuKey)` | Opens a `/vmenu` entry (`plugin:key`). |
+| `static Component settings(String label, String sectionKey)` | Opens a settings section (`plugin:section`). |
+| `static Component command(String label, String hover, String command)` | Runs a command (with leading `/`) as the player. |
+| `static Component suggest(String label, String hover, String command)` | Puts text into the chat input. |
+| `static Component copy(String label, String value)` | Copies to clipboard. |
+
+```java
+player.sendMessage(ChatActions.text(lang.text(player, "quest.reward-ready")).append(Component.space())
+        .append(ChatActions.buttonOnce(lang.ref("quest.claim"), lang.ref("quest.claim-hover"), p -> claim(p))));
+```
+
+### 8.2 `_uiMethods.menu.MenuButtons`
+
+Shared `DialogButton`s for your own dialogs: `home()` (Core main menu), `category(MenuCategory)`,
+`back(Consumer<Player> target)`, `settings(String sectionKey)`, `settings(String sectionKey, String label, Component tooltip)`
+(label may be a `Lang.ref`), `settings(String sectionKey, Component label, Component tooltip)`. Labels render in each
+viewer's language.
+
+---
+
+## 9. Tutorials
+
+`api.registerTutorial(Plugin owner)` (or `TutorialGuide.register(API api, Plugin owner)`) registers a read-only guide
+from `tutorial.yml` in your jar as menu entry `<plugin>:tutorial` in the Tutorials category. Optional translations
+`tutorial_<code>.yml` (e.g. `tutorial_en.yml`); players get their language, unknown languages get `tutorial_en.yml` if
+present, else `tutorial.yml`. Call once in `onEnable` (server thread).
+
+```yaml
+# src/main/resources/tutorial.yml
+title: Greeter
+permission: ''            # optional: only players with this permission see the guide
+pages:
+  - title: Getting started
+    text: |
+      1. Type /greet.
+      2. Open /vsettings to turn greetings off.
+    gif: tutorial/greet.gif   # optional (0.59.0): build animation in your jar, shown on map tiles next to the text
+  - title: Admins
+    permission: greeter.admin     # optional per page
+    text: |
+      Server options: /vsettings server.
+```
+
+---
+
+## 10. Admin dashboard modules (`api.admin()`)
+
+`/vadmin` (`/admin`) shows a permission-checked dashboard. A module is a curated list of your **own command's**
+sub-commands; Core runs them as the clicking admin (normal permission checks) and asks for confirmation before
+`mutating` actions, showing the exact command.
+
+```java
+AdminModule(String id, String title, String plugin, String command, String permission, String nativeEntry, List<AdminAction> actions)
+AdminAction(String id, String label, String permission, String fixedArguments, String argumentHint, String example, boolean mutating)
+```
+
+- `id`, `command`, action `id`: `[a-z0-9-]{1,40}`; ≤ 64 actions; `plugin` must equal your plugin's `getName()`.
+  At most 128 modules in total; a module id owned by another plugin → `IllegalArgumentException`.
+- `command` is your command name (no slash); `fixedArguments` the fixed sub-command; `argumentHint` (non-empty) makes
+  Core ask for trailing arguments (max 192 chars, unsafe input rejected); `nativeEntry` (optional) is a command line
+  opened by a "native menu" button. Your `SERVER` settings sections are linked automatically.
+- `title`/`label` may be `lang.ref(...)`. `AdminInterface`: `register`, `unregister(Plugin)` (automatic on disable),
+  `modules()`, `owner(String id)`.
+- Core ships a built-in catalog of modules for the known Vystorm plugins (`inventory`, `market`, `economy`, `skills`,
+  `factions`, …). A module you register **with the same id replaces that catalog entry** in the dashboard, so a plugin
+  can offer its full, up-to-date action list. Check `CoreApi.has(CoreApi.Capability.ADMIN_MODULES)` (flag since 0.26.4).
+
+```java
+core.admin().register(this, new AdminModule("greeter", lang.ref("admin.title"), getName(), "greet", "greeter.admin", "",
+        List.of(new AdminAction("reset", lang.ref("admin.reset"), "greeter.admin", "reset", "", "", true),
+                new AdminAction("give", lang.ref("admin.give"), "greeter.admin", "give", "<player> <amount>", "Steve 5", true))));
+```
+
+---
+
+## 11. Shared database
+
+Capability `shared-database` (0.14.0). One MySQL/MariaDB pool for all Vystorm plugins, configured only in Core's
+`config.yml` (`database.shared`, default `enabled: false`). Plugins never see credentials; each plugin owns tables with
+its own prefix.
+
+`api.database()` (`DataBaseInterface`, default methods) and the static `database.SharedDatabase`:
+
+| Method | Description |
+| --- | --- |
+| `Optional<DataSource> shared()` / `SharedDatabase.dataSource()` | The pool if connected and tested; empty if disabled, still connecting, failed or closed. |
+| `boolean isSharedAvailable()` / `SharedDatabase.available()` | Whether the pool is present right now. |
+| `CompletableFuture<Optional<DataSource>> sharedReady()` / `SharedDatabase.whenReady()` | Completes once Core's asynchronous connection test is done (empty = not available). **Use this at startup.** |
+| `String sharedTableName(String prefix, String table)` / `SharedDatabase.tableName(...)` | `<prefix>_<table>`: prefix 2–16 chars `[a-z][a-z0-9]*` (unique per plugin), table `[a-z0-9][a-z0-9_]*`, total ≤ 64. Invalid → `IllegalArgumentException` (never rewritten). |
+| `SharedDatabase.status()` | `SharedDatabase.Status`: `DISABLED`, `CONNECTING`, `AVAILABLE`, `FAILED`, `CLOSED`. |
+| `SharedDatabase.failure()` | `Optional<String>` reason of a failure (no credentials). |
+| `SharedDatabase.ID` | `"vystorm"` – id of the pool in the legacy handler. Never call `unregisterDataBase("vystorm")`. |
+
+`database.SchemaMigrator` – versioned schema steps, one row per owner in `vystorm_schema_versions`
+(`SchemaMigrator.VERSION_TABLE`):
+
+```java
+new SchemaMigrator(String owner)                       // owner = your table prefix
+SchemaMigrator step(int version, String... sql)        // version >= 1, unique
+SchemaMigrator step(int version, SchemaMigrator.Step step)   // Step: void apply(Connection) throws SQLException
+int migrate(DataSource ds) throws SQLException         // applies missing steps in order, saves version after each
+int currentVersion(DataSource ds) throws SQLException
+int latest() / String owner()
+```
+
+A database newer than your highest step → `IllegalStateException`. MySQL commits DDL implicitly: make steps idempotent
+(`IF NOT EXISTS`) or one DDL statement per step.
+
+```java
+API core = CoreApi.api().orElseThrow();
+core.database().sharedReady().thenAcceptAsync(db -> {
+    if (db.isEmpty()) { useFlatFiles(); return; }
+    DataSource ds = db.get();
+    String stash = core.database().sharedTableName("greet", "stats");   // "greet_stats"
+    try {
+        new SchemaMigrator("greet")
+                .step(1, "CREATE TABLE IF NOT EXISTS " + stash + " (player BINARY(16) PRIMARY KEY, count INT NOT NULL, updated BIGINT NOT NULL)")
+                .migrate(ds);
+        try (Connection c = ds.getConnection();
+             PreparedStatement ps = c.prepareStatement("SELECT count FROM " + stash + " WHERE player = ?")) {
+            // ... always PreparedStatement parameters for values
+        }
+        Bukkit.getScheduler().runTask(this, this::databaseReady);        // back to the server thread for Bukkit
+    } catch (SQLException e) {
+        getLogger().severe("Database: " + e.getMessage());
+        useFlatFiles();
+    }
+}, task -> Bukkit.getScheduler().runTaskAsynchronously(this, task));
+```
+
+Rules: never use connections on the server thread; return them immediately (try-with-resources); never close the
+`DataSource`; the pool is small and shared; store times as epoch millis (`BIGINT`); UUIDs as `BINARY(16)`; always
+`PreparedStatement` parameters. There is no automatic reconnect after a failed start (needs a restart); short outages
+while running are handled by the pool.
+
+`whenReady()`/`sharedReady()` run their callbacks on Core's init thread or, if the test is already done, on the calling
+thread – switch to the server thread for Bukkit access (the example above uses `thenAcceptAsync` with Bukkit's async
+scheduler). Pool startup, log lines and the local integration test (`SharedDatabaseIntegrationTest`, only against
+`127.0.0.1`/`localhost`) are described in [TECHNICAL.md](TECHNICAL.md#shared-database).
+
+---
+
+## 12. Player data, XP, preferences, file storage
+
+### 12.1 XP (`api.player()`, `PlayerHandlerInterface`) – server thread
+
+```java
+int experience(Player player)                          // spendable XP incl. level progress
+void giveExperience(Player player, int amount)         // like Bukkit giveExp; amount >= 0
+void setExperience(Player player, int amount)          // amount >= 0
+boolean withdrawExperience(Player player, int amount)  // false = not enough, XP unchanged
+void depositExperience(Player player, int amount)
+```
+
+Negative amounts throw `IllegalArgumentException`.
+
+### 12.2 Per-player values
+
+- **Preferences:** `PlayerPrefs` (5.4) – booleans/numbers/strings in the player's persistent data, saved with the
+  player file. Best choice for small per-player options.
+- **Legacy string storage:** `api.player().getSetting(UUID, String)` / `setSetting(UUID, String, String)` and
+  `getPlayerData(UUID, String)` / `setPlayerData(UUID, String, String[])` (temporary data). Core loads/saves player
+  data on join/quit. Prefer `PlayerPrefs`, your own storage or the shared database for new code.
+
+### 12.3 Item/inventory serialization (`api.data().dataEncoder()`)
+
+`DataEncoder`: `String encodeItem(ItemStack)`, `ItemStack decodeItem(String)`, `String encodeInventory(ItemStack[])`,
+`ItemStack[] decodeInventory(String)` – Paper's native serialization (meta, PDC and empty slots round-trip), plus
+`encodeInt/decodeInt`, `encodeString/decodeString`, `encodeBoolean/decodeBoolean`.
+
+### 12.4 Files
+
+`_coreMethods.dataStorage.AtomicFiles`: `static void write(Path, byte[])` and `static void write(Path,
+FileConfiguration)` – write-to-temp + atomic replace (throws `IOException`). Use it for your own YAML/JSON files.
+Since 0.44.0: `static Path moveAside(Path)` moves an unreadable data file aside as `<name>.broken-<yyyyMMdd-HHmmss>`;
+`static YamlConfiguration readYaml(Path, Logger)` returns the loaded file (empty when missing) or `null` when it was
+unreadable – it is then moved aside with a severe log line, and you should use defaults in memory and not save over it
+until the next restart.
+
+The legacy `api.data()` loader/creator/saver/`dataEntry(Plugin, String folder, Path, String name)` storage (YAML
+`DataEntry`s kept in memory and saved by Core) still works but has an awkward API; new plugins should use their own
+files (`AtomicFiles`), `storage.VersionedStore` (section 17) or the shared database. Deprecated:
+`DataStorageInterface.convertDataEntry`/`exportDataEntry`, `DataBaseEntry`, `Saver.saveDataEntryExtern`.
+
+---
+
+## 13. Debug messages
+
+`_parsersDebuggerEtc.debugger.DebugMessages` – static, any thread, never throws:
+
+```java
+DebugMessages.low(String message)    / low(String message, Throwable failure)
+DebugMessages.mid(String message)    / mid(String message, Throwable failure)
+DebugMessages.high(String message)   / high(String message, Throwable failure)   // appends class, message, 8 stack lines
+```
+
+Start every message with a marker `[Name]` or `[Name 42]` (e.g. `"[Greeter/Store] save failed"`): the text in the
+brackets without a trailing line number is the switch key in `plugins/vystorm_core/debug/states.yml`
+(`Greeter/Store.LOW: false`). New switches default to on (except a few noisy Core ones); console output defaults to
+HIGH/SHUTDOWN only (`_console.LOW` etc.). HIGH also goes to players with `vystormCore.debug`. Files:
+`debug/low-mid/` and `debug/high-shutdown/`, each capped at 512 MiB, 8 MiB per file, messages ≤ 8192 chars.
+
+`api.debug()` (`DebugInterface`) additionally offers `low/mid/high/shutdown(String, LocalDateTime)`,
+`boolean highConfirmed(String, LocalDateTime, Duration)` (blocks until written and synced; `false` = switched off;
+throws `IOException`, `InterruptedException`, `TimeoutException`), `flush(Duration)` and `reloadStates(Duration)`.
+Don't log secrets, tokens or full payloads. `api.debug().shutdown(...)` requests a server shutdown – don't use it in
+normal plugins.
+
+---
+
+## 14. Web platform
+
+Capabilities `web` (0.17.0), `web-live` (0.18.0), `web-localization` (0.23.0), `web-open` + `web-settings` (0.24.0).
+Package `Vystorm.vystorm_core.web`.
+
+Core serves browser pages for all plugins – in a normal browser (`/web`) and, for players with the Vystorm client mod,
+as an in-game overlay. Core handles login (one-time links), sessions, CSRF/Origin checks, permissions, rate limits,
+body limits, handler timeouts, security headers and an audit log. **Browser and client are never authoritative:** every
+change goes through your `WebHandler` on the server, which validates it.
+
+The platform is off unless the admin sets `web.enabled: true` in Core's `config.yml`. Registering modules always works;
+while the platform is off they are simply not served (`WebServices.available()` is `false`).
+
+### 14.1 URL layout
+
+| Path | Content |
+| --- | --- |
+| `/`, `/login`, `/app/<id>[/sub…]` | Web UI (bundled vystorm-web-ui, or a newer build configured by the admin). |
+| `/m/<id>/…` | Your module's **static assets** (from your jar). Public – no login needed, cacheable. |
+| `/api/<id>/…` | Your module's **routes** (JSON). Session required. |
+| `/data/<id>/<name>.json`, `/data/<id>/<name>.<hash>.json` | Data published with `publishData`. |
+| `/core/web.js`, `/core/web.css`, `/core/session`, `/core/live`, `/core/i18n` | Core helpers and endpoints. |
+
+### 14.2 `WebServices` (static facade)
+
+| Method | Thread | Description |
+| --- | --- | --- |
+| `static void register(Plugin owner, WebModule module)` | any | Registers/replaces your module. Throws `IllegalStateException` if another active plugin (or Core) owns the id, `IllegalArgumentException` if assets can't be loaded. |
+| `static void unregister(Plugin owner)` / `static boolean unregister(Plugin owner, String moduleId)` | any | Remove your modules (automatic on disable). |
+| `static boolean available()` | any | Platform configured and running. |
+| `static boolean registered(String moduleId)` / `static Set<String> modules()` | any | Active modules. |
+| `static Optional<String> loginLink(Player, String moduleId)` | server | One-time link `<public-url>/login#<token>` (~60 s, single use). Empty if platform off, module missing or no permission. |
+| `static boolean sendLink(Player, String moduleId, Component label)` | server | Clickable link in chat (`label` null = default text). `false` + hint to the player if impossible. |
+| `static Optional<WebLogin> issueLogin(Player, String moduleId, String issuer)` | server | Token without chat (for own channels). The token is secret – only for that player, never log it. |
+| `static WebOpenResult openOrLink(Player, String moduleId, String subPath, Runnable fallback)` | server | (0.24.0) Overlay if client mod present and trusted, else chat link, else `fallback` (or Core's hint if `fallback` is null). |
+| `static WebOpenResult openOrLink(Player, String moduleId, String subPath, Component label, Runnable fallback)` | server | (0.26.4) Same, but the chat link shows `label` instead of the module title (`null` = module title). |
+| `static WebOpenResult openOrElse(Player, String moduleId, String subPath, Runnable fallback)` | server | (0.24.0) Overlay if possible, else `fallback` – no chat link. Use it to replace a chest/dialog menu. |
+| `static String overlayPage(String moduleId, String subPath)` | any | (0.24.0) Page string for `ClientServices.show`. |
+| `static boolean push(UUID player, String moduleId, String type, JsonElement data)` / `push(Player, …)` | any | (0.18.0) Live event to all open tabs/overlays of the player; returns whether a live connection exists. |
+| `static int broadcast(String moduleId, String type, JsonElement data)` | any | (0.24.0) Live event to every connected player allowed to open the module; returns the count. |
+| `static String publishData(Plugin owner, String moduleId, String name, JsonElement data)` | any | (0.18.0) Versioned static JSON; returns `/data/<id>/<name>.<hash>.json`. |
+| `static Optional<String> dataUrl(String moduleId, String name)` | any | Current versioned URL. |
+| `static Optional<String> publicUrl()` | any | Public base URL (no trailing slash) while running. |
+| `static int revokeSessions(UUID player)` | any | Ends all web sessions of a player. |
+| `static String coreModuleId()` / `USE_PERMISSION` | – | `"core"` / `"vystorm.web.use"` (base permission, default: everyone). |
+
+`WebOpenResult`: `OVERLAY`, `LINK`, `FALLBACK`, `NONE`. `subPath`: `""` (module start page), `"tab/x"` (→
+`/app/<id>/tab/x`) or `"#frag"`; letters, digits and `/_=&.,:~+-`, at most one `#fragment`, no `..` or `//`, about
+150 chars max; invalid → `IllegalArgumentException`. The chat link always opens the module page (sub-path only in the
+overlay).
+
+Players can also open any module themselves with `/web <id>` (plain `/web`: the overview). Since 0.25.3 this behaves like
+`openOrLink`: client mod present and origin trusted → the page opens directly, otherwise the chat link.
+
+### 14.3 `WebModule`
+
+```java
+WebModule.builder(String id, String title)      // id [a-z0-9-]{1,32} (WebModule.ID); title 1..64 chars (a lang.ref string counts)
+    .description(String text)                   // ≤ 200 chars (may be lang.ref)
+    .permission(String node)                    // for page list AND all routes; empty = only vystorm.web.use
+    .assets(String classpathPrefix)             // e.g. "web/greeter/" in YOUR jar → /m/<id>/…
+    .asset(String path, byte[] content)         // inline file (overrides a jar file of the same path)
+    .route(WebRoute route) / .routes(Iterable<WebRoute>)
+    .entry(String path)                         // start page, default "index.html"
+    .snapshot(WebSnapshot source)               // live state for newly connected tabs (0.18.0)
+    .listed(boolean)                            // show on the overview page, default true
+    .build()
+```
+
+Reserved ids: `core`, `settings` (Core's modules), `logout`, `status`, `link` (`/web` sub-commands). Duplicate routes
+(same method and pattern) → `IllegalArgumentException`.
+
+**Static assets are public** (served without login and cached by gateways): never put secrets or player data in
+them; data always comes from routes. Allowed extensions: html, js, mjs, css, json, svg, png, jpg, jpeg, gif, webp, ico,
+woff, woff2, txt. Limits: 512 files, 4 MiB per file, 32 MiB per module. The Content-Security-Policy blocks inline
+scripts and styles – put JS/CSS into files.
+
+### 14.4 `WebRoute`
+
+```java
+WebRoute.get(String path, WebHandler handler)      // also post, put, patch, delete
+WebRoute.builder(WebMethod method, String path, WebHandler handler)
+    .permission(String node)        // extra permission, re-checked on every request
+    .requiresOnline()               // player must be online in game, else HTTP 409; also requiresOnline(boolean)
+    .rateLimit(int perMinute)       // per session and route, 1..6000, default 120 (DEFAULT_RATE_PER_MINUTE)
+    .maxBody(int bytes)             // default 16 KiB (DEFAULT_MAX_BODY), max 1 MiB (MAX_BODY_LIMIT); GET always 0
+    .mutating(boolean)              // audit-logged; default true for non-GET; GET may only be false
+    .build()
+```
+
+Paths are relative to `/api/<id>`: fixed segments `[A-Za-z0-9._~-]{1,64}` and placeholders `{name}`
+(`[a-zA-Z][a-zA-Z0-9]{0,31}`), at most 16 segments; `"/"` is the module root. `WebMethod`: `GET`, `POST`, `PUT`,
+`PATCH`, `DELETE`. Every non-GET request needs the CSRF header and a matching `Origin` – `/core/web.js` and the web UI
+handle that.
+
+### 14.5 Handlers, requests, responses
+
+`WebHandler`: `WebResponse handle(WebRequest request) throws Exception`.
+
+**Handlers do not run on the server thread** (bounded pool, default timeout 10 s → HTTP 504). For Bukkit access use
+`request.sync(...)` (runs on the server thread, default timeout 5 s → `WebException` 503).
+
+`WebContext` (base of `WebRequest` and snapshot context):
+
+| Method | Description |
+| --- | --- |
+| `UUID playerId()` / `String playerName()` | The logged-in player (name at login time). |
+| `String moduleId()` | Your module id. |
+| `String clientIp()` / `String sessionId()` | Trusted client IP; stable, non-secret session id. |
+| `boolean online()` | Whether the player was online when the request arrived. |
+| `<T> T sync(Callable<T> task)` / `sync(Callable<T> task, Duration timeout)` | Run on the server thread and wait. |
+| `default String language()` | (0.23.0) Language of this request – use with your bundle: `lang.plain(request.language(), "web.error.x")`. |
+
+`WebRequest` adds: `WebMethod method()`, `WebRoute route()`, `String path()`, `Map<String, String> pathParams()`,
+`default String pathParam(String name)` (missing → `WebException` 400; values ≤ 128 chars, no control chars or `/`),
+`Map<String, List<String>> query()`, `default Optional<String> query(String name)`, `JsonElement body()` (strict JSON;
+`JsonNull` if empty), `<T> T body(Class<T> type)` (Gson, e.g. a record; mismatch → 400).
+
+Core has already checked session, permissions, CSRF, rate limit and body size – **the values still come from the
+browser: validate everything** (ranges, ownership, ids, state).
+
+`WebResponse` (always JSON, `Cache-Control: no-store`): `static json(Object value)` (Gson; a `JsonElement` is used as
+is), `static json(int status, Object value)` (200–299 or 400–599), `static noContent()` (204),
+`static error(int status, String message)` → `{"error": "<code>", "message": "…"}`.
+
+`WebException(int status, String message)` (400–599) + `badRequest`, `forbidden`, `notFound`, `conflict`. The message
+is shown to the user unchanged (may be a `lang.ref`) – no internal details. Any other exception is logged by Core and
+answered with HTTP 500 without details.
+
+```java
+record Allocate(String node, int points) {}
+
+WebRoute.post("/nodes/{node}/allocate", request -> {
+    String node = request.pathParam("node");
+    Allocate body = request.body(Allocate.class);
+    if (body == null || body.points() < 1 || body.points() > 5) throw WebException.badRequest(lang.ref("web.error.points"));
+    boolean ok = request.sync(() -> tree.allocate(request.playerId(), node, body.points()));   // server thread
+    if (!ok) throw WebException.conflict(lang.ref("web.error.no-points"));
+    return WebResponse.json(tree.view(request.playerId()));
+}).requiresOnline().rateLimit(30).maxBody(1024).build();
+```
+
+### 14.6 Live data and published data (0.18.0)
+
+- `WebModule.Builder.snapshot(WebSnapshot)` – `Map<String, JsonElement> snapshot(WebContext ctx) throws Exception`:
+  current state when a tab/overlay connects (keys = event types). Runs off the server thread (same timeout as handlers).
+- `WebServices.push(player, moduleId, type, json)` – after every change (cheap no-op without a connection). Events of
+  the same module+type are coalesced per player (100 ms); max 16 KiB per event; `type` `[a-z0-9][a-z0-9._:-]{0,63}`
+  (e.g. `character`, `node:12`). Invalid type or too large → `IllegalArgumentException`.
+- `WebServices.publishData(owner, moduleId, name, json)` – large, rarely changing JSON (layouts, catalogs); `name`
+  `[a-z0-9][a-z0-9-]{0,47}`, ≤ 8 MiB; module must be yours (`IllegalStateException`). Private (session needed) if the
+  module has a permission, else public. Call after registering and on reload.
+- The browser receives `{"kind":"event","module","type","data","snapshot"}`, `{"kind":"ready"}` (snapshot done),
+  `{"kind":"data","module","name","url"}` and `{"kind":"bye","reason"}` over Server-Sent Events (`GET
+  /core/live?modules=<id>`). No polling.
+
+```java
+WebServices.register(this, WebModule.builder("stats", lang.ref("web.title"))
+        .snapshot(ctx -> Map.of("summary", summaryJson(ctx.playerId())))
+        .route(WebRoute.get("/summary", r -> WebResponse.json(summaryJson(r.playerId()))).build())
+        .build());
+// whenever the value changes (any thread):
+WebServices.push(playerId, "stats", "summary", summaryJson(playerId));
+```
+
+### 14.7 Writing the page
+
+**Option A – static page in your jar (works everywhere, no Core release needed).** Register `.assets("web/<id>/")`.
+The bundled UI sends `/app/<id>` to `/m/<id>/` when it has no built-in page for your module. Use Core's helpers:
+
+```html
+<html lang="{{@lang}}" data-vw-texts="{{@texts}}" data-vw-languages="{{@languages}}">
+<link rel="stylesheet" href="/core/web.css">
+<script src="/core/web.js"></script>
+<script src="app.js"></script>
+<header data-vw-header></header>   <!-- shared header: brand, theme, language, logout -->
+```
+
+- HTML tokens (rendered per request language, HTML-escaped): `{{<namespace>:web.ui.key}}` – raw text from **your**
+  bundle (namespace = lower-case plugin name); `{{@lang}}`; `{{@texts}}` (Core's `web.ui.*` texts as JSON for
+  `VystormWeb.t`); `{{@languages}}`. Pages without `{{` are served unchanged.
+- `GET /core/i18n?ns=<namespace>` → `{language, languages:[{code,name}], texts:{…}}` with your keys below `web.ui.`
+  (prefix removed).
+- `window.VystormWeb`: `session()`, `get(path)`, `post(path, body)`, `put`, `patch`, `del` (CSRF header automatic;
+  errors throw `VystormWeb.WebError {status, code, message}`; 401 shows a re-login hint), `live(modules, onMessage)` →
+  `{close()}`, `el(tag, attrs, ...children)` (safe DOM, no `innerHTML`), `showError(error, target)`, `t(key, vars)`,
+  `setLanguage(code)`, `logout()`, `toggleTheme()`.
+- Styling: classes `vw-main`, `vw-card`, `vw-button`, `vw-primary`, `vw-input`, `vw-table`, `vw-row`, `vw-muted`,
+  `vw-notice`, `vw-mono`; theme tokens `--vw-bg`, `--vw-surface`, `--vw-text`, `--vw-accent` (light/dark).
+- Never use `innerHTML`/inline handlers with server or user data; use `textContent`/`VystormWeb.el`.
+
+**Option B – page inside the web UI app (vystorm-web-ui, Preact).** For first-party Vystorm plugins: add
+`src/modules/<id>/` plus one line in `src/modules/index.js`, use `useApp`, `useLive(module, type)`,
+`usePluginTexts(namespace, fallbacks)`; the page ships with the next Core release (Core bundles the UI build). Keep a
+static fallback page (option A) so older UIs still work.
+
+### 14.8 Settings page for free (0.24.0)
+
+All sections registered with `api.settings()` appear on `/app/settings` automatically (section 5.5). Endpoints (used by
+the UI): `GET /api/settings/sections`, `POST /api/settings/save {section, values:{id:value}}`. Live event
+`settings/changed` refreshes open pages; call `api.settings().changed(player)` after changing values yourself.
+
+### 14.9 A page in vystorm-web-ui, step by step (option B in detail)
+
+Spigot servers need nothing but Core's jar: it bundles the web UI and serves it when `web.enabled: true`.
+
+**1. Server side.** Register a module as in 14.3. Title and description should be `lang.ref(...)` keys of *your* lang
+files; the web UI shows the title per viewer, no Core lang edit is needed:
+
+```java
+Lang lang = CoreApi.api().orElseThrow().lang().register(this);
+WebServices.register(this, WebModule.builder("customtrees", lang.ref("web.module.title"))
+        .description(lang.ref("web.module.description"))
+        .assets("web/customtrees/")          // optional static fallback page (see 3.)
+        .route(WebRoute.get("/species", req -> WebResponse.json(species(req.language()))).build())
+        .snapshot(ctx -> Map.of("stats", statsJson(ctx.playerId())))   // optional live state
+        .build());
+```
+
+**2. The page.** In vystorm-web-ui add a folder `src/modules/<id>/` and **one line** in `src/modules/index.js`:
+
+```js
+customtrees: { load: () => import('./customtrees/CustomTreesPage.jsx') },
+```
+
+```jsx
+// src/modules/customtrees/CustomTreesPage.jsx
+import { useEffect, useState } from 'preact/hooks';
+import { useApp, useLive, usePluginTexts } from '../../lib/hooks.js';
+const EN = { empty: 'No trees yet.', grown: '{count} trees grown' };   // English fallbacks
+
+export default function CustomTreesPage({ module, rest, title }) {    // title = your registered module title, localized
+  const tr = usePluginTexts('customtrees', EN);    // GET /core/i18n?ns=customtrees → your lang files, keys below web.ui.
+  const { api } = useApp();
+  const stats = useLive('customtrees', 'stats');   // snapshot + WebServices.push, no polling
+  const [species, setSpecies] = useState(null);
+  useEffect(() => { api.get('/api/customtrees/species').then(setSpecies); }, []);
+  return <main class="vw-main"><h1>{title}</h1><p>{tr('grown', { count: stats?.grown ?? 0 })}</p></main>;
+}
+```
+
+Texts go into your plugin's `lang/en.yml`/`de.yml` under `web.ui.` (`web: { ui: { grown: "{count} trees grown" } }`);
+the namespace is your plugin name in lower case (spaces → `_`). `tp(ns, key, vars)`/`loadPluginTexts(ns)` in
+`src/lib/plugintexts.js` are the framework-free variants. Core's own UI texts (`t()` from `src/lib/i18n.js`) stay for
+the frame and the component kit. Use the kit (`src/kit`, demo at `/app/kit`) and the theme classes (`vw-card`,
+`vw-button`, …); no inline scripts/styles (CSP), no `dangerouslySetInnerHTML`. `npm test` and `npm run build` (CSP
+check) must pass. The page gets `rest` (sub-path after `/app/<id>`) for tabs and deep links.
+
+**3. Fallback when the served UI has no page for your module** (an older bundled UI, a gateway with an older build):
+the UI redirects to your static page `/m/<id>/` if you registered `.assets("web/<id>/")` (option A), otherwise it shows
+"This server's web interface has no page for … yet – ask the admin to update the web UI". The overview lists your module
+in both cases.
+
+**4. Shipping.** Commit the page to vystorm-web-ui (`main`), then in Core run `scripts/update-web-ui.sh` (builds the UI
+incl. CSP check and writes `webui/vystorm-web-ui-dist.zip` + `webui/web-ui.properties`), commit both, bump Core's
+version and release Core – Spigot users get the page with the next Core jar. Core's Gradle build needs no npm. Which UI
+build a server actually serves (gateway `uiDir` → `web.ui-dir` → bundled build → built-in pages) is described in
+[TECHNICAL.md](TECHNICAL.md#which-web-ui-is-served); `/web status` shows it.
+
+---
+
+## 15. Client mod: overlay and native HUD elements
+
+The optional **Vystorm client mod** (Fabric/NeoForge) shows web pages as an in-game overlay and renders native HUD
+elements. Everything here is **additive**: players without the mod must get the same function through vanilla means
+(chest/dialog menus, chat links, boss bars, action bars). All calls: **server thread**.
+
+### 15.1 `ClientServices` (0.19.0)
+
+| Member | Description |
+| --- | --- |
+| `static boolean hasClient(Player)` | Handshake done. |
+| `static int capabilities(Player)` | `CAP_*` bits (0 without mod). |
+| `static int clientState(Player)` | `STATE_*` bits (0 without mod). |
+| `static boolean overlayAvailable(Player)` | Overlay possible **and** the client would follow a show request (player trusted the web origin). |
+| `static boolean show(Player, String moduleId, String page)` | Open a module in the overlay; `page` e.g. `"/app/skills#node/12"` or `""`. `false` → open your normal menu. |
+| `static boolean close(Player, String moduleId)` | Close the overlay (null/empty = any module). |
+| `static boolean originTrusted(Player)` | (0.21.0) Hint only, not a permission. |
+| `static boolean uiHidden(Player)` / `static boolean uiAvailable(Player, int capability)` | (0.20.0) Native elements hidden (key H) / accepted. |
+| `static boolean enabled()` | Client channel on (`web.client.enabled`). |
+
+Capabilities: `CAP_BROWSER_OVERLAY`, `CAP_EXTERNAL_BROWSER`, `CAP_HUD`, `CAP_TOASTS`, `CAP_MARKERS`, `CAP_TOOLTIPS`,
+`CAP_JS_BRIDGE`, `CAP_UI_EXTENSIONS` (0.26.4, client ≥ 0.9.0, §15.5). States: `STATE_UI_HIDDEN`, `STATE_OVERLAY_OPEN`, `STATE_ORIGIN_TRUSTED`.
+
+Prefer the 0.24.0 shortcuts: `WebServices.openOrElse(player, id, sub, () -> openMenu(player))`.
+
+`show` returns `false` (open your normal menu) also while the player has not yet agreed to the web origin in the mod
+(since 0.20.0). Web sessions the mod signs in end when the player quits (`web.client.end-sessions-on-quit`).
+
+### 15.2 `ClientUi` (0.20.0)
+
+```java
+ClientUi ui = ClientUi.of(this);            // per plugin; ids get the namespace "<plugin>:" (xp → greeter:xp)
+boolean available(Player, int capability)  // CAP_HUD, CAP_TOASTS, CAP_MARKERS, CAP_TOOLTIPS
+boolean has(Player, String localId)
+boolean put(Player, ClientElement.Element<?> element)          // create or replace; false without mod/capability or if invalid
+boolean patch(Player, ClientElement.Element<?> fields)          // change set fields only; false if the element is gone → put
+boolean remove(Player, String... localIds)
+boolean clear(Player) / boolean clear(Player, String localPrefix) /* 0.26.4: only ids starting with the prefix, e.g. "event/" */ / void clearAll()
+boolean toast(Player, ClientElement.Toast toast)                      // an action label is dropped here
+boolean toast(Player, ClientElement.Toast toast, Consumer<Player> onAction)   // 0.26.4, §15.6
+boolean visible(Player)                    // 0.26.4: CAP_HUD and not hidden with key H
+// raw JSON variants: put(Player, JsonObject), patch(Player, String, JsonObject), toast(Player, JsonObject)
+String fullId(String localId) / String namespace() / Plugin owner()
+```
+
+Core validates every element with the client's schema (invalid → `false` + one log warning, limits are rejected, not
+truncated), batches patches (default 4 per second per element, unchanged fields not sent), rate-limits sending, and
+removes your elements when your plugin is disabled. Client limits: 32 HUD elements, 64 markers, 128 tooltip rules per
+player.
+
+**Hidden UI (key H).** `available(...)` does not look at the hide key on purpose: hidden elements stay stored on the
+client and keep receiving your `put`/`patch`, and they reappear as they are when the player presses H again – Core
+never needs to replay anything and neither do you. While hidden, the client draws no HUD elements or markers, adds no
+tooltip lines, and **drops toasts that arrive** (toasts on screen slide out). For important one-off messages use
+`ui.visible(player) ? ui.toast(...) : player.sendMessage(...)`; `VystormClientStateEvent.uiHiddenChanged()` tells you
+when it flips.
+
+### 15.3 `ClientElement` builders
+
+Local ids `[a-z0-9][a-z0-9_.:/-]*`. A builder contains only the fields you set, so the same builder works as a patch.
+Builders are not thread-safe.
+
+| Factory | Type | Main setters |
+| --- | --- | --- |
+| `ClientElement.panel(String id)` | HUD box | `width(int)` (0 or 16..320), `padding`, `background`, `border`, `textColor`, `title(String/Text)`, `icon(Icon)`, `line(String/Text)` (≤ 12), `lines(List<Text>)` |
+| `ClientElement.bar(String id)` | progress bar | `width`, `height`, `value(double)`, `max(double)`, `color`, `background`, `textColor`, `label(String/Text)`, `segments(int)` |
+| `ClientElement.slots(String id)` | skill bar | `size(int)` (16..32), `gap`, `slot(Slot)` (≤ 12), `slots(List<Slot>)` |
+| `ClientElement.slot()` | slot | `icon`, `key(String)` (≤ 4 chars), `count`, `cooldown(long remainingMs, long totalMs)`, `active(boolean)`, `label` |
+| `ClientElement.marker(String id)` | world marker | `at(x, y, z)` (required), `world(String/World)`, `label`, `color`, `icon`, `maxDistance`, `showDistance`, `clampToScreen` |
+| `ClientElement.tooltip(String id)` | tooltip rule | `matchItem(String/Material)`, `matchCustomData(String, String)`, `line(String/Text)` (1..8); 0.26.4: `matchCustomDataPresent(path)`, `matchCustomDataViewer(path)`, several conditions = AND, placeholders `ClientElement.data(path)` (§15.5) |
+| `ClientElement.list(String id)` | HUD list (0.26.4, §15.5) | `width` (0 or 40..320), `padding`, `background`, `border`, `textColor`, `rightColor`, `title`, `row(ListRow)` (≤ 12), `rows(List<ListRow>)` |
+| `ClientElement.row(String/Text label)` | list row (0.26.4) | `icon(Icon)`, `label`, `right(String/Text)`, `bar(double value, double max, String color)`, `rate(double)` (after `bar`), `countdown(long remainingMs, long totalMs, String color)`; with a bar, `right` may use `Bar.VALUE`/`MAX`/`TIME` |
+| `ClientElement.toast(String/Text title)` | one-off message | `text`, `icon`, `duration(int)`, `style(Toast.Style.INFO/SUCCESS/WARNING/ERROR)`, 0.26.4: `action(String/Text label)` (§15.6) |
+
+HUD elements (`panel`, `bar`, `slots`) also have `anchor(ClientElement.Anchor)` (`TOP_LEFT`, `TOP`, `TOP_RIGHT`, `LEFT`,
+`CENTER`, `RIGHT`, `BOTTOM_LEFT`, `BOTTOM`, `BOTTOM_RIGHT`), `offset(int, int)` (±4000 GUI px, inward from the anchor),
+`order(int)` (±1000), 0.26.4: `stack(boolean)` (§15.5). Every element: `ttl(long millis)` (0 = until removed).
+0.26.4: `Bar.rate(double unitsPerSecond)`, `Bar.countdown(long remainingMs, long totalMs)`, label placeholders
+`Bar.VALUE`/`Bar.MAX`/`Bar.TIME`; `Marker.entity(UUID/Entity)`, `yOffset(double)`, `ground(boolean)`.
+`ClientElement.Text`: `plain(String)`, `of(String text, String color)`, `then(...)`, `bold()`, `italic()`,
+`underlined()`, `strikethrough()`; colors `#RRGGBB`, `#AARRGGBB` or a Minecraft color name; ≤ 16 parts, 256 chars.
+`ClientElement.Icon`: `item(String/Material)`, `item(String item, String model)`, `sprite(String)`,
+`image(String webPath)` (PNG on the web platform, ≤ 64 KiB, ≤ 128 px), 0.26.4: `item(ItemStack)` (item id + the stack's
+`minecraft:item_model`; custom model data, dye and glint are not sent – give custom items an `item_model`).
+
+### 15.4 Events (`org.bukkit.event.Listener`)
+
+- `VystormClientReadyEvent` – handshake accepted: `capabilities()`, `has(int)`, `modVersion()`, `loader()`. Good place
+  for the first `put`.
+- `VystormClientStateEvent` – state changed: `state()`, `previous()`, `uiHidden()`, `uiHiddenChanged()`,
+  `overlayOpen()`, `originTrusted()`, `originTrustedChanged()`. Show your vanilla display again when `uiHidden()`.
+- `VystormClientUiRejectEvent` – the client rejected one of your elements: `owner()`, `elementId()`, `localId()`,
+  `code()` (`INVALID`, `LIMIT`, `UNKNOWN_TYPE`, `UNKNOWN_ID`, `RATE`), `detail()`.
+
+```java
+@EventHandler public void onReady(VystormClientReadyEvent e) {
+    if (!e.has(ClientServices.CAP_HUD)) return;
+    ui.put(e.getPlayer(), ClientElement.bar("xp").anchor(ClientElement.Anchor.BOTTOM).offset(0, 52)
+            .value(xp(e.getPlayer())).max(need(e.getPlayer())).label("Lv " + level(e.getPlayer())));
+}
+void onXpChange(Player p) {
+    if (!ui.patch(p, ClientElement.bar("xp").value(xp(p)))) { /* not there (yet) → put, or vanilla boss bar */ }
+}
+```
+
+### 15.5 Client 0.9.0 extensions (Core 0.26.4, `CLIENT_UI_EXTENSIONS`)
+
+Clients from 0.9.0 announce `ClientServices.CAP_UI_EXTENSIONS`. Core sends the new **types and fields that an older
+client would reject or show wrongly only to those clients** – `put`/`patch` return `false` otherwise (no warning; use
+your vanilla fallback) – and **silently drops the pure enhancement fields** (`stack`, `rate`, marker
+`entity`/`yOffset`/`ground`) for older clients, so the element still works there in its plain form.
+
+| Feature | Needs 0.9.0 (else `false`) | Older clients get |
+| --- | --- | --- |
+| `ClientElement.list(id)` – HUD list with rows (icon, label, right text, small bar), ≤ 12 rows. A patch replaces `rows` as a whole. Row bars can run like `Bar.rate` (`row.rate(..)`, `row.countdown(remainingMs, totalMs, color)`), and the row's right text may use `{value}`/`{max}`/`{time}` of that bar – e.g. a remaining-time bar per world event: `ClientElement.row("Meteor").countdown(90_000, 120_000, "red").right(Bar.TIME)`. | yes | – |
+| Tooltip placeholders `"Quality: " + ClientElement.data("PublicBukkitValues.vystorm_items:quality")` – filled from the hovered item's `minecraft:custom_data` (string tags as is, numbers formatted, ≤ 64 chars); a missing placeholder becomes empty text, a line whose placeholders are **all** missing is skipped. ≤ 4 per line, ≤ 16 per rule. | yes | – |
+| `matchCustomDataPresent(path)` (tag exists) / `matchCustomDataViewer(path)` (string tag equals the viewing player's UUID – "soulbound to you"; compared on the client, the server learns nothing); several `matchCustomData*` calls are AND-ed (≤ 4). | yes (a single `matchCustomData(path, equals)` works everywhere) | – |
+| `Bar.rate(unitsPerSecond)` – the client advances the value smoothly between patches (clamped to 0..max); every patch resets value and start. `Bar.countdown(remainingMs, totalMs)` = value/max in seconds, rate −1. | no | static value |
+| Bar label placeholders `Bar.VALUE` (`{value}`, rounded), `Bar.MAX`, `Bar.TIME` (`{time}`, value as seconds `m:ss`/`h:mm:ss`, rounded up) – e.g. `.countdown(75_000, 90_000).label("Wave in " + Bar.TIME)` counts down without patches. | yes | – |
+| `stack(true)` on HUD elements: elements with the same anchor (also from other plugins) never overlap – each keeps its offset unless that would cover the previous stacked element (by `order`), then it goes right after it (2 px gap); top/middle anchors stack down, bottom anchors up. | no | exact offsets (may overlap) |
+| `Marker.entity(UUID/Entity)`: the client follows the entity's interpolated position while it is loaded on the client (top of its hitbox + `yOffset`); otherwise `at(x,y,z)` is used as last known position (still required). `ground(true)`: the client uses the terrain height at x/z if that chunk is loaded (for targets whose Y the server doesn't know). `world(...)` always limits the marker to that dimension (also before 0.9.0). | no | marker at `at(x,y,z)` |
+
+```java
+ClientUi ui = ClientUi.of(this);
+ui.put(p, ClientElement.list("quests").anchor(ClientElement.Anchor.TOP_RIGHT).offset(4, 40).stack(true).title("Quests")
+        .row(ClientElement.row("Collect wood").icon(ClientElement.Icon.item(Material.OAK_LOG)).right("3/10").bar(3, 10, null)));
+ui.put(p, ClientElement.bar("forge").value(heat).max(1500).rate(heating ? 12 : -4).label("Forge"));
+ui.put(p, ClientElement.tooltip("soul").matchCustomDataViewer("PublicBukkitValues.vystorm_items:soulbound")
+        .line(ClientElement.Text.of("Soulbound to you", "light_purple")));
+ui.put(p, ClientElement.marker("npc").entity(npc).at(npcLoc.getX(), npcLoc.getY(), npcLoc.getZ()).yOffset(0.3).label("Smith"));
+```
+
+### 15.6 Toasts with an action (0.26.4, `CLIENT_TOAST_ACTIONS`)
+
+```java
+boolean shown = ui.toast(target, ClientElement.toast("Party invite from " + leader.getName()).action("Join").duration(10_000),
+        p -> parties.acceptInvite(p, partyId));     // re-checks invite, size, permissions …
+if (!shown) target.sendMessage(clickableInvite(partyId));   // client < 0.9.0, no mod, hidden …
+```
+
+The toast shows `[Y] Join` (the client's "Accept notification" key, default Y; without `action(label)` the client
+shows "Accept" in the player's language). While the toast is visible the player presses the key, the client sends
+the action id back on `vystorm:ui` and Core runs `onAction` on the **server thread** – **at most once**, only for that
+player, only within `3 × duration + 15 s` after sending, rate-limited (2/s, burst 4); unknown, repeated and expired ids
+are ignored silently. At most 16 actions stay open per player (oldest dropped); they end on quit and when your plugin
+is disabled. Handler exceptions are logged with your plugin's logger. Returns `false` without the mod, for clients
+< 0.9.0 (no `CAP_UI_EXTENSIONS`) and for invalid toasts – then nothing is sent.
+
+**Security.** The action id is chosen by Core; the client only echoes it. A modified client can at most "press the key"
+without having looked at the toast, so treat `onAction` exactly like a chat command typed by that player: **re-check
+everything** (the invite still exists, the player may still join, location, money, cooldowns …). Never put
+authority into the toast text or the id.
+
+### 15.7 Testing elements without a server (0.26.4, `CLIENT_UI_TESTING`)
+
+`web.ClientUiTesting` validates builders with the client's own schema – use it instead of Core internals:
+
+| Method | Result |
+| --- | --- |
+| `List<String> validate(ClientElement.Element<?>)` / `validateJson(JsonObject)` | Empty if the client accepts it, else the reason (field name + problem). |
+| `List<String> validate(ClientElement.Toast)` | Same for toasts (with an action as `ClientUi` would send it). |
+| `boolean needsExtensions(ClientElement.Element<?>)` | `true` if only clients ≥ 0.9.0 get it (`ClientUi.put` returns `false` for older ones). |
+
+```java
+assertEquals(List.of(), ClientUiTesting.validate(hud.questList(stats)));
+```
+
+---
+
+## 16. Items, regions, curves, NBT and legacy handlers
+
+### Items
+
+Core does not implement items. It is the neutral layer between the item engine (Vystorm-Items) and everyone else
+(mobs, loot, markets, storage, skills). This layer has two parts:
+
+- `item.ItemRefs`: resolves text references such as `vystorm:ORC_WAR_AXE` to an `ItemStack`, for any plugin that
+  registers a namespace.
+- `item.ItemServices`: a facade over **one** `ItemProvider` (the item engine) for reading, creating, validating,
+  storing, repairing and rolling loot for managed items.
+
+Never import classes from Vystorm-Items. Go through these two classes.
+
+| Capability (`CoreApi.Capability`) | Since | Covers |
+| --- | --- | --- |
+| `ITEM_REFS` | 0.9.0 | `ItemRefs`, `ItemRefResolver` |
+| `ITEM_SERVICES` | 0.10.0 | `ItemServices`, `ItemProvider`, the records, `item.event.*` |
+| `CORE_API` | 0.11.0 | `ItemServices.repair/damage/encode/decode/templateExists/provenance` |
+| `ITEM_REF_PRIORITY` | 0.12.0 | Priorities, several providers per namespace, `providers()`, built-in `mythic:`/`mmoitems:` fallbacks |
+| `LIFECYCLE_CLEANUP` | 0.10.3 | Automatic unregistration on plugin disable |
+
+#### ItemRefs – item references
+
+**Reference syntax** (`namespace:id`; the namespace is case-insensitive and everything after the **first** colon is the id):
+
+| Reference | Resolved by |
+| --- | --- |
+| `DIAMOND`, `minecraft:diamond` | Built in: `Material.matchMaterial(id)`. Air and non-item materials give empty. |
+| `vystorm:<TEMPLATE>` | Vystorm-Items (registered at `PRIORITY_VYSTORM`) |
+| `mythic:<Item>` | Registered providers first (Vystorm-Items imports, then bridges), then the built-in MythicMobs fallback |
+| `mmoitems:TYPE:ID` | Registered providers first, then the built-in MMOItems fallback (the id `TYPE:ID` is upper-cased) |
+| `<yourns>:<id>` | Your `ItemRefResolver` |
+
+`vanilla:` is **not** a built-in namespace. Use `minecraft:` or a bare material name.
+
+| Method | Notes |
+| --- | --- |
+| `static void register(Plugin owner, String namespace, ItemRefResolver resolver)` | Same as priority `PRIORITY_DEFAULT` |
+| `static void register(Plugin owner, String namespace, int priority, ItemRefResolver resolver)` | 0.12.0. The namespace is trimmed and lower-cased. If the same owner registers again, only its own entry is replaced. |
+| `static void unregisterAll(Plugin owner)` | Runs automatically on disable |
+| `static Set<String> namespaces()` | Namespaces that have at least one registration |
+| `static boolean available(String namespace)` | `true` for `minecraft`, for a namespace with an enabled provider, or when a built-in fallback's plugin is enabled |
+| `static List<String> providers(String namespace)` | 0.12.0. Names of the provider plugins in resolution order (built-in fallbacks not included) |
+| `static Optional<ItemStack> resolve(String ref, int amount)` | Returns a clone. `amount < 1` is treated as 1. A blank or null ref gives empty. |
+
+Constants: `PRIORITY_VYSTORM = 100` (native Vystorm plugins), `PRIORITY_DEFAULT = 0`, `PRIORITY_BRIDGE = -100`
+(adapters to external plugins, used only as a fallback).
+
+`ItemRefResolver` is a functional interface: `Optional<ItemStack> resolve(String id, int amount)`. Return
+`Optional.empty()` for ids you do not know. Do not throw and do not return null.
+
+**Resolution order** for a namespace:
+
+1. Enabled providers, highest priority first.
+2. At equal priority, the plugin that owns the current `ItemServices` provider.
+3. Then the newest registration.
+
+The first non-empty result wins. If a provider throws, Core logs it (throttled) and asks the next one. After all
+providers, the built-in `mythic`/`mmoitems` fallbacks run.
+
+- **Threading:** registration is thread-safe. Call `resolve` on the **server thread**, because resolvers are server-thread code.
+- **Lifecycle:** register in `onEnable`. Core removes your entries when your plugin is disabled.
+
+```java
+// onEnable
+if (CoreApi.has(CoreApi.Capability.ITEM_REF_PRIORITY)) {
+    ItemRefs.register(this, "myplugin", ItemRefs.PRIORITY_DEFAULT,
+            (id, amount) -> Optional.ofNullable(templates.get(id)).map(t -> t.asQuantity(amount)));
+}
+// Later, on the server thread: a reward reference taken from config
+ItemStack reward = ItemRefs.resolve(getConfig().getString("reward", "minecraft:diamond"), 3)
+        .orElseGet(() -> new ItemStack(Material.DIAMOND, 3));
+```
+
+#### ItemServices – the item-engine facade
+
+Every facade method is **guarded**. With no provider registered, or when the provider throws, the call returns the
+fallback shown below: empty, `NOT_MANAGED`, an empty list or map, or `false`. Provider errors are logged (throttled).
+Without a provider, items behave like vanilla items.
+
+| Method | Fallback |
+| --- | --- |
+| `static boolean available()` | – |
+| `static Optional<ItemView> describe(ItemStack stack)` | empty (also for null or air) |
+| `static boolean managed(ItemStack stack)` | `false` (`describe(stack).isPresent()`) |
+| `static Optional<ItemStack> create(ItemCreateSpec spec)` | empty |
+| `static ItemValidation validate(ItemStack stack)` | `ItemValidation.notManaged()`. Items marked with `ItemRestrictions` (0.26.0) return `ItemValidation.restricted(reason)` = `QUARANTINED` with message `restricted:<reason>` before any provider is asked. |
+| `static Optional<int[]> durability(ItemStack stack)` | empty. The array is `[current, max]`; empty means the item has no own durability. |
+| `static List<ItemStack> generateLoot(String profileId, LootContext context)` | `List.of()`. Profile ids are defined in the provider's config. |
+| `static Map<String, Double> equipmentStats(Player player)` | `Map.of()` (a cached snapshot of the equipment the player is wearing) |
+| `static Optional<ItemStack> repair(ItemStack stack, int amount, Player player)` | empty. Returns a new stack; the original is unchanged. (0.11.0) |
+| `static Optional<ItemStack> damage(ItemStack stack, int amount, Player player)` | empty. Returns a new stack, or AIR if the item breaks. (0.11.0) |
+| `static Optional<StoredItem> encode(ItemStack stack)` | empty (also for unmanaged items). A lossless storage form. (0.11.0) |
+| `static Optional<ItemStack> decode(StoredItem stored)` | empty. **If empty, do not delete the stored copy.** (0.11.0) |
+| `static boolean templateExists(String templateId)` | `false` (0.11.0) |
+| `static Optional<String> provenance(UUID instanceId)` | empty. Looks up the player or place of an instance in the provenance database; never scans worlds. (0.11.0) |
+| `static Optional<ItemProvider> provider()` | Raw provider. Calls through it are **not** guarded, so prefer the facade. |
+| `static void register(Plugin owner, ItemProvider provider)` / `static void unregister(Plugin owner)` | **Engine only.** There is exactly one provider. Replacing another plugin's provider logs a warning. `unregister` removes the provider only when `owner` matches. |
+| `static void fire(Event event)` | **Engine only.** Fires an `item.event.*` event. Off the server thread, the event is deferred to the next tick, so fire cancellable events only from the server thread. |
+
+- **Threading:** call every method on the **server thread**. `ItemProvider` is a server-thread contract.
+- **Lifecycle:** the provider is removed automatically when its plugin is disabled.
+
+**Records**
+
+- `ItemCreateSpec(String templateId, int amount, int level, String rarity, String sourceType, String sourceId, UUID actor, long seed, Map<String, String> attributes)`
+  - A blank `templateId` throws `IllegalArgumentException`. `amount` is at least 1.
+  - `level <= 0` or `rarity == null` means the template decides. A null `sourceType` becomes `SYSTEM_REWARD`.
+  - Factory: `static ItemCreateSpec of(String templateId, int amount, String sourceType, String sourceId)`.
+  - `sourceType` is the provenance: `CRAFTING`, `LOOT_MOB`, `LOOT_BOSS`, `DUNGEON`, `WORLD_EVENT`, `QUEST`,
+    `NPC_VENDOR`, `MARKET`, `ADMIN`, `MIGRATION` or `SYSTEM_REWARD`.
+- `ItemView(UUID instanceId, String templateId, String type, Set<String> groups, String rarity, String tier, int level, double quality, Optional<UUID> boundTo, Set<String> tags, Map<String, Double> stats, int schemaVersion)`
+  - A read-only view.
+  - `boolean is(String typeOrGroup)`: case-insensitive match on `type` (for example `DAGGER`) or on a group
+    (`WEAPON`, `MELEE`, `ARMOR`, `TOOL`, …).
+  - `double stat(String id)`: returns 0 when the stat is missing. Stat ids are defined by the provider.
+- `ItemValidation(Status status, List<String> messages)`
+  - `Status`: `VALID`, `NOT_MANAGED`, `UNKNOWN_TEMPLATE`, `OUTDATED`, `TAMPERED`, `DUPLICATE`, `QUARANTINED`.
+  - `boolean ok()` is `true` for `VALID`, `NOT_MANAGED` and `OUTDATED`.
+  - Factories: `static ItemValidation valid()`, `static ItemValidation notManaged()`.
+- `LootContext(String sourceType, String sourceId, UUID player, Set<UUID> party, Location location, String region, String dungeon, String faction, double threat, int mobLevel, boolean elite, boolean boss, double difficulty, double luck, Map<String, Double> eventModifiers)`
+  - Factory: `static LootContext of(String sourceType, String sourceId, UUID player, Location location)`. Its
+    defaults are mobLevel 1, difficulty 1, luck 0, threat 0 and no party.
+  - `LootContext withMob(int level, double threat, boolean elite, boolean boss)`.
+  - Callers only supply these values. The provider does all the rolling.
+- `StoredItem(int schemaVersion, String templateId, UUID instanceId, String fingerprint, int amount, String data)`
+  - `data` is the Base64-serialized full stack. The other fields carry identity for stack and duplicate rules.
+
+`ItemProvider` (for implementing an engine, rarely needed) declares the same operations with these signatures:
+`Optional<ItemView> describe(ItemStack)`, `Optional<ItemStack> create(ItemCreateSpec)`, `ItemValidation validate(ItemStack)`,
+`Optional<int[]> durability(ItemStack)`, `ItemStack repair(ItemStack, int, Player)`, `ItemStack damage(ItemStack, int, Player)`,
+`Optional<StoredItem> encode(ItemStack)`, `ItemStack decode(StoredItem)`, `List<ItemStack> generateLoot(String, LootContext)`,
+`Map<String, Double> equipmentStats(Player)`, `boolean templateExists(String)`, `Optional<String> provenance(UUID)`.
+
+```java
+// Server thread: roll loot for a mob kill and inspect the weapon in hand
+if (CoreApi.has(CoreApi.Capability.ITEM_SERVICES) && ItemServices.available()) {
+    LootContext ctx = LootContext.of("LOOT_MOB", "orc_grunt", killer.getUniqueId(), mob.getLocation())
+            .withMob(12, 1.5, false, false);
+    ItemServices.generateLoot("orc_camp", ctx)
+            .forEach(drop -> mob.getWorld().dropItemNaturally(mob.getLocation(), drop));
+    ItemServices.describe(killer.getInventory().getItemInMainHand())
+            .filter(view -> view.is("WEAPON"))
+            .ifPresent(view -> getLogger().info(view.templateId() + " lvl " + view.level()));
+}
+```
+
+#### Item events (`item.event`)
+
+The engine fires these events through `ItemServices.fire`. Listeners run on the server thread. Every event has
+`getHandlerList()`.
+
+| Event | Cancellable | Accessors |
+| --- | --- | --- |
+| `ItemCreateEvent` | no | `ItemView item()`, `ItemCreateSpec spec()`, `Player player()` |
+| `ItemLootEvent` | no | `String profileId()`, `LootContext context()`, `List<ItemStack> items()`. The list is mutable until delivery. |
+| `ItemEquipEvent` | no | `Player player()`, `ItemView item()`, `String slot()`, `boolean equipped()`. The stat snapshot is already updated when this fires. |
+| `ItemModifyEvent` | yes | `Player player()`, `ItemView item()`, `String kind()` (one of `UPGRADE`, `REFORGE`, `REPAIR`, `SALVAGE`, `SOCKET_INSERT`, `SOCKET_REMOVE`, `IDENTIFY`, `BIND`; Vystorm-Items also sends `SKIN`, so treat the set as open), `String detail()` |
+| `ItemCraftEvent` | yes, at stages `START`/`ACTION` | `Player player()`, `String recipeId()`, `String station()`, `String stage()` (`START`, `ACTION`, `COMPLETE`, `FAILED`), `String action()`, `double quality()`, `ItemStack result()` |
+
+```java
+@EventHandler
+public void onModify(ItemModifyEvent e) {
+    if (e.kind().equals("SALVAGE") && e.item().tags().contains("soulbound")) e.setCancelled(true);
+}
+```
+
+### Mythic bridges
+
+The package `mythic` gives optional, reflection-only access to MythicMobs and MMOItems. Neither plugin becomes a hard
+or soft dependency. When one is missing or disabled, every method reports "not available" and callers fall back to
+vanilla behaviour. Since 0.12.0 these bridges are **only a fallback**:
+
+- For mobs, use `mob.MobRefs` (Vystorm-Mobs).
+- For items, use `ItemRefs`, which already consults both bridges as its last step.
+
+Call a bridge directly only when you specifically mean MythicMobs or MMOItems. Capability: `MYTHIC_BRIDGE` (0.3.0);
+the `item`, `active` and `MmoItemsBridge` members need `ITEM_REF_PRIORITY` (0.12.0).
+
+| Method | When absent | Notes |
+| --- | --- | --- |
+| `MythicMobsBridge.available()` | `false` | The MythicMobs plugin is present and enabled |
+| `MythicMobsBridge.active()` | `false` | Like `available()`, but returns `false` instead of throwing when no server is running (tests). (0.12.0) |
+| `static Optional<ItemStack> MythicMobsBridge.item(String id, int amount)` | empty | Returns a copy of the MythicMobs item. Empty for unknown ids. (0.12.0) |
+| `static boolean MythicMobsBridge.exists(String mobId)` | `false` | |
+| `static Entity MythicMobsBridge.spawn(String mobId, Location location, int level)` | `null` | See the spawn contract below |
+| `static boolean MythicMobsBridge.installPack(Plugin owner, String resource, String fileName) throws IOException` | `false` | Installs a bundled mob file into MythicMobs' `Mobs/` folder, then runs `mythicmobs reload` once. See the install rules below. |
+| `static boolean MmoItemsBridge.available()` | `false` | (0.12.0) |
+| `static Optional<ItemStack> MmoItemsBridge.item(String typeAndId, int amount)` | empty | Takes `TYPE:ID`. Empty for a bad format or an unknown id. (0.12.0) |
+| `static Optional<String> MmoItemsBridge.idOf(ItemStack stack)` | empty | `TYPE:ID` (upper case) of an MMOItems stack; empty for vanilla items or without MMOItems. (0.26.4, `MMOITEMS_IDS`) |
+
+**`spawn` contract:**
+
+- Returns `null` when MythicMobs is missing or the id is unknown. In that case it is safe to spawn a vanilla mob instead.
+- Throws `IllegalStateException` when the MythicMobs API could not be reached before any spawn was attempted.
+- Throws `MythicMobsBridge.UnknownOutcomeException` (a `RuntimeException`) when the spawn call itself failed. An
+  entity may exist, so **do not retry**.
+
+**`installPack` rules:** an existing file is replaced only if its first line still carries the same
+`# managed-by:` marker. A file an admin has edited is left untouched.
+
+Call everything on the **server thread**. There is nothing to register or clean up.
+
+```java
+Entity boss = null;
+try { boss = MythicMobsBridge.spawn("OrcWarlord", loc, 20); }
+catch (MythicMobsBridge.UnknownOutcomeException unknown) { return; } // never retry
+if (boss == null) boss = loc.getWorld().spawnEntity(loc, EntityType.VINDICATOR);
+```
+
+### Resource pack
+
+Core builds **one** server resource pack from the asset modules that plugins register, then publishes and sends it:
+
+- It builds and hashes the pack (SHA-1) on a virtual thread.
+- It publishes the pack through a built-in HTTP server or an external URL, both configured in Core's `resource-pack.yml`.
+- It sends the pack on join and tracks a `PackState` per player.
+
+Plugins never assign CustomModelData numbers by hand. Capability: `RESOURCE_PACK` (0.10.0).
+
+#### ResourcePacks (plugin-facing)
+
+| Method | Notes |
+| --- | --- |
+| `static void register(Plugin owner, String module, List<String> namespaces, Map<String, byte[]> files, int priority)` | Registers or replaces a module and schedules a rebuild on the next tick |
+| `static PackState state(Player player)` | `NOT_SENT` if the player is unknown |
+| `static boolean hasRequiredAssets(Player player, AssetRequirement requirement)` | `true` only if the player has `LOADED` the **current** hash and every required module is registered |
+| `static CompletionStage<PackState> ensurePack(Player player)` | Sends the pack if needed. Completes with `LOADED`, `DECLINED` or `FAILED` (also `FAILED` on quit). Completes immediately if the current pack is already loaded. |
+| `static AssetRegistry assets()` | The shared registry |
+| `static Optional<String> hash()`, `static Optional<String> url()`, `static List<String> conflicts()` | Diagnostics: the published SHA-1, the download URL, and file paths overridden by several modules |
+| `static void rebuildSoon()` | Coalesced rebuild. Only needed if you changed `assets()` directly. |
+
+Core-internal members (not public API): `initialize()`, `shutdown()`, `ResourcePacks.Settings`, `PackBuilder`.
+
+#### AssetRegistry and AssetRequirement
+
+`AssetRegistry.register(Plugin owner, String moduleId, List<String> namespaces, Map<String, byte[]> files, int priority)` validates as follows:
+
+- The module id is lower-cased.
+- Namespaces must match `[a-z0-9_.-]{1,64}` and must not be `minecraft`. A namespace owned by another module throws
+  `IllegalStateException`.
+- File paths must match `[a-z0-9_./-]+`, must not contain `..`, and must start with `assets/<own namespace>/` or
+  `assets/minecraft/` (overrides only). Anything else throws `IllegalArgumentException`.
+- When several modules write the same path, the **higher `priority`** wins, and the path is listed in `conflicts()`.
+
+Other members:
+
+- `synchronized void unregisterAll(Plugin owner)`
+- `synchronized List<AssetRegistry.Module> modules()`
+- `synchronized boolean hasModule(String id)`
+- `synchronized long revision()`
+- `static NamespacedKey itemModel(String assetKey)`: parses and lower-cases an asset key for the `item_model` component,
+  e.g. `myplugin:rune` (the item model definition `assets/myplugin/items/rune.json`). An invalid key throws
+  `IllegalArgumentException`.
+- `synchronized int customModelData(String assetKey)`: for legacy systems only. Returns a deterministic number in
+  100000–9999999, with collisions resolved by probing.
+- `synchronized Optional<String> assetForModelData(int value)`
+
+`AssetRegistry.Module(String id, Plugin owner, List<String> namespaces, Map<String, byte[]> files, int priority)` is a record.
+
+`AssetRequirement(Set<String> modules)` is a record. Factory: `static AssetRequirement of(String... modules)`.
+
+`PackState` values:
+
+- `NOT_SENT`, `DOWNLOADING`, `LOADED`, `FAILED`, `DECLINED`, `OUTDATED`
+- `boolean usable()` returns `true` only for `LOADED`.
+
+`PackStateChangeEvent` (Bukkit event, not cancellable, server thread) has `Player player()`, `PackState previous()`
+and `PackState state()`.
+
+**Threading and lifecycle**
+
+- Call `register`, `state` and `ensurePack` on the **server thread**.
+- Register modules in `onEnable`. When your plugin is disabled, Core removes its modules and rebuilds the pack.
+- In `public-url` mode an admin must re-upload the zip after every asset change. Otherwise clients reject the hash and
+  end in `FAILED`.
+
+```java
+// onEnable: ship a model and a texture under your own namespace
+ResourcePacks.register(this, "myplugin", List.of("myplugin"), Map.of(
+        "assets/myplugin/items/rune.json", runeItemJson,
+        "assets/myplugin/textures/item/rune.png", runePng), 50);
+meta.setItemModel(AssetRegistry.itemModel("myplugin:rune"));
+
+// Before opening a GUI that needs the glyphs
+if (!ResourcePacks.hasRequiredAssets(player, AssetRequirement.of("myplugin"))) {
+    ResourcePacks.ensurePack(player).thenAccept(state -> Bukkit.getScheduler().runTask(this, () -> {
+        if (state.usable() && player.isOnline()) openGui(player);
+    }));
+    return;
+}
+openGui(player);
+```
+
+### Curves & relative stats
+
+This is shared balancing math. Curves are immutable, side-effect-free functions `x → y`. They are thread-safe to
+evaluate. You store them under a global id, for example `curve.agility.slow.default`, and any plugin can read them by
+that id. `RelativeStat` runs a ratio `source / target` through a curve and clamps the result. Capability: `CURVES` (0.5.0).
+
+#### Curve (sealed interface)
+
+`double apply(double x)`, `String describe()`, `static Curve fromMap(Map<?, ?> raw)`.
+
+| Record | Formula | YAML `type` / keys (defaults) |
+| --- | --- | --- |
+| `Curve.Linear(double slope, double offset)` | `offset + slope·x` | `linear`: `slope` (1), `offset` (0). This is the type used when `type` is missing. |
+| `Curve.Power(double scale, double exponent, double offset)` | `scale·max(0,x)^exponent + offset` | `power`: `scale` (1), `exponent` (1), `offset` (0) |
+| `Curve.SoftCap(double max, double half)` | `max·x/(x+half)`, for x ≥ 0 | `softcap`: `max` (1), `half` (1, must be > 0) |
+| `Curve.Logistic(double min, double max, double mid, double steepness)` | `min + (max-min)/(1+e^(-steepness·(x-mid)))` | `logistic`: `min` (0), `max` (1), `mid` (1), `steepness` (1) |
+| `Curve.Logarithmic(double scale, double divisor)` | `scale·ln(1 + max(0,x)/divisor)` | `log` or `logarithmic`: `scale` (1), `divisor` (1, must be > 0) |
+| `Curve.Points(double[] xs, double[] ys)` | Piecewise linear, constant outside the given points | `points`: `points: [[x,y], …]`. Needs strictly increasing x values and at least one point. |
+
+`fromMap` throws `IllegalArgumentException` for an unknown type or bad numbers.
+
+#### CurveRegistry (static, thread-safe)
+
+| Method | Notes |
+| --- | --- |
+| `static void register(String id, Curve curve)` | Replaces any curve with the same id. A blank id or null curve throws `IllegalArgumentException`. |
+| `static void unregister(String id)` / `static void unregisterPrefix(String prefix)` | |
+| `static Optional<Curve> get(String id)` | |
+| `static double apply(String id, double x, double fallback)` | Returns `fallback` when the curve is missing |
+| `static Set<String> ids()` | Sorted copy |
+| `static List<String> loadSection(String prefix, ConfigurationSection section)` | Registers each sub-section as the curve `prefix + key`. Bad entries are skipped and returned as messages. |
+
+#### RelativeStat
+
+- `static final double EPSILON = 1.0e-6`
+- `static RelativeStat.Result resolve(RelativeStat.Input input)`
+- `RelativeStat.Input(double source, double target, String curveId, double min, double max, double contextFactor)`,
+  plus a 5-argument constructor with `contextFactor = 1.0`.
+- `RelativeStat.Result(double ratio, double curveOutput, double finalValue, boolean capped, String breakdown)`
+
+How `resolve` computes the result:
+
+1. `ratio = max(0, source) / max(EPSILON, target)`.
+2. The ratio runs through the curve. A missing curve counts as the identity.
+3. The output is multiplied by `contextFactor` and clamped to `[min, max]`.
+4. `breakdown` is a human-readable explanation of these steps, for debug commands.
+
+**Lifecycle:** Core does **not** remove curves automatically, because curves have no owner. Use a plugin-specific
+prefix, and call `CurveRegistry.unregisterPrefix(prefix)` both on reload and in `onDisable`.
+
+```java
+// config.yml:  curves: { crit: { type: softcap, max: 0.6, half: 2.0 } }
+static final String PREFIX = "curve.myplugin.";
+CurveRegistry.unregisterPrefix(PREFIX);
+CurveRegistry.loadSection(PREFIX, getConfig().getConfigurationSection("curves"))
+        .forEach(problem -> getLogger().warning("Curve " + problem));
+double critChance = CurveRegistry.apply(PREFIX + "crit", agility / 10.0, 0.05);
+var hit = RelativeStat.resolve(new RelativeStat.Input(attackerStr, targetStability, PREFIX + "stagger", 0, 1));
+```
+
+### Regions
+
+`region.RegionService` is the shared region register of all Vystorm plugins. Each plugin publishes its regions (city
+claims, arenas, markets, dungeons, faction territories, …). Any plugin can query them without depending on the plugin
+that owns them. Gameplay rules such as rights and members stay in the owning plugin. Capability: `REGIONS` (0.4.0).
+
+#### Region (record)
+
+`Region(String kind, String id, String owner, int priority, RegionShape shape, Set<String> tags, Map<String, String> attributes, Map<String, Boolean> flags)`
+
+- The key is `kind:id`. `kind` must match `[a-z0-9_-]{1,40}` and `id` must be non-blank and at most 128 characters.
+  A violation throws `IllegalArgumentException`.
+- Tags are lower-cased. The collections must not be null, so prefer the factory:
+  `static Region of(String kind, String id, RegionShape shape)`. It sets the default priority for the kind and leaves
+  the collections empty.
+- Copy methods: `withPriority(int)`, `withOwner(String)`, `withTags(Set<String>)`, `withAttributes(Map<String, String>)`,
+  `withFlags(Map<String, Boolean>)`.
+- Read methods: `String key()`, `Optional<String> attribute(String)`, `Optional<Boolean> flag(String)`,
+  `boolean hasTag(String)`.
+- `owner` is filled with the registering plugin's name if you leave it empty.
+
+#### RegionShape (sealed interface)
+
+All bounds are inclusive. `world == null` means the shape applies in every world.
+
+| Record | Notes |
+| --- | --- |
+| `RegionShape.Box(UUID world, int minX, int minY, int minZ, int maxX, int maxY, int maxZ)` | Corners are normalised |
+| `RegionShape.Cylinder(UUID world, int centerX, int centerZ, int radius, int minY, int maxY)` | `radius >= 0` |
+| `RegionShape.Chunks(UUID world, Set<Long> chunks, int minY, int maxY)` | `world` is required. Helpers: `static long pack(int chunkX, int chunkZ)`, `static int chunkX(long)`, `static int chunkZ(long)` |
+| `RegionShape.Polygon(UUID world, List<double[]> points, int minY, int maxY)` | Points are `{x, z}`, at least 3 |
+
+The interface methods are `world()`, `minY()`, `maxY()`, `minX()`, `minZ()`, `maxX()`, `maxZ()`,
+`boolean containsColumn(int x, int z)` and `default boolean contains(UUID worldId, int x, int y, int z)`.
+
+#### RegionPriority
+
+On overlap, the highest priority wins. `static int forKind(String kind)` maps a kind to its default:
+
+| Constant | Value | Kind |
+| --- | --- | --- |
+| `SPAWN` | 1000 | `spawn` |
+| `SAFE` | 950 | `safe` |
+| `ARENA_ZONE` | 820 | `arena-zone` |
+| `ARENA` | 800 | `arena` |
+| `MARKET` | 600 | `market` |
+| `DUNGEON` | 500 | `dungeon` |
+| `CITY` | 400 | `city` |
+| `STRUCTURE` | 300 | `structure` |
+| `TERRITORY` | 100 | `faction`, `territory` |
+| `DEFAULT` | 0 | anything else |
+
+#### RegionService
+
+`static RegionService get()` returns the singleton.
+
+| Method | Notes |
+| --- | --- |
+| `synchronized void register(Plugin owner, Region region)` | Registers or replaces the region with the same key |
+| `synchronized boolean unregister(String kind, String id)` | |
+| `synchronized int unregisterOwner(Plugin owner)` | Runs automatically on disable |
+| `synchronized void sync(Plugin owner, String kind, Collection<Region> regions)` | Reconciles all of this owner's regions of one kind: removes missing ones, replaces changed ones, leaves the rest. A region of another kind throws `IllegalArgumentException`. |
+| `List<Region> at(UUID world, int x, int y, int z)` / `List<Region> at(Location location)` | Highest priority first |
+| `Optional<Region> top(Location location)` / `Optional<Region> top(Location location, String kind)` | |
+| `boolean flag(Location location, String flag, boolean fallback)` | The highest-priority region that **sets** the flag decides |
+| `List<String> keys(Location location)` | The `kind:id` keys at that location |
+| `Optional<Region> get(String kind, String id)`, `List<Region> all()`, `List<Region> all(String kind)` | |
+| `List<Region> intersecting(UUID world, int minX, int minZ, int maxX, int maxZ)` | Approximate column test, meant for placement and planning |
+| `long revision()` | Increases on every change. Use it as a cache key. |
+
+- **Threading:** register, unregister and sync on the **server thread**. Queries are lock-free and allowed from any thread.
+- **Lifecycle:** Core removes a plugin's regions on disable.
+- Regions covering more than 4096 chunks are not indexed. They are checked by bounding box instead, so they are
+  slower but still correct.
+- Legacy `api.area()` entries appear here automatically, with the kind taken from the area's NBT prefix.
+
+#### Events and command
+
+`RegionEnterEvent` and `RegionLeaveEvent` extend `PlayerEvent`. Each has `Region region()` and `getHandlerList()`.
+
+- They fire on the server thread after a block-changing move, a teleport, or a join.
+- They do **not** fire when regions are (un)registered around a player who is standing still, and there is no leave
+  event on quit.
+
+`/vregion at [player]` and `/vregion list [kind]` are admin views (permission `vystorm_core.admin`).
+
+```java
+// onEnable and after every data change: publish your territories
+List<Region> regions = territories.stream().map(t -> Region.of("faction", t.id(),
+        new RegionShape.Polygon(t.worldId(), t.points(), -64, 320))
+        .withAttributes(Map.of("owner", t.ownerName()))
+        .withFlags(Map.of("pvp", true))).toList();
+RegionService.get().sync(this, "faction", regions);
+
+@EventHandler public void onEnter(RegionEnterEvent e) {
+    if (e.region().kind().equals("market")) e.getPlayer().sendActionBar(Component.text("Market"));
+}
+boolean pvp = RegionService.get().flag(victim.getLocation(), "pvp", true);
+```
+
+### NBT and inventory event helpers
+
+These helpers come from the legacy `API` object (`CoreApi.api()`, capability `CORE_API` 0.11.0; the helpers
+themselves are older and have no capability constant). Like all legacy handlers they use unguarded maps, so call them
+**on the server thread only**.
+
+#### api.nbt() – `NBTInterface`
+
+String tags on items, entities, players and blocks:
+
+- **Items and entities:** the tags live in the persistent data container, under Core's plugin namespace plus a
+  configurable prefix. Keys are lower-cased.
+- **Blocks:** the tags live in a Core-side YAML store keyed by position. Each write saves that file synchronously, so
+  avoid bulk writes.
+- Admins can switch items, entities or blocks off in Core's config. Calls for a disabled target become no-ops or
+  return null.
+
+| Method | Notes |
+| --- | --- |
+| `ItemStack setNBT(ItemStack itemStack, String key, String value)` | Mutates and returns the same stack. A `null` value removes the key. An item without meta (air) throws `IllegalArgumentException`. |
+| `Entity setNBT(Entity entity, String key, String value)`, `void setNBT(Player player, String key, String value)`, `void setNBT(Block block, String key, String value)` | A `null` value removes the key |
+| `String getNBT(ItemStack \| Block \| Entity \| Player, String key)` | `null` if the tag is absent |
+| `String removeNBT(ItemStack \| Block \| Entity \| Player, String key)` | Returns the key, or `null` if it was absent |
+| `HashMap<String, String> getAllNBT(ItemStack \| Block \| Entity \| Player)` | Only Core-owned tags, with the prefix removed from the keys |
+| `ItemStack clearNBT(ItemStack)`, `Block clearNBT(Block)`, `Entity clearNBT(Entity)` | Removes only Core-owned tags (there is no player variant) |
+| `default <P, C> C getTag(ItemStack item, NamespacedKey key, PersistentDataType<P, C> type)` | **Preferred for new code:** typed data under your own key |
+| `default <P, C> ItemStack setTag(ItemStack item, NamespacedKey key, PersistentDataType<P, C> type, C value)` | A `null` value removes the key |
+
+The same two typed methods also exist as statics on `PersistentDataHelper`:
+`static <P, C> C get(ItemStack, NamespacedKey, PersistentDataType<P, C>)` and
+`static <P, C> ItemStack set(ItemStack, NamespacedKey, PersistentDataType<P, C>, C)`.
+
+**Legacy tag actions (not public API):**
+
+- `NBTEntity getEntityNBT(String key)`, `NBTEntity setEntityNBT(NBTEntity entity, String key)` and
+  `HashMap<String, NBTEntity> getEntityNBTHashMap()` bind an `NBTEntity` action to a tag key.
+- `api.priority()` (`PriorityInterface`) is Core's dispatcher. Its listeners run those actions, in descending
+  `priority()`, for block break and place, entity damage and death, interact, held-item change, item damage and harvest
+  whenever the involved player, block or entity carries the key.
+- There is no per-plugin cleanup and no unregister method. Use your own Bukkit listeners instead.
+
+```java
+NamespacedKey charges = new NamespacedKey(this, "charges");
+api.nbt().setTag(wand, charges, PersistentDataType.INTEGER, 5);
+Integer left = api.nbt().getTag(wand, charges, PersistentDataType.INTEGER);
+api.nbt().setNBT(npc, "myplugin_role", "vendor");         // simple string tag on an entity
+```
+
+#### api.inventoryEvents() – `InventoryEventInterface`
+
+Coalesced inventory change notifications, delivered after the fact:
+
+- A subscription gets at most one callback per player or inventory per tick.
+- The callback runs on the **next tick**, after the vanilla operation has completed.
+- Every call must be made on the server thread. Otherwise it throws `IllegalStateException`. A disabled owner also
+  throws `IllegalStateException`.
+
+| Method | Purpose |
+| --- | --- |
+| `void watchPlayers(Plugin owner, Consumer<Player> callback)` | The player's own inventory changed |
+| `void watchInventories(Plugin owner, Predicate<Inventory> accepts, Consumer<Inventory> callback)` | A container you accept changed |
+| `void watchUses(Plugin owner, Consumer<InventoryUse> callback)` | Confirmed block placement or item consumption from the hotbar or offhand |
+| `void changed(Player player)`, `void changed(Inventory inventory)` | Report a change that your plugin made itself |
+| `void changed(Player player, BooleanSupplier valid)`, `void changed(Inventory inventory, BooleanSupplier valid)` | Same, but dropped if `valid` is false when the queue drains |
+| `void observeUse(Player player, int slot, ItemStack original, BooleanSupplier valid)` | Emits one use observation for a custom use (for example a custom sapling) |
+| `void removeAll(Plugin owner)` | Runs automatically on disable |
+
+`InventoryUse` has four accessors:
+
+- `Player player()`
+- `int slot()`: 0–8 or 40 (offhand)
+- `ItemStack item()`: a copy
+- `boolean valid()`: re-checks the guards
+
+An observation does **not** prove the item was consumed.
+
+Not public API (vanilla-hook plumbing): `invalidateUses`, `forgetUsePlayer`, `discardUseIntent`, `captureUseIntent`,
+`confirmBoneMealUse` and `clear()`. Probe for this API with `API.class.getMethod("inventoryEvents")` when you must
+support very old Cores.
+
+```java
+api.inventoryEvents().watchPlayers(this, player -> hotbarCache.refresh(player));
+```
+
+#### api.inventoryInteractor() – `InteractorInterface` / `InteractorEntry`
+
+Click, drag and drop handling for GUI items, routed by tag. Here is how the routing works:
+
+1. You tag an item with a string key using `api.nbt().setNBT(item, key, value)` or
+   `setNBTforItem(ItemStack, String name, String value)`.
+2. You register an `InteractorEntry` whose `getNBT()` returns that key. Keys are lower-cased.
+3. Core's listeners dispatch clicks, drags and drops on tagged items to the matching entries, highest `priority()` first.
+4. An entry with `blocksOthers()` stops lower-priority entries. `canProcess(Player)` can skip an entry.
+
+**Entries must cancel the event themselves.**
+
+- `InteractorInterface` (plugin-facing): `void register(InteractorEntry)`, `void unregister(InteractorEntry)`,
+  `InteractorEntry getByName(String)`, `InteractorEntry getNBTForMatch(ItemStack)`,
+  `String getValueForItem(ItemStack, String key)`, `ItemStack setNBTforItem(ItemStack, String, String)`, and the typed
+  `getTag`/`setTag` defaults.
+  - Registering a key that is already taken is ignored and logged.
+- `InteractorEntry` callbacks:
+  - `String getNBT()`
+  - `leftClick`, `rightClick`, `shiftLeftClick`, `shiftRightClick`, `middleClick`, each taking
+    `(Player player, Event event, String value)`
+  - `void dropClick(Player, Event)`
+  - `void dragEventOld(InventoryDragEvent, InteractorEntry)`
+  - `void dragEventNew(InventoryDragEvent)`
+  - Defaults: `int priority()` returns 10, `boolean blocksOthers()` returns false, `boolean canProcess(Player)` returns true.
+- **Lifecycle:** entries have no owner and are **not** removed automatically. Call `unregister(entry)` in `onDisable`.
+- Core-dispatch methods (not for plugins): `handle(...)`, `handleEvent(...)`, `getNBTforItem`, `getAllNamespacedKeys`.
+
+### Legacy handlers on API
+
+`API` (`CoreApi.api()` returns `Optional<API>`) also exposes older subsystems. Unless noted otherwise, call them on the **server thread**.
+Several of them check this and throw `IllegalStateException` off-thread: particle, packages, interaction, and world
+create/unload.
+
+| Accessor → type | Key methods | Cleanup |
+| --- | --- | --- |
+| `vault()` → `VaultInterface` | `boolean isEconomyAvailable()`, `String economyName()`, `double balance(OfflinePlayer)`, `boolean has(OfflinePlayer, double)`, `String format(double)`, `Transaction withdraw(OfflinePlayer, double)`, `Transaction deposit(OfflinePlayer, double)`, `int fractionalDigits()` (-1 = no fixed precision), `VaultInterface economySnapshot()`, `String economyIdentity()` | – |
+| `luckperms()` → `LuckpermsInterface` | `boolean permissionChecker(String permission, Player player)`, `boolean permissionChecker(String permission, UUID playerUUID)` | – |
+| `area()` → `AreaInterface` | `Area getArea()` (new, empty), `void register(Area)`, `boolean update(Area)`, `boolean unregister(Area)`, `List<Area> find(Location)`. `Area` has setters `setAreaType(AreaType)` (`fullCircle`, `Cylinder`, `Rectangle`), `setCenterX/Z`, `setRadius`, `setCorner1X/Z`, `setCorner2X/Z`, `setY1/Y2`, `setWorld(UUID)`, `setNBT(String)` and `boolean contains(Location)` | Manual `unregister` |
+| `particle()` → `ParticleInterface` | `<T> void spawn(Particle, Location, int count, T data)`, `<T> void spawn(Particle, Location, int count, double offsetX, double offsetY, double offsetZ, double extra, T data)`, `<T> void spawn(Player viewer, Particle, Location, int count, T data)`, `<T> void line(Particle, Location from, Location to, int points, T data)`, `<T> void circle(Particle, Location center, double radius, int points, T data)`, `BukkitTask repeat(Plugin owner, Runnable effect, long periodTicks, int iterations)` | Tasks belong to `owner` |
+| `structureGenerator()` → `StructureGeneratorInterface` | `TreeGenerator tree(StructureAccess, Random, TreeSpecies)`, `void register(Plugin, NamespacedKey, StructureGenerator)`, `boolean generate(NamespacedKey, StructureAccess, StructurePos, Random)`, `boolean unregister(Plugin, NamespacedKey)`, `Set<NamespacedKey> registeredNames()` | Automatic |
+| `worldGenerator()` → `WorldGeneratorInterface` | `void register(String name, ChunkGenerator)`, `ChunkGenerator get(String)`, `boolean unregister(String)`, `ChunkGenerator voidGenerator()`, `ChunkGenerator flatGenerator(int bottomY, List<WorldGeneratorHandler.Layer> layers)`, `World create(WorldCreator, String generatorName)`, `boolean unload(World, boolean save)`, plus world-profile defaults (`detect`, `registerDetector`, …; see section 17, World environment) | Manual `unregister(name)`; detectors are cleaned up automatically |
+| `interactionGenerator()` → `InteractionGeneratorInterface` | `Interaction spawn(Plugin owner, Location, float width, float height, Consumer<Player> rightClick, Consumer<Player> attack)`, `Interaction get(UUID)`, `boolean remove(UUID)` | Automatic |
+| `packages()` → `PackageInterface` | `void register(Plugin owner, String channel, PluginMessageListener listener)` (a `null` listener registers an outgoing-only channel), `void send(Plugin owner, Player, String channel, byte[] payload)`, `boolean unregister(Plugin owner, String channel)` | Automatic |
+
+**Notes on individual handlers**
+
+- **Vault:** `withdraw` and `deposit` handle an unavailable economy differently from bad input and provider errors:
+
+  | Situation | Result |
+  | --- | --- |
+  | No economy | `Transaction(false, 0, 0, "Vault economy is unavailable")` |
+  | Negative or non-finite amount | `IllegalArgumentException` |
+  | The provider throws | The exception is rethrown, and the outcome is **unknown** |
+
+  - `economyName`, `balance`, `format`, `fractionalDigits`, `economySnapshot` and `economyIdentity` throw
+    `IllegalStateException` when no economy is available. Check `isEconomyAvailable()` first.
+  - `Transaction(boolean successful, double amount, double balance, String error)` is a record.
+  - `economySnapshot()` binds a short synchronous sequence, such as a charge plus its refund, to the current provider.
+    It is **not** atomic and does not survive a crash.
+  - `economyIdentity()` is process-local. Use it to invalidate quotes, never as a persistent key.
+- **LuckPerms:** despite the name, this uses Bukkit permissions, not the LuckPerms API.
+  - The check is true for ops, for `*`, and for any `prefix.*` wildcard of the node.
+  - The `UUID` variant returns `false` for offline players.
+  - `permissionleve()` always returns 0 (not implemented) and `InventoryNametoPermission(String)` is internal. Neither
+    is public API.
+- **Area:** superseded by `RegionService`. Each area is mirrored there as a region, with its kind taken from the text
+  before `:` in the area's NBT string. After you mutate a registered area, call `update(area)`.
+  `compare(Player)` is `@Deprecated`.
+- **Particle:** the default handler shares a budget of 4,096 particles per tick. Under load it reduces the count or
+  resolution; nothing is queued for later ticks. `data` must match `Particle.getDataType()`, otherwise the call throws
+  `IllegalArgumentException`.
+- **Structure generator:** the one exception to the server-thread rule. The caller picks a thread that suits its
+  `StructureAccess` implementation, for example a Paper `LimitedRegion` inside a generation callback.
+- **World generator:** register a generator before the world that uses it is created or loaded.
+- **Interaction generator:** `boolean handle(UUID, Player, boolean)` is Core's own dispatch hook and not public API.
+- **Packages:** the payloads are untrusted client input. The channel is validated. Registering the same owner and
+  channel twice throws `IllegalArgumentException`.
+- **Cleanup:** "Automatic" in the table means Core's `releaseAdvancedResources(Plugin)`, which runs on plugin disable.
+  `removeAll(Plugin)` and `clear()` on these handlers are Core-internal.
+
+```java
+// Charge a player and refund if the follow-up step fails (server thread)
+VaultInterface vault = api.vault();
+if (!vault.isEconomyAvailable()) return;
+VaultInterface eco = vault.economySnapshot();          // bound to one provider for this sequence
+VaultInterface.Transaction paid = eco.withdraw(player, 250.0);
+if (!paid.successful()) { player.sendMessage("Payment failed: " + paid.error()); return; }
+if (!deliver(player)) eco.deposit(player, 250.0);
+
+if (api.luckperms().permissionChecker("myplugin.shop.admin", player)) openAdminShop(player);
+api.particle().circle(Particle.FLAME, altar.getLocation().add(0.5, 1, 0.5), 1.5, 24, null);
+```
+
+**Advanced: replacing handlers.** Every legacy handler can be swapped out at runtime through `API.override*Handler(...)`
+(for example `overrideVaultHandler(VaultInterface)`, `overrideParticleHandler(ParticleInterface)`,
+`overrideAreaHandler(AreaInterface)`, `overrideNBT(NBTInterface)`, `overrideInventoryEventHandler(InventoryEventInterface)`,
+`overrideInventoryInteractorHandler(InteractorInterface)`). The replacement is server-wide and affects every plugin.
+
+- A custom `VaultInterface` whose provider can change must return a bound view from `economySnapshot()` and change
+  `economyIdentity()` whenever the provider changes.
+- A custom `ParticleInterface` must override the offset overload to support spread and speed.
+
+Use these seams only for integration or tests, not for normal features.
+
+#### Legacy handler details
+
+All of these handlers live in `_advancedMethods` and need no extra runtime dependencies. Resources of the interaction
+and package handlers are released on plugin disable and when the handler is replaced. Repeated particle effects
+belong to the given plugin and end after the given number of iterations; the returned `BukkitTask` can stop them early.
+
+**Areas.** Coordinate names follow Minecraft: `CenterX`/`CenterZ` and `Corner*X`/`Corner*Z` describe the horizontal
+X/Z plane, `Y1`/`Y2` limit the height. `fullCircle` checks a horizontal circle without height limit, `Cylinder` adds
+the height, `Rectangle` is a box with height. Bounds are inclusive, reversed corners are allowed. `setWorld(UUID)`
+binds the area to one world; without it the area applies in all worlds. `find(location)` returns an unmodifiable list.
+The old `compare(player)` return type is kept: no hits give an empty array, hits a single group. Very large areas are
+checked without a huge chunk index.
+
+```java
+var area = api.area().getArea();
+area.setAreaType(AreaType.Cylinder);
+area.setCenterX(100);
+area.setCenterZ(200); // Minecraft Z
+area.setRadius(20);
+area.setY1(60);      // lower Minecraft Y bound
+area.setY2(90);
+area.setWorld(world.getUID());
+api.area().register(area);
+var matches = api.area().find(player.getLocation());
+```
+
+**World generators.** `flatGenerator(bottomY, layers)` uses immutable layers of solid block material with positive
+height; output is fitted to the real world heights. Custom `ChunkGenerator`s are added with `register(name, generator)`
+before the world is created or loaded; worlds already loaded are not reconfigured. The generators follow the
+[Paper 26.2 generation stages](https://jd.papermc.io/paper/26.2/org/bukkit/generator/ChunkGenerator.html).
+
+**Particle budget.** Particle data is checked against the
+[data type Paper requires](https://jd.papermc.io/paper/26.2/org/bukkit/Particle.html#getDataType()). The default
+handler shares **4,096 particles per server tick** between world/player output, lines, circles and the animations built
+on them. Calls are served in arrival order. With too little budget left, count or resolution drops: lines keep both end
+points, circles still spread their points over the whole circumference. Below two remaining points a line is skipped,
+below three a circle. Excess output is not deferred to later ticks. `count = 0` stays the Bukkit special case and uses
+one budget slot. The first time the limit is hit, the handler reports it through the MID debugger. Line fractions and
+unit circles are cached per resolution (at most 16 cache entries each, at most 4,096 points). Output uses coordinates
+directly, without a `Location` per point. The start value is not a measured performance limit;
+`api.overrideParticleHandler(new ParticleHandler(limit))` allows 1–65,536 particles per tick. The budget is per handler
+instance; for a shared budget plugins use `api.particle()`. It counts requested particles before distribution to
+receivers, not network packets or the sum over all clients. Direct particle calls of other plugins are not limited,
+and arbitrary work inside a `repeat` callback is not limited by the budget. Purpur needs no changes for this.
+
+**Book actions.** `openBook` opens the clicked written book after the inventory event ends. The constructor optionally
+takes a `Function<String, ItemStack>` that resolves the tag value. Named books check `vcore.bookgui.<name>`. Left or
+right click opens the book; shift, middle, drag and drop actions keep the GUI item from moving.
+
+**Plugin messaging.** `packages().register(plugin, "namespace:channel", listener)` registers a channel; a `null`
+listener means send-only. Received byte arrays are copied. The receiver checks content, permissions and its own message
+format. The handler logs channel and length, never payload contents. Other existing listeners on the channel are kept
+during cleanup.
+
+**Structure generator.** The bundled generators support nine tree species, four random architecture forms, normal,
+2x2, 3x3 and 5x5 sizes, shrubs, hedges and glowstone in the leaves. Request a new stateful builder for every build:
+
+```java
+var structures = api.structureGenerator();
+structures.tree(access, new java.util.Random(seed), TreeSpecies.OAK)
+        .buildNormal(new StructurePos(x, y, z));
+```
+
+`StructureAccess` describes reads, writes and bounds of a block region; the caller makes sure its implementation only
+touches the allowed region. Live worlds are edited on the server thread; a matching `LimitedRegion` can be used inside
+the generation callback. Core creates no threads, worlds or automatic retries. The height/radius limits and at most
+128 connected plants match the old CustomTrees config limits. Invalid parameters are rejected before any block changes.
+A generation is not an atomic transaction; protection checks and any rollback belong to the caller. More structures
+register without new singleton or API classes:
+
+```java
+var marker = new org.bukkit.NamespacedKey(plugin, "stone_marker");
+structures.register(plugin, marker, (blocks, origin, random) -> {
+    if (blocks.contains(origin.x(), origin.y(), origin.z())) {
+        blocks.setType(origin.x(), origin.y(), origin.z(), org.bukkit.Material.STONE);
+    }
+});
+structures.generate(marker, access, new StructurePos(x, y, z), new java.util.Random(seed));
+```
+
+`generate` returns `false` for an unknown generator or a disabled owner. Names of other plugins can't be overwritten or
+removed. `PluginDisableEvent`, handler replacement and Core stop clean up registrations; callbacks already running are
+not interrupted. Registrations are not saved and must be repeated on every plugin start. Core and CustomTrees load in
+the `STARTUP` phase so the API is ready before world generation; a `STARTUP` dependency on a `POSTWORLD` plugin would
+not guarantee the order (see
+[Bukkit load phases](https://hub.spigotmc.org/javadocs/spigot/org/bukkit/plugin/PluginDescriptionFile.html#getLoad())).
+Vault stays optional and is resolved on access, also when it registers late.
+
+**Inventory events.** Core only observes changes: it moves no items, cancels no events and runs no plugin business
+logic in event handlers. `releaseAdvancedResources(plugin)` removes a plugin's subscriptions, `shutdownAdvanced()` all
+of them. `watchUses` observes synchronously confirmed block placements and finished item uses; it does not move or
+charge items and does not confirm a later inventory difference, so plugins check their actual follow-up state
+themselves. `watchPlayers` and `watchInventories` stay coalesced, deferred callbacks on the next tick.
+
+---
+
+## 17. Cross-plugin services
+
+Provider/consumer registries that let Vystorm plugins cooperate without compile-time dependencies on each other.
+
+### Registry conventions (read first)
+
+All registries in this chapter follow the same provider/consumer pattern: one plugin **provides** an implementation and registers it with its own `Plugin` as owner; any number of plugins **consume** it through a static facade, without a compile or load dependency on the provider. Consumers only depend on Core.
+
+| Rule | Detail |
+|---|---|
+| When to register | In `onEnable` (server thread). Every `register` takes the owning `Plugin`. |
+| Cleanup | You do not have to unregister. `CoreLifecycle` listens for `PluginDisableEvent` (priority `MONITOR`) and removes the disabled plugin's registrations from every registry listed in [CoreLifecycle](#corelifecycle-and-providerfailures). Exception: threat modifiers (see [ThreatServices](#threatservices)). |
+| Disabled owners | Most read paths skip providers whose owner `isEnabled()` is false, even before cleanup has run. |
+| Single-source registries | `MobServices`, `PartyServices`, `WorldEventServices`, `CharacterServices`, `DisciplineServices`: exactly one provider. A second `register` from another plugin **replaces** the first (last writer wins, a warning is logged; load order decides). |
+| Multi-provider registries, keyed by id | `RuntimeContextHub`, `RuntimeActionHub`: an id that already exists is replaced (warning logged). `RelationServices`, `MobContextServices`, `MobExtensions`, `CombatRegistry`: an id that another plugin already owns throws `IllegalStateException`; the same owner may re-register (replace). |
+| Provider failures | Exceptions thrown by providers are caught. Core falls back to the documented neutral value and logs through `ProviderFailures`, at most once per minute per provider and operation. A broken provider never breaks the consumer. |
+| Missing provider | Facades return neutral values (`Optional.empty()`, empty list, `1.0`, level 1, …) and never throw because a provider is missing. |
+
+Feature detection (see section 1.4):
+
+```java
+boolean ok;
+try { ok = CoreApi.has(CoreApi.Capability.MOB_SERVICES); } catch (LinkageError tooOld) { ok = false; }
+```
+
+| Area | Capability constant | Since |
+|---|---|---|
+| `runtime.RuntimeContextHub`, `runtime.RuntimeActionHub` | `RUNTIME_HUBS` | 0.2.0 |
+| `mob.*` (services, relations, context, events, extensions) | `MOB_SERVICES` | 0.9.0 |
+| `mob.MobRefs` | `MOB_REFS` | 0.12.0 |
+| `MobExtensions.sink(Plugin, TriggerSink)`, `hasSink()` | `TRIGGER_SINK_OWNER` | 0.10.3 |
+| `MobService.spawnRules()`, `MobSpawnRule` | none: use `CoreApi.atLeast("0.15.0")` | 0.15.0 |
+| `threat.*` | `THREAT` | 0.2.0 |
+| `combat.CombatRegistry` | `COMBAT_REGISTRY` | 0.2.0 |
+| `party.*` | `PARTY` | 0.6.0 |
+| `worldevent.*` | `WORLD_EVENTS` | 0.3.0 |
+| `spawn.*` | `SPAWN_POINTS` | 0.13.0 |
+| `progression.CharacterServices` | `CHARACTER` | 0.16.0 |
+| `progression.DisciplineServices` | `DISCIPLINES` | 0.10.0 |
+| `world.WorldEnvironmentRegistry`, player activity | none (older than `CoreApi`; present whenever `CORE_API` is) | <0.11.0 |
+| `storage.VersionedStore` | `VERSIONED_STORE` (the `CorruptStoreException`/quarantine constructor needs `atLeast("0.11.1")`) | 0.3.0 |
+| `config.ConfigMigrator` | `CONFIG_MIGRATOR` | 0.3.0 |
+| `schedule.TaskGroup` | `TASK_GROUPS` | 0.3.0 |
+| `lifecycle.CoreLifecycle` (automatic cleanup) | `LIFECYCLE_CLEANUP` | 0.10.3 |
+| `lifecycle.ProviderFailures` | `CORE_API` | 0.11.0 |
+
+---
+
+### Runtime hubs (`runtime`)
+
+Two singleton buses for loosely coupled data exchange. Payloads use only neutral types (`String`, `double`, `UUID`, sets and maps), so plugins can exchange data without depending on each other's classes. Access them with `RuntimeContextHub.get()` and `RuntimeActionHub.get()`.
+
+#### RuntimeContextHub
+
+**Purpose.** Providers publish read-only *snapshots* of their state (spawn pressure, city/faction state, world events, player activity, world generation). Consumers query one `Channel` at one position and either get every snapshot or a merged view.
+
+`enum Channel { WORLD_EVENT, SPAWN, STRUCTURE, FACTION, CITY, PLAYER, WORLD_GENERATION, INFRASTRUCTURE, DUNGEON, CUSTOM }`
+
+| Type / method | Notes |
+|---|---|
+| `record Query(UUID worldId, int blockX, int blockY, int blockZ, Optional<UUID> playerId, Set<String> tags, Map<String,String> attributes)` | `static Query world(UUID worldId, int x, int y, int z)`, `Query withPlayer(UUID player)`. |
+| `record Snapshot(String providerId, Channel channel, int priority, long revision, Set<String> tags, Map<String,String> values, Map<String,Double> scores)` | `static Snapshot empty(String providerId, Channel channel, int priority, long revision)`. A blank `providerId` or a non-finite score throws `IllegalArgumentException`. |
+| `record MergedSnapshot(Channel channel, long revision, Set<String> tags, Map<String,String> values, Map<String,Double> scores, List<String> providers)` | Merge result. |
+| `interface Provider` | `String id()`, `Set<Channel> channels()`, `default int priority()` (0), `default long revision()` (0), `default boolean supports(Channel channel, Query query)`, `Snapshot snapshot(Channel channel, Query query)`. |
+| `Registration register(Plugin owner, Provider provider)` | Blank id throws `IllegalArgumentException`. The same id (case-insensitive) replaces the earlier provider. |
+| `boolean unregister(UUID registrationId)`, `boolean unregisterProvider(String providerId)`, `int unregisterOwner(Plugin owner)` | Manual removal (normally not needed). |
+| `List<Snapshot> query(Channel channel, Query query)` | All matching snapshots, ordered by priority (descending) and then by registration order. |
+| `MergedSnapshot merged(Channel channel, Query query)` | Tags are unioned. For `values`, the higher-priority provider wins per key. `scores` are **added up**. `revision` is a hash of the providers' revisions. |
+| `Collection<Registration> registrations()` | Diagnostics. |
+
+- **Provider contract:** fast, free of side effects, and **must never load chunks**. Returning `null` means "no contribution". If a provider throws, or returns a snapshot for a different channel, it is skipped and a warning goes to its owner's logger.
+- **Threading:** `query` and `merged` run the providers synchronously on the caller's thread. Core does not switch threads, so a provider that touches Bukkit state must only be queried from the server thread, or must read only thread-safe caches.
+- Merged data is meant as input for directors and planners. Do not use it as an authoritative source for persistence.
+- Core registers two providers itself: `core-player-activity` (channel `PLAYER`) and `core-world-environment` (channel `WORLD_GENERATION`). Both are described below.
+
+```java
+// Provider (onEnable)
+RuntimeContextHub.get().register(this, new RuntimeContextHub.Provider() {
+    public String id() { return "myplugin-arenas"; }
+    public Set<RuntimeContextHub.Channel> channels() { return Set.of(RuntimeContextHub.Channel.CUSTOM); }
+    public RuntimeContextHub.Snapshot snapshot(RuntimeContextHub.Channel ch, RuntimeContextHub.Query q) {
+        String arena = arenaIndex.at(q.worldId(), q.blockX(), q.blockZ()); // own in-memory index, no chunk access
+        if (arena == null) return null;
+        return new RuntimeContextHub.Snapshot(id(), ch, priority(), 1L, Set.of("ARENA"),
+                Map.of("arenaId", arena), Map.of("pressure", 0.4));
+    }
+});
+// Consumer
+RuntimeContextHub.MergedSnapshot m = RuntimeContextHub.get().merged(RuntimeContextHub.Channel.CUSTOM,
+        RuntimeContextHub.Query.world(loc.getWorld().getUID(), loc.getBlockX(), loc.getBlockY(), loc.getBlockZ()));
+double pressure = m.scores().getOrDefault("pressure", 0.0);
+```
+
+#### RuntimeActionHub
+
+**Purpose.** A command router: a plugin *asks* another plugin to do something by a semantic action id (for example `player.activity.signal`), without depending on its API. Handlers answer asynchronously with a `Response`.
+
+| Type / method | Notes |
+|---|---|
+| `record Request(UUID requestId, String action, UUID worldId, int blockX, int blockY, int blockZ, Optional<UUID> playerId, Set<String> tags, Map<String,String> values, Map<String,Double> scores)` | `action` is normalized: trimmed, lower-cased, spaces become `.`. A blank action or a non-finite score throws `IllegalArgumentException`. Shortcut: `static Request world(String action, UUID worldId, int x, int y, int z)`. |
+| `record Response(String handlerId, boolean accepted, String status, Set<String> tags, Map<String,String> values, Map<String,Double> scores)` | `static Response accepted(String handlerId, Map<String,String> values)`, `static Response declined(String handlerId, String status)`. |
+| `interface Handler` | `String id()`, `Set<String> actions()` (list **lower-case** ids), `default int priority()` (0), `default boolean supports(Request request)`, `CompletionStage<Response> handle(Request request)`. |
+| `Registration register(Plugin owner, Handler handler)` | The same handler id replaces the earlier handler (warning logged). |
+| `boolean unregister(UUID registrationId)`, `boolean unregisterHandler(String handlerId)`, `int unregisterOwner(Plugin owner)` | Manual removal. |
+| `CompletionStage<Response> dispatch(Request request)` | Sends the request to the **first** enabled handler (highest priority, then earliest registration) whose `actions()` contains the id and whose `supports()` returns true. If that handler declines, the next handler is **not** tried. |
+| `CompletionStage<List<Response>> broadcast(Request request)` | Sends the request to every matching handler and completes once all of them have answered. |
+| `Collection<Registration> registrations()` | Diagnostics. |
+
+- **Threading:** `dispatch` and `broadcast` may be called from any thread. Off the server thread, Core moves handler selection and `handle(...)` to the next server tick, so **handlers are always invoked on the server thread**. Long-running work should return a stage that completes later. Handlers must not load chunks implicitly. Never block the server thread on the returned stage (`join()`/`get()`). If the continuation touches Bukkit, schedule it back onto the server thread.
+- **Errors are never exceptional:** the stage completes with `accepted=false` and one of these statuses: `no-handler` (handlerId `core`), `null-stage`, or `failed:<ExceptionSimpleName>`. Off-thread calls while Core is disabled complete exceptionally.
+- Action ids used by other Vystorm plugins (for example `structure.*`, `spawn.context`, `city.*`) are contracts owned by those plugins, not by Core. Core itself only handles the two `player.activity.*` actions below.
+
+```java
+RuntimeActionHub.get().register(this, new RuntimeActionHub.Handler() {
+    public String id() { return "myplugin-rewards"; }
+    public Set<String> actions() { return Set.of("myplugin.reward.grant"); }
+    public CompletionStage<RuntimeActionHub.Response> handle(RuntimeActionHub.Request r) {
+        if (r.playerId().isEmpty()) return CompletableFuture.completedFuture(RuntimeActionHub.Response.declined(id(), "missing:playerId"));
+        rewards.grant(r.playerId().get(), r.values().getOrDefault("tier", "1"));
+        return CompletableFuture.completedFuture(RuntimeActionHub.Response.accepted(id(), Map.of("granted", "true")));
+    }
+});
+```
+
+#### Player activity (Core provider)
+
+Core tracks a lightweight, event-driven activity state per online player (mining, combat, trading, …). `player.PlayerActivityService` is public, but Core owns the only live instance and **no static accessor exists**, so do not construct your own instance. Treat the class as "not public API" and use it only through the hubs:
+
+- **Read:** `RuntimeContextHub.get().query(Channel.PLAYER, Query.world(...).withPlayer(uuid))`. The query must carry a `playerId`. Provider id `core-player-activity`. Tags: `ACTIVITY:<ACTIVITY>` plus active flags (upper-case). Values: `activity`, `activitySince` (epoch ms).
+- **Write/read via actions** (handler `core-player-activity-actions`, priority 1000; the request needs `playerId`):
+  - `player.activity.signal` takes values `activity` (a `PlayerActivityService.Activity` name, default `IDLE`), `holdMillis` (default `10000`; 0 means no expiry) and `flags` (`|`-separated).
+  - `player.activity.context` reads the current state.
+  - Both respond with values `activity`, `since`, `expiresAt` and tags `ACTIVITY:<X>` plus flags. Invalid input gives `declined` with status `invalid:<message>` or `missing:playerId`.
+- Activities: `IDLE, TRAVELLING, EXPLORING, MINING, FARMING, BUILDING, CRAFTING, TRADING, FISHING, CITY, MARKET, HOME, DUNGEON_EXPLORING, DUNGEON_COMBAT, DUNGEON_BOSS, ARENA, PVP, COMBAT, LOOTING, ESCAPING, RESTING`. An expired state reads as `IDLE`. The state is dropped on quit.
+
+```java
+var req = new RuntimeActionHub.Request(UUID.randomUUID(), "player.activity.signal", p.getWorld().getUID(),
+        p.getLocation().getBlockX(), p.getLocation().getBlockY(), p.getLocation().getBlockZ(),
+        Optional.of(p.getUniqueId()), Set.of(), Map.of("activity", "DUNGEON_BOSS", "holdMillis", "30000", "flags", "BOSS_ROOM"), Map.of());
+RuntimeActionHub.get().dispatch(req);
+```
+
+#### World environment (`world.WorldEnvironmentRegistry`)
+
+**Purpose.** A single semantic profile per world (dimension, terrain kinds, tags), so that every plugin classifies custom worlds the same way. Custom world generators provide a `Detector`. Consumers call `detect(world)`.
+
+| Type / method | Notes |
+|---|---|
+| `enum DimensionKind { OVERWORLD, NETHER, END, AETHER, CUSTOM }`, `enum TerrainKind { GROUND, UNDERGROUND, FLOATING, CEILING, VOID, MIXED }` | |
+| `record WorldProfile(String id, DimensionKind dimension, Set<TerrainKind> terrain, Set<String> tags, String generatorId, String generatorClass, boolean customGeneration, String providerId, int priority, Map<String,String> attributes)` | `boolean hasTerrain(TerrainKind kind)`, `boolean hasTag(String tag)` (case-insensitive). A blank id throws `IllegalArgumentException`. |
+| `interface Detector` | `String id()`, `default int priority()`, `boolean supports(World world)`, `WorldProfile detect(World world)`. |
+| `static WorldEnvironmentRegistry get()` | Singleton. |
+| `Registration register(Plugin owner, Detector detector)` | The same owner with the same id replaces the earlier detector. |
+| `boolean unregister(UUID registrationId)`, `int unregisterOwner(Plugin owner)` | |
+| `WorldProfile detect(World world)` | Resolution order: explicit profile, then the first detector (by priority descending) that supports the world and returns non-null, then the built-in fallback. Never null. |
+| `void setExplicitProfile(Plugin owner, World world, WorldProfile profile)`, `void clearExplicitProfile(World world)` | Forces the profile for one world. |
+| `Optional<String> registeredGeneratorId(World world)` | The id of the generator, if it was registered through Core's generator registry. |
+
+- **Fallback profile:** id `vanilla:<dimension>` or `custom:<generatorId or generator class>`. Tags: the dimension name, plus `CUSTOM_GENERATION` and `CORE_GENERATOR` where they apply. Terrain: `GROUND`. Provider `core-fallback`.
+- **Threading:** callable from any thread. Detectors must only read world metadata (name, environment, generator). They must be free of side effects and must **never load chunks or touch entities**. A detector that throws is skipped with a warning.
+- The profile is also published on `RuntimeContextHub` channel `WORLD_GENERATION` (provider `core-world-environment`). Tags: `DIMENSION:<X>`, `TERRAIN:<X>` plus the profile tags. Values: `profile`, `dimension`, `generatorId`, `generatorClass`, `customGeneration`.
+- `generatorRegistered(...)` and `generatorUnregistered(...)` are called by Core's generator registry. They are **not public API**.
+
+```java
+WorldEnvironmentRegistry.WorldProfile wp = WorldEnvironmentRegistry.get().detect(player.getWorld());
+if (wp.dimension() == WorldEnvironmentRegistry.DimensionKind.NETHER || wp.hasTerrain(WorldEnvironmentRegistry.TerrainKind.CEILING)) { /* no sky spawns */ }
+```
+
+---
+
+### Mob platform (`mob`, `mob.event`, `mob.extension`)
+
+**Purpose.** A neutral mob API: spawn, find and control managed mobs, decide who is hostile to whom, and add context such as arenas or sieges. The only provider is **Vystorm-Mobs**. SpawnDirector, Factions, Arena, Cities, dungeons and other plugins are consumers. Without the provider, `MobServices.service()` is empty and consumers fall back to vanilla or legacy behaviour.
+
+#### MobServices and MobService
+
+| `MobServices` (facade) | |
+|---|---|
+| `static Optional<MobService> service()` | Empty when there is no provider. |
+| `static boolean available()` | |
+| `static void register(Plugin owner, MobService service)` | **Provider only** (Vystorm-Mobs). |
+| `static void unregister(Plugin owner)` | |
+| `static void fire(Event event)` | **Provider only.** Fires the event synchronously on the server thread and defers it to the next tick from other threads. Cancellable events must be fired on the server thread. |
+
+| `MobService` (implemented by the provider) | |
+|---|---|
+| `Optional<MobHandle> spawn(MobSpawnRequest request)` | Throws `IllegalArgumentException` for an unknown definition. Empty if the spawn was cancelled (for example through `MobSpawnRequestEvent`). |
+| `Optional<MobGroupHandle> spawnGroup(MobGroupRequest request)` | |
+| `Optional<MobHandle> getMob(UUID mobId)` / `Optional<MobHandle> byEntity(Entity entity)` | |
+| `Collection<MobHandle> getMobs(MobQuery query)` | Live mobs. |
+| `Optional<MobDefinitionView> getDefinition(String id)` / `Collection<MobDefinitionView> getDefinitions(MobQuery query)` | Definitions. |
+| `ThreatQuote quoteThreat(MobSpawnRequest request)` / `Optional<MobPreview> preview(MobSpawnRequest request)` | Plan without spawning. |
+| `void despawn(UUID mobId, DespawnReason reason)` | |
+| `Optional<EntityRef> describe(Entity entity)` | Empty for entities the provider does not manage. |
+| `Optional<MobGroupHandle> group(UUID groupId)` | |
+| `default Collection<MobSpawnRule> spawnRules()` / `default long spawnRulesVersion()` | Natural spawn rules (since 0.15.0). Rebuild your catalog when the version changes. |
+
+**Threading:** spawn methods and all mutating `MobHandle` methods run **on the server thread only**.
+
+#### Requests, handles and value types
+
+- `MobSpawnRequest` (record). Build it with `static Builder of(String definitionId)` and the chainable methods `at(Location)`, `level(int)` (`<= 0` means the definition decides), `tier(MobTier)` (`null` means the definition's tier), `affix(String)`, `role(String)`, `squad(UUID)`, `source(String)`, `team(String)`, `persistent(boolean)`, `objective(Objective)` and `attribute(String, String)`, then call `build()`. Also available: `Builder toBuilder()`. A blank `definitionId` throws `IllegalArgumentException`.
+- `MobHandle` (interface). Read methods: `UUID id()` (the mob id, which is **not necessarily** the entity UUID and survives persistence promotion), `definitionId()`, `Optional<LivingEntity> entity()`, `valid()`, `level()`, `tier()`, `affixes()`, `role()`, `squadId()`, `team()`, `currentTarget()`, `threat()`, `ref()`, `aiTier()` (0 dormant to 3 combat). Mutating methods: `setTarget(UUID)`, `addObjective(Objective)`, `clearObjective(String)`, `pushContext(ContextLayer)`, `removeContext(String)`, `persistent()`, `UUID promoteToPersistent()`, `despawn(DespawnReason)`.
+- `MobGroupRequest(List<MobSpawnRequest> members, String formation, int leaderIndex, List<Objective> objectives)` throws `IllegalArgumentException` for an empty member list. `formation` defaults to `LOOSE`. `leaderIndex < 0` means the provider picks the leader.
+- `MobGroupHandle`: `groupId()`, `members()`, `leader()`, `void order(String order, Objective objective)` (orders such as `FOCUS_TARGET`, `SPREAD_OUT`, `RETREAT`, `FLANK`, `DEFEND_POSITION`, `PUSH`, `HOLD`, `BREACH`), `double morale()`.
+- `MobQuery`: `MobQuery.builder().faction("ORC").role("RANGED").environment("FOREST").threat(20, 35).tiers(MobTier.NORMAL, MobTier.ELITE).near(worldId, x, y, z, r).limit(n).build()`. Also `id(String)`, `tag(String)` (all of) and `anyTag(String)`. `MobQuery.ALL` matches everything. Empty fields do not restrict the query.
+- Enums: `MobTier { NORMAL, VETERAN, ELITE, CHAMPION, RARE, BOSS, WORLD_BOSS }` with `static MobTier parse(String value, MobTier fallback)`. `DespawnReason { DIRECTOR_RECYCLE, CONTEXT_ENDED, LEASH, DEATH, ADMIN, PLUGIN_DISABLE, CHUNK_UNLOAD, RELOAD, OTHER }`. `ObjectiveType { ATTACK, DEFEND, CAPTURE, ESCORT, HOLD, DESTROY, PATROL, SURVIVE, RETREAT }`.
+- `Objective` (record). Factories: `static Objective at(String id, ObjectiveType type, UUID worldId, Vector point, double radius, int priority)` and `static Objective entity(String id, ObjectiveType type, UUID target, int priority)`. Also `withExpiry(long expiresAtMillis)` (`<= 0` means unlimited) and `expired(long nowMillis)`.
+- Read-only records: `MobDefinitionView` (id, displayName, entityType, faction, archetype, tier, baseThreat, tags, roles, environments, abilities, traits, boss, …), `MobPreview`, `ThreatQuote(String definitionId, double total, Map<String,Double> breakdown)` (with `static ThreatQuote unknown(String)`), and `MobSpawnRule` (biomes as namespaced keys, dimensions `NORMAL|NETHER|THE_END`, `weight` with rarity already applied).
+
+```java
+Optional<MobService> mobs = MobServices.service();
+if (mobs.isPresent() && mobs.get().getDefinition("ORC_GRUNT").isPresent()) {
+    MobSpawnRequest req = MobSpawnRequest.of("ORC_GRUNT").at(loc).level(12).tier(MobTier.ELITE).source(getName())
+            .objective(Objective.at("hold-gate", ObjectiveType.DEFEND, loc.getWorld().getUID(), loc.toVector(), 8, 10))
+            .build();
+    mobs.get().spawn(req).ifPresent(handle -> tracked.add(handle.id()));
+} else {
+    loc.getWorld().spawnEntity(loc, EntityType.ZOMBIE); // fallback without Vystorm-Mobs
+}
+```
+
+#### MobRefs (Vystorm first, MythicMobs as fallback)
+
+Resolves config references such as `ID`, `vystorm:ID` (Vystorm-Mobs only) and `mythic:ID`/`mythicmobs:ID`. The order is always Vystorm-Mobs first, then MythicMobs. **Server thread only.**
+
+| Method | |
+|---|---|
+| `static String id(String ref)` | Strips a known prefix. |
+| `static boolean vystormKnows(String ref)` | |
+| `static Optional<MobRefs.Source> source(String ref)` | `Source { VYSTORM, MYTHIC_MOBS }`. Empty if no source knows the reference. |
+| `static Optional<Entity> spawn(String ref, Location location, int level, String sourcePlugin)` | Empty means that no source knows the reference or the spawn was declined before any mob existed, so a vanilla replacement is safe. Throws `MobRefs.UnknownOutcomeException` (a `RuntimeException`) when a spawn was triggered but its outcome is unclear. In that case **do not retry and do not replace it with vanilla**. |
+
+#### Relations
+
+**Purpose.** One place that decides who may attack or assist whom (arena teams, factions, cities, pets, parties). Plugins provide `RelationProvider`s, and mob AI and other consumers ask `RelationServices.get()`.
+
+| Type / method | |
+|---|---|
+| `enum Relation { ALLY, FRIENDLY, NEUTRAL, UNWELCOME, HOSTILE, INVADER }` | `boolean attackable()` (`HOSTILE`/`INVADER`), `boolean assistable()` (`ALLY`/`FRIENDLY`). |
+| `record EntityRef(UUID id, Kind kind, String faction, String team, UUID owner, Set<String> tags)` | `Kind { PLAYER, MOB, NPC, PET, VANILLA_HOSTILE, VANILLA_PASSIVE, OTHER }`. Factories: `static EntityRef player(UUID)`, `static EntityRef mob(UUID id, String faction, String team, UUID owner, Set<String> tags)`, `static EntityRef of(Entity entity)` (server thread; resolves managed mobs through `MobService.describe`). Also `boolean hasTag(String)`. |
+| `interface RelationProvider` | `String id()`, `int priority()`, `Optional<Relation> relation(EntityRef source, EntityRef target)`. Return empty for "no opinion". |
+| `interface RelationService` | `Relation getRelation(EntityRef source, EntityRef target)`, `default boolean canAttack(EntityRef, EntityRef)`, `default boolean canAssist(EntityRef, EntityRef)`. |
+| `RelationServices` | `static RelationService get()`, `static void register(Plugin owner, RelationProvider provider)` (throws `IllegalStateException` if another plugin owns the id), `static void unregisterAll(Plugin owner)`, `static List<String> providers()`, `static Relation fallback(EntityRef source, EntityRef target)`. |
+
+- **Resolution:** the same id gives `ALLY`. Otherwise the providers are asked by priority, descending, and the first non-empty answer wins. If no provider answers, the fallback applies: same team gives `ALLY`; different explicit teams give `HOSTILE`; an owner/pet link or a shared owner gives `ALLY`; two players give `ALLY` if they are in the same party (`PartyServices`), else `NEUTRAL`; the same faction gives `ALLY`; a hostile mob against a player, pet or NPC gives `HOSTILE`; everything else gives `NEUTRAL`. Hostility between mob factions is never assumed; a provider must declare it.
+- **Provider contract:** fast, with no world access. Thread: not constrained by Core. Callers in the mob system are on the server thread.
+
+```java
+RelationServices.register(this, new RelationProvider() {
+    public String id() { return "myplugin-arena-teams"; }
+    public int priority() { return 500; }
+    public Optional<Relation> relation(EntityRef s, EntityRef t) {
+        String a = teams.get(s.id()), b = teams.get(t.id());
+        if (a == null || b == null) return Optional.empty();
+        return Optional.of(a.equals(b) ? Relation.ALLY : Relation.HOSTILE);
+    }
+});
+boolean may = RelationServices.get().canAttack(EntityRef.of(attacker), EntityRef.of(victim));
+```
+
+#### Mob context
+
+**Purpose.** Plugins describe *where* a mob is (arena match, city, siege, event, dungeon) as `ContextLayer`s. The mob system combines them into combat and AI rules. Context providers never control the mob AI directly.
+
+| Type / method | |
+|---|---|
+| `interface ContextProvider` | `String id()`, `List<ContextLayer> layers(MobContextQuery query)`. |
+| `MobContextServices` | `static void register(Plugin owner, ContextProvider provider)` (throws `IllegalStateException` if another plugin owns the id), `static void unregisterAll(Plugin owner)`, `static List<String> providers()`, `static MobContext resolve(MobContextQuery query)` (server thread; returns `MobContext.EMPTY` if there are no layers). |
+| `record MobContextQuery(UUID worldId, int x, int y, int z, UUID mobId, String definitionId, String faction, Set<String> tags)` | `mobId` may be null for previews. |
+| `record ContextLayer(ContextKind kind, String id, String owner, int priority, Set<String> tags, Map<String,String> attributes, CombatRules combatRules, AiRules aiRules, List<Objective> objectives)` | `combatRules` and `aiRules` may be `null` ("no constraint"). Well-known attribute keys: `team`, `matchId`, `gameMode`, `cityId`, `owner`, `faction`, `siegeState`, `protectionState`, `disposition`. |
+| `enum ContextKind { WORLD, REGION, ARENA, CITY, FACTION, EVENT, DUNGEON }` | |
+| `record CombatRules(boolean damagePlayers, boolean damageMobs, boolean damageNpcs, boolean damagePets, boolean friendlyFire, boolean mobBlockDamage, Set<String> allowedBlockTargets, double damageMultiplier)` | Constants `OPEN_WORLD`, `ARENA`, `PROTECTED`, and `static CombatRules siege(Set<String> targets)`. Layers are combined **restrictively** (`restrict`). |
+| `record AiRules(double aggressionMultiplier, boolean allowFlee, boolean allowPursuitOutsideRegion, double leashRadius, boolean passiveUnlessProvoked)` | `DEFAULT`. The highest-priority layer that sets `AiRules` wins. |
+| `MobContext` | `layer(ContextKind)`, `has(ContextKind)`, `layers()`, `combatRules()`, `aiRules()`, `objectives()`, `tags()`, `arena()`, `city()`, `event()`, `team()`. |
+
+**Provider contract:** called on the server thread. It must be fast and must not load chunks. The provider caches results and refreshes them periodically. A provider that throws is skipped.
+
+```java
+MobContextServices.register(this, new ContextProvider() {
+    public String id() { return "myplugin-arena"; }
+    public List<ContextLayer> layers(MobContextQuery q) {
+        Match m = matches.at(q.worldId(), q.x(), q.z());
+        if (m == null) return List.of();
+        return List.of(new ContextLayer(ContextKind.ARENA, "arena:" + m.id(), getName(), 100, Set.of(),
+                Map.of("matchId", m.id()), CombatRules.ARENA, null, List.of()));
+    }
+});
+```
+
+#### Mob events (`mob.event`)
+
+These are standard Bukkit events, fired by the provider. Each has `getHandlerList()`. Unless noted otherwise they fire on the server thread.
+
+| Event | Cancellable | Accessors |
+|---|---|---|
+| `MobSpawnRequestEvent` | yes | `request()`, `request(MobSpawnRequest replacement)`: replace the request before the spawn. |
+| `MobSpawnedEvent` | no | `mob()`, `request()` |
+| `MobDeathEvent` | no | `mob()`, `killer()` (a `UUID`, may be null) |
+| `MobDespawnedEvent` | no | `mob()`, `reason()`: removed without dying. |
+| `MobTargetChangedEvent` | yes | `mob()`, `previousTarget()`, `newTarget()` (null means no target) |
+| `MobAbilityCastEvent` | yes | `mob()`, `abilityId()`, `targets()` |
+| `MobDamageEvent` | only in `Stage.PRE` | `stage()`, `source()`, `target()`, `damageType()`, `abilityId()`, `heal()`, `amount()`, `amount(double)` (PRE only; POST throws `IllegalStateException`) |
+| `MobSquadOrderEvent` | yes | `group()`, `order()`, `objective()` |
+| `MobObjectiveChangedEvent` | no | `mob()`, `objective()`, `added()` |
+| `MobPromotedEvent` | no | `mob()`, `persistentId()` |
+| `MobBossEvent` | no | `boss()`, `stage()` (`START`, `PHASE`, `ENRAGE`, `RESET`, `KILL`, `WIPE`), `phase()` |
+| `MobRegisteredEvent` | no | `definition()` |
+| `MobDecisionTelemetryEvent` | no, **asynchronous** | `mobId()`, `definitionId()`, `action()`, `score()`, `scores()`. Read only; no world access. |
+
+```java
+@EventHandler public void onMobDeath(MobDeathEvent e) {
+    if (e.killer() != null && e.mob().tier() == MobTier.BOSS) bounties.pay(e.killer(), e.mob().definitionId());
+}
+```
+
+#### Mob extensions (`mob.extension`)
+
+**Purpose.** Content plugins add skill building blocks to Vystorm-Mobs (mechanics, targeters, conditions, triggers, brain profiles, traits, effects) without depending on its runtime classes. Vystorm-Mobs looks them up by id. Ids are case-insensitive, and **built-in names of Vystorm-Mobs take precedence**, so give yours a plugin prefix.
+
+| Register (content plugin) | Lookup (used by Vystorm-Mobs) |
+|---|---|
+| `static void registerMechanic(Plugin owner, String id, MobMechanic.Factory factory)` | `static Optional<MobMechanic.Factory> mechanic(String id)` |
+| `static void registerTargeter(Plugin owner, String id, MobTargeter.Factory factory)` | `static Optional<MobTargeter.Factory> targeter(String id)` |
+| `static void registerCondition(Plugin owner, String id, MobCondition.Factory factory)` | `static Optional<MobCondition.Factory> condition(String id)` |
+| `static void registerTrigger(Plugin owner, String id)` | `static boolean triggerKnown(String id)` |
+| `static void registerBrain(Plugin owner, MobBrainProfile profile)` | `static Optional<MobBrainProfile> brain(String id)` |
+| `static void registerTrait(Plugin owner, MobTrait trait)` | `static Optional<MobTrait> trait(String id)` |
+| `static void registerEffect(Plugin owner, MobEffect effect)` | `static Optional<MobEffect> effect(String id)` |
+| `static Set<String> ids(MobExtensions.Kind kind)` | `Kind { MECHANIC, TARGETER, CONDITION, TRIGGER, BRAIN, TRAIT, EFFECT }` |
+
+- `register*` throws `IllegalStateException` if another plugin owns the id, and `IllegalArgumentException` for a blank id. Lookups return empty while the owner is disabled.
+- Functional contracts:
+  - `MobMechanic.apply(SkillCall call, SkillTarget target)` returns `boolean` (false means "not applied").
+  - `MobTargeter.select(SkillCall call)` returns `List<SkillTarget>`.
+  - `MobCondition.test(SkillCall call, SkillTarget target)` returns `boolean`; `target == null` means the caster is tested.
+  - Each has a nested `Factory` with `create(ExtensionArgs args)`.
+- `MobTrait`: `id()`, `utilityMultiplier(String category)`, `stat(String stat, double value)`, `threat()`. `MobEffect`: `id()`, `onStart`, `onTick`, `onRefresh`, `onEnd`. `MobBrainProfile(String id, Map<String,Double> weights, double preferredRange, boolean kite, double fleeBelow, double threat)`.
+- `SkillCall` (runtime view for extensions): `caster()`, `casterMob()`, `origin()`, `trigger()`, `targets()`, `args()`, `number(String key, double fallback)` (argument evaluated as a formula), `evaluate(String, double)`, `variable(...)`, `context()`, `rules()`, `boolean mayAffect(Entity target, boolean harmful)`, `castSkill(String)`, `skillId()`. `SkillTarget(Entity entity, Location location)` with `of(Entity)`, `at(Location)`, `asEntity()`, `position()`. `ExtensionArgs(Map<String,String> values)` with `string(String, String)` and `has(String)`.
+- **Threading:** extensions are invoked by the mob runtime on the server thread. World access is only allowed there. Vystorm-Mobs calls the factory **on every application** (per target), so keep `create` cheap. Custom mechanics are **not** relation-checked automatically: call `call.mayAffect(entity, true)` before you apply harm.
+- **Triggers.** `static void fireTrigger(UUID mobId, String trigger, Entity cause)` sends a signal to a mob. `mobId` is `MobHandle.id()`. It does nothing when no sink is set or the arguments are blank. `static boolean hasSink()`. `static void sink(Plugin owner, TriggerSink sink)` and `sink(TriggerSink)` are **provider only** (Vystorm-Mobs); `null` removes the sink. Vystorm-Mobs runs the definition's skill lines registered under that trigger name (for example `onSignal:<name>`).
+
+```java
+MobExtensions.registerMechanic(this, "myplugin_ignite", args -> (call, target) -> {
+    Optional<Entity> e = target.asEntity();
+    if (e.isEmpty() || !call.mayAffect(e.get(), true)) return false;
+    e.get().setFireTicks((int) call.number("ticks", 60));
+    return true;
+});
+```
+
+---
+
+### Threat and combat policy
+
+#### ThreatServices
+
+**Purpose.** A shared, thread-safe threat score per target (player, cluster, region or world). Directors (SpawnDirector, WorldDirector) read it, and any plugin can add modifiers. The effective value is `clamp(sum(additive) × product(multiplier), min, max)`.
+
+| Type / method | |
+|---|---|
+| `static ThreatScoreService ThreatServices.get()` | Always non-null (implemented by Core). |
+| `void putModifier(Plugin owner, ThreatTarget target, NamespacedKey source, double additive, double multiplier, int priority, Duration ttl, boolean persistent)` | Upsert keyed by `(target, source)`. |
+| `default void addPoints(Plugin owner, ThreatTarget target, NamespacedKey source, double amount, Duration ttl)` | Additive only (multiplier 1). |
+| `default void setMultiplier(Plugin owner, ThreatTarget target, NamespacedKey source, double multiplier, Duration ttl)` | Multiplier only. |
+| `boolean removeModifier(Plugin owner, ThreatTarget target, NamespacedKey source)` | Returns false if the modifier is missing or not yours. |
+| `int removeOwner(Plugin owner)` | Removes all modifiers of the plugin. |
+| `ThreatSnapshot snapshot(ThreatTarget target, double minimumThreat, double maximumThreat)` / `default ThreatSnapshot snapshot(ThreatTarget target)` (bounds 0–100) | Explains the value: `additiveTotal`, `multiplierProduct`, `effectiveThreat`, `modifiers`, `calculatedAtEpochMilli`. |
+| `record ThreatTarget(ThreatScope scope, String key)` | `static player(UUID)`, `cluster(String)`, `region(String)`, `world(UUID)`. `ThreatScope { PLAYER, CLUSTER, REGION, WORLD }`. |
+| `record ThreatModifier(NamespacedKey source, double additive, double multiplier, int priority, long expiresAtEpochMilli, boolean persistent)` | `boolean isExpired(long now)`. |
+
+- **Errors:** `source` must be in **your plugin's namespace** (`new NamespacedKey(plugin, "...")`), otherwise `IllegalArgumentException`. A non-finite `additive`, or a negative or non-finite `multiplier`, throws `IllegalArgumentException`. So do invalid bounds (non-finite, or min > max).
+- `ttl` of `null`, zero or negative means no expiry. Expired modifiers are dropped on read and purged by Core every minute. `persistent` is stored as metadata only; modifiers are kept in memory and are lost on restart.
+- **Threading:** every method may be called from any thread.
+- **Lifecycle:** threat modifiers are **not** part of `CoreLifecycle`. Core removes them on disable only through a listener that registers lazily on the first `ThreatServices.get()` made from the server thread. Call `ThreatServices.get().removeOwner(this)` in `onDisable` to be safe.
+- `ThreatServices.purgeExpired()` is called by Core; it is not needed by plugins.
+
+```java
+NamespacedKey key = new NamespacedKey(this, "bloodmoon");
+ThreatServices.get().addPoints(this, ThreatTarget.world(world.getUID()), key, 25, Duration.ofMinutes(10));
+double t = ThreatServices.get().snapshot(ThreatTarget.player(p.getUniqueId())).effectiveThreat();
+```
+
+#### CombatRegistry
+
+**Purpose.** Pluggable **player-vs-player** damage policy (bounties, duels, protected zones). Core evaluates it on `EntityDamageByEntityEvent` at priority `HIGHEST`. Projectiles, TNT, area-effect clouds and tamed pets are resolved to the player who owns them; self-damage is ignored.
+
+| Type / method | |
+|---|---|
+| `enum Decision { PASS, ALLOW, DENY }` | |
+| `record Context(Player attacker, Player target, Kind kind)` | Both players non-null; `kind` `null` → `HARM`. The old constructor `Context(attacker, target)` stays and means `HARM`. `boolean harmful()`. (Kind: 0.26.4, `COMBAT_KINDS`) |
+| `enum Kind { HARM, SUPPORT }` | `SUPPORT` = only beneficial effects (healing/buff splash potions, clouds). Policies that protect team mates should return `DENY` only for `harmful()` contexts, so healing still works. (0.26.4) |
+| `static Decision evaluate(Player attacker, Player target, Kind kind)` | (0.26.4) |
+| `static Kind kindOf(Iterable<PotionEffect> effects)` | `SUPPORT` if no effect is `HARMFUL`, else `HARM`; empty → `HARM`. For splash potions and area-effect clouds. (0.26.4) |
+| `interface Policy` | `String id()`, `int priority()`, `Decision evaluate(Context context)`. |
+| `static void register(Plugin owner, Policy policy)` | The id is normalized to lower case. A blank id throws `IllegalArgumentException`. An id owned by another plugin throws `IllegalStateException`. |
+| `static boolean unregister(Plugin owner, String id)`, `static void unregisterAll(Plugin owner)` | |
+| `static Decision evaluate(Player attacker, Player target)`, `static Decision evaluate(Context context)` | Policies are evaluated by priority, descending (then by registration order). The first non-`PASS` decision wins. A `null` result counts as `PASS`, and a policy that throws is skipped. |
+| `static List<String> policies()` | Diagnostics. |
+| `static void clear()` | **Not for plugins:** it removes every policy. |
+
+- **Effect:** `DENY` cancels the event. `ALLOW` un-cancels it, but only if the event was not already cancelled before priority `NORMAL`. `PASS` leaves it unchanged.
+- **Threading:** server thread. The policy must be fast.
+
+```java
+CombatRegistry.register(this, new CombatRegistry.Policy() {
+    public String id() { return "myplugin-duels"; }
+    public int priority() { return 100; }
+    public CombatRegistry.Decision evaluate(CombatRegistry.Context c) {
+        return duels.active(c.attacker(), c.target()) ? CombatRegistry.Decision.ALLOW : CombatRegistry.Decision.PASS;
+    }
+});
+```
+
+---
+
+### Parties (`party`)
+
+**Purpose.** Party membership for all plugins (XP share, friendly fire, shared loot). The only source is **VystormParties**. Without a source, every player is alone.
+
+| `PartyServices` | Behaviour without a source or on failure |
+|---|---|
+| `static void register(Plugin owner, PartySource source)` / `static void unregister(Plugin owner)` | Provider only. |
+| `static boolean available()` | |
+| `static Optional<PartyView> partyOf(UUID player)` / `static Optional<PartyView> party(UUID partyId)` | empty |
+| `static Collection<PartyView> all()` | empty list |
+| `static boolean sameParty(UUID a, UUID b)` | false (also when `a` equals `b`) |
+| `static List<Player> onlineMembers(Player player)` | Online members **excluding** the player; server thread. |
+| `static List<Player> nearbyMembers(Player player, double radius)` | Same world and within `radius`; server thread. |
+| `static boolean flag(UUID player, String key, boolean fallback)` | `fallback` |
+| `static boolean setting(UUID partyId, String key, String value)` | Sets or removes (`null`) a party setting. Returns false without a source. |
+| `static void fire(PartyChangeEvent event)` | **Provider only.** Fires synchronously on the server thread, otherwise on the next tick. |
+
+- `PartySource` (provider): `partyOf(UUID)`, `party(UUID)`, `all()`, `boolean setting(UUID partyId, String key, String value)`. Reads must be **fast and thread-safe**, so the `PartyServices` read methods may be called from any thread (except `onlineMembers` and `nearbyMembers`).
+- `record PartyView(UUID id, String name, UUID leader, Set<UUID> members, Map<String,String> settings, long createdAt)`: `contains(UUID)`, `setting(String, String)`, `flag(String, boolean)`. Settings are free-form keys (for example `xp-share`, `friendly-fire`). Other plugins should prefix their own keys.
+- `PartyChangeEvent` (server thread): `kind()` (`CREATED, JOINED, LEFT, KICKED, LEADER, RENAMED, SETTING, DISBANDED`), `party()` (the state after the change; the last state for `DISBANDED`), `player()` (may be null for `SETTING` and `DISBANDED`), `detail()` (for example the setting key).
+
+```java
+for (Player m : PartyServices.nearbyMembers(killer, 32)) if (PartyServices.flag(killer.getUniqueId(), "xp-share", true)) giveXp(m, share);
+```
+
+---
+
+### World events (`worldevent`)
+
+**Purpose.** A neutral view of running world events (blood moon, invasions, …) and their numeric modifiers at a position. The only source is **WorldDirector**. Without a source there are no events and every modifier is `1.0`.
+
+| `WorldEventServices` | |
+|---|---|
+| `static void register(Plugin owner, WorldEventSource source)` / `static void unregister(Plugin owner)` | Provider only. |
+| `static boolean available()` | |
+| `static List<WorldEventView> active()` | All running events. |
+| `static List<WorldEventView> activeAt(Location location)` / `activeAt(UUID worldId, int x, int y, int z)` | Events that apply at the position (global, world, region or local scope). |
+| `static boolean activeAt(Location location, String eventIdOrTag)` | Matches the event id or a tag, case-insensitively. |
+| `static double modifier(String key, Location location)` / `modifier(String key, UUID worldId, int x, int y, int z)` | The combined multiplier, clamped to `MIN_MODIFIER`–`MAX_MODIFIER` (0–10). `1.0` without a source, with a null key or location, or on a non-finite value or failure. |
+| `static void fireStarted(WorldEventView event)`, `static void fireEnded(WorldEventView event, WorldEventEndedEvent.Reason reason)` | **Provider only.** They fire `WorldEventStartedEvent` and `WorldEventEndedEvent` (`Reason { EXPIRED, MANUAL }`), always on the server thread. |
+
+- `WorldEventSource` (provider): `active()`, `activeAt(UUID, int, int, int)`, `modifier(String key, UUID worldId, int x, int y, int z)`. Calls must be fast and free of side effects, and must never load chunks.
+- `record WorldEventView(UUID instanceId, String eventId, String category, String type, String scope, String scopeKey, Set<String> tags, Instant startedAt, Instant endsAt, double pressure)`: `type` is one of `POSITIVE|NEGATIVE|MIXED|LEGENDARY`, `scope` one of `GLOBAL|WORLD|REGIONAL|LOCAL`. Also `boolean hasTag(String)`.
+- Modifier key names are defined by the source's event catalog, not by Core.
+- **Threading:** Core does not switch threads for reads. Call them from the server thread unless the source documents that it is thread-safe.
+
+```java
+double lootMult = WorldEventServices.modifier("loot", mob.getLocation());
+@EventHandler public void onStart(WorldEventStartedEvent e) { if (e.event().hasTag("bloodmoon")) announce(e.event()); }
+```
+
+---
+
+### Spawn points (`spawn`)
+
+**Purpose.** Fixed spawn points per region. The plugin that builds a region (for example WorldForge for `dungeon:<id>`) publishes the points, and spawners (SpawnDirector) read them and fill them. Neither side depends on the other.
+
+| Type / method | |
+|---|---|
+| `record SpawnPoint(String id, String region, UUID world, int x, int y, int z, String role, String theme, int level, Map<String,String> attributes)` | `static SpawnPoint of(String id, String region, UUID world, int x, int y, int z, String role, String theme)`. The constructor throws `IllegalArgumentException` if `id` is blank or longer than 200 characters, if `role` is blank, or if `level` is outside 0–100 (0 means the spawner profile decides). `region` is a region key `kind:id`. Change `id` to have a location re-populated (for example for a new wave). |
+| `static SpawnPointService get()` | Singleton. |
+| `void sync(Plugin owner, String region, Collection<SpawnPoint> points)` | Replaces all points of a region. An empty collection removes the region. Throws `IllegalStateException` if another plugin owns the region, and `IllegalArgumentException` if a point's `region` does not match. |
+| `void retain(Plugin owner, Collection<String> regions)` | Keeps only the listed regions of this plugin (reconciliation after a restart or teardown). |
+| `int unregisterOwner(Plugin owner)` | |
+| `List<SpawnPoint> inRegion(String region)`, `Set<String> regions()`, `List<SpawnPoint> all()`, `Optional<String> owner(String region)` | Reads. |
+| `long revision()` | Increases on every change. Use it as a cache key. |
+
+**Threading:** writes are synchronized and belong on the server thread. Reads are lock-free and allowed from **any thread**. Ownership is tracked by plugin name.
+
+```java
+SpawnPointService.get().sync(this, "dungeon:crypt_7", List.of(
+        SpawnPoint.of("crypt_7:boss:w1", "dungeon:crypt_7", world.getUID(), 120, 40, -88, "BOSS", "undead")));
+```
+
+---
+
+### Progression (`progression`)
+
+Two single-source bridges, both provided by **Vystorm Skills**. Mobs, quests, crafting and events use them without depending on the skills plugin. `available()` also requires the owner to be enabled.
+
+#### CharacterServices
+
+Character level and XP (the main class with talent points, separate from disciplines and from vanilla XP).
+
+| `CharacterServices` | Without a source or on failure |
+|---|---|
+| `static void register(Plugin owner, CharacterSource source)` / `static void unregister(Plugin owner)` | Provider only. |
+| `static boolean available()` | |
+| `static int level(UUID player)` | `1` (the result is always at least 1) |
+| `static int maxLevel()` | `1` |
+| `static double awardXp(Player player, double amount, String source, int sourceLevel)` | `0`. Also `0` if `player` is null or `amount <= 0`. Returns the amount actually granted. `sourceLevel` (for example the mob level) enables level-gap damping; `0` means no damping. **Server thread.** |
+
+`CharacterSource` (provider): `int level(UUID)`, `int maxLevel()`, `double awardXp(Player, double, String, int)`. Reads must be fast and thread-safe; `awardXp` runs on the server thread only.
+
+#### DisciplineServices
+
+Professions and disciplines for crafting, smithing, repair and salvage.
+
+| `DisciplineServices` | Without a source or on failure |
+|---|---|
+| `static void register(Plugin owner, DisciplineSource source)` / `static void unregister(Plugin owner)` | Provider only. |
+| `static boolean available()` | |
+| `static Set<String> disciplines()` | empty set |
+| `static int level(UUID player, String discipline)` | `0` |
+| `static double modifier(UUID player, String key)` | `0` (neutral). Example keys: `smithing.quality`, `salvage.yield`. |
+| `static boolean hasUnlock(UUID player, String unlock)` | `false` |
+| `static double awardXp(Player player, String discipline, double amount, String source)` | `0`. Returns the amount granted. **Server thread.** |
+
+`DisciplineSource` (provider) has the same five methods. Reads must be fast and thread-safe; `awardXp` runs on the server thread.
+
+```java
+int lvl = CharacterServices.level(p.getUniqueId());
+CharacterServices.awardXp(p, 40.0, "myplugin:quest", 0);
+double quality = 1.0 + DisciplineServices.modifier(p.getUniqueId(), "smithing.quality");
+```
+
+---
+
+### Plugin utilities
+
+#### VersionedStore
+
+**Purpose.** A crash-safe state store with a schema version. The whole state is stored as JSON in an envelope `{"schema": n, "data": {...}}`. Older versions are migrated step by step on load; content with a newer version is never overwritten.
+
+| Member | |
+|---|---|
+| `static <T> VersionedStore<T> open(JavaPlugin plugin, API core, String folder, String file, Class<T> type, int schema, Map<Integer, UnaryOperator<JsonObject>> migrations, Supplier<T> empty) throws Exception` | Store at `<dataFolder>/<folder>/<file>` through Core's data layer. Unreadable content is backed up next to it as `<file>.corrupt-<millis>`. |
+| `VersionedStore(Backend backend, Class<T> type, int schema, Map<Integer, UnaryOperator<JsonObject>> migrations, Supplier<T> empty, Gson gson)` and a 7-argument overload with a trailing `Consumer<String> quarantine` (since 0.11.1) | For a custom `Backend { String read(); void write(String value); }`. A `null` gson means default Gson. |
+| `T load()` | Empty storage returns `empty.get()` and saves it. Migrated state is saved again. |
+| `void save(T state)` | A failed write is rolled back (default backend). |
+| `int schema()` | |
+
+- **Errors:** `schema < 1`, or a migration key outside `2..schema`, throws `IllegalArgumentException` (constructor). Content with a newer schema throws `IllegalStateException`. Unreadable JSON throws `VersionedStore.CorruptStoreException` (an `IllegalStateException`); in that case **do not continue with an empty state**. A migration returning `null` throws `IllegalStateException`. A JSON object without an envelope counts as version 1.
+- `migrations` maps a *target* version to a step (key 2 migrates from version 1 to 2).
+- **Threading:** synchronous I/O on the calling thread. The default backend synchronizes on its entry.
+
+```java
+store = VersionedStore.open(this, CoreApi.api().orElseThrow(), "state", "state.yml", MyState.class, 2,
+        Map.of(2, json -> { json.addProperty("version2Field", 0); return json; }), MyState::new);
+MyState s = store.load();
+```
+
+#### ConfigMigrator
+
+**Purpose.** Versioned migration of `config.yml`. Each step raises the config by one version. New default keys are added without overwriting user values, and a backup `config.yml.v<old>.bak` is written before any change.
+
+| Member | |
+|---|---|
+| `ConfigMigrator(String versionKey, int current)` | `current < 1` throws `IllegalArgumentException`. |
+| `ConfigMigrator step(int target, Consumer<FileConfiguration> migration)` | The step migrates from `target-1` to `target`. A target outside `2..current` throws `IllegalArgumentException`. Missing steps are allowed (only defaults are added; logged). |
+| `int migrate(FileConfiguration config)` | In memory only. Returns the source version; a missing key counts as 1. A newer version throws `IllegalStateException`. |
+| `int migrate(JavaPlugin plugin) throws IOException` | Saves the default config, migrates, copies defaults, and backs up and saves the file if anything changed. |
+
+```java
+new ConfigMigrator("config-version", 3)
+        .step(2, c -> c.set("spawn.radius", c.getInt("radius", 32)))
+        .step(3, c -> c.set("radius", null))
+        .migrate(this);
+```
+
+#### TaskGroup
+
+**Purpose.** A named group of Bukkit tasks belonging to one part of a plugin. `cancel()` stops only this group's tasks. An exception in a task is caught and logged (at most every 30 s) and the task keeps running.
+
+`static TaskGroup of(Plugin plugin, String name)`. Methods: `BukkitTask timer(long delayTicks, long periodTicks, Runnable action)`, `BukkitTask later(long delayTicks, Runnable action)`, `BukkitTask now(Runnable action)`, `BukkitTask async(Runnable action)`, `BukkitTask asyncTimer(long delayTicks, long periodTicks, Runnable action)`, `void cancel()` (the group stays usable), `int size()`, and `void close()` (`AutoCloseable`). After `close()`, scheduling cancels the new task and throws `IllegalStateException`. Thread rules are those of the Bukkit scheduler. Since 0.26.4 one-shot tasks (`later`, `now`, `async`) leave the group once they ran, so frequent one-shots don't pile up, and tasks go through `plugin.getServer().getScheduler()` (falling back to `Bukkit.getScheduler()`), so tests with an injected `Server` work.
+
+```java
+TaskGroup ai = TaskGroup.of(this, "ai");
+ai.timer(20L, 20L, this::tickDirectors);
+// onDisable: ai.close();
+```
+
+#### CoreLifecycle and ProviderFailures
+
+- `CoreLifecycle` (a Listener that Core registers itself) calls `static void releaseAll(Plugin owner)` for every disabled plugin. It removes the plugin from: `MobServices`, `RelationServices`, `MobContextServices`, `MobExtensions` (including the trigger sink), `ItemServices`, `ItemRefs`, `DisciplineServices`, `CharacterServices`, `PartyServices`, `WorldEventServices`, `CombatRegistry`, `RuntimeActionHub`, `RuntimeContextHub`, `WorldEnvironmentRegistry` (detectors and explicit profiles), `RegionService`, `SpawnPointService`, `WebServices`, `ClientUi` and `Localization`. Each step is idempotent and isolated from failures in the others. Plugins **do not need** to call it. Calling `releaseAll(this)` yourself is harmless but redundant.
+- `ProviderFailures` is Core's throttled logger for registry faults (at most one message per minute per key; suppressed repeats are counted). It has `static void report(String registry, String provider, String operation, Throwable failure)` and `static void replaced(String registry, String key, Plugin previousOwner, Plugin newOwner)`. It is thread-safe. Plugins may use it for their own registries, but it is primarily Core-internal and its output format is not a contract.
+
+---
+
+## 18. Native panels (`Vystorm.vystorm_core.panel`)
+
+Capability `panels` (since **0.25.1** – the element builders were reshaped before the API freeze, plugins need 0.25.1).
+A **panel** is a menu you describe as a function of state; players with the Vystorm Client mod (0.8.0+, best 0.8.1)
+see it as a real Minecraft screen (scrolling, tooltips, keyboard, item icons), everybody else gets your own menu, an
+automatic Paper dialog or a web link. Panels work without the web platform (`web.enabled: false`), only
+`web.client.enabled` and `web.client.panels.enabled` must be on. `register`, `unregister` and `open` run on the server
+thread (otherwise `IllegalStateException`); `refresh`, `refreshAll`, `close` and `available` may be called from any
+thread (Core hops to the server thread). Render functions and handlers always run on the server thread.
+
+### 18.1 Overview and fallback chain
+
+`Panels.open(player, name)` walks this chain and returns where the player ended up (`PanelOpenResult`):
+
+| Player | Result |
+|---|---|
+| no permission (`access` predicate false) | `NONE` + message `panel.no-permission` |
+| mod with panels (handshake done) | `NATIVE` – the panel opens as a screen |
+| otherwise, `fallback(...)` set | `FALLBACK` – your own chest/dialog menu (it has priority) |
+| otherwise, `dialogFallback(true)` and the panel is dialog-capable | `DIALOG` – automatic Paper dialog built from the same panel |
+| otherwise, `web(module, page)` set | `WEB` – `WebServices.openOrLink` (system browser via the mod, else chat link) |
+| otherwise | `NONE` + message `panel.unavailable` |
+
+Dialog-capable: `heading`/`text`/`kv` → plain message, `item` → item body, `toggle` → bool input, `slider`/`number` →
+number range, `select` → single option, `input` → text, `button` → dialog buttons (paged like `/vmenu`; a button with
+`confirm(...)` first opens a confirmation dialog), `tabs` → buttons that reopen the dialog on another tab (each tabs
+element keeps its own choice; a `lazyTab` calls your `onTab` handler), `table`/`list` → at most 20 rows as text (more
+only with `web(...)` set, plus "Open web page"). Disabled inputs are shown as "label: value" text, disabled buttons
+are left out. Not dialog-capable: `image`, `chart`, `graph`, bigger tables without a web page. Dialog actions run
+through the same checks, rate limits and handlers as native actions; dialogs only refresh after an action.
+
+### 18.2 `Panels`
+
+| Method | Description |
+| --- | --- |
+| `static Panels of(Plugin plugin)` | Facade for your plugin; namespace `<lowercase plugin name>:`. |
+| `static boolean enabled()` | Panel channel is running. |
+| `String namespace()` / `String id(String name)` | `"myplugin"` / `"myplugin:<name>"`. |
+| `void register(String name, PanelSpec spec)` | Panel ID `<namespace>:<name>`; duplicate → `IllegalArgumentException`. |
+| `void unregister(String name)` | Remove one panel and its `/vmenu` entry from `menu(...)` (all of them are removed automatically on disable). |
+| `PanelOpenResult open(Player, String name)` / `open(Player, String name, String arg)` | Fallback chain (§18.1); `arg` reaches `ctx.arg()`. |
+| `void refresh(Player, String name)` | Re-render this player's open panel; Core diffs and sends a PATCH (coalesced per tick, ≤ 10/s). Any thread. |
+| `void refreshAll(String name)` | Same for every player who has it open. Any thread. |
+| `void close(Player, String name)` | Close it for this player. Any thread. |
+| `boolean available(Player)` | The player's mod finished the panel handshake. Any thread. |
+| `static void release(Plugin owner)` | Internal cleanup (called by Core on disable). |
+
+### 18.3 `PanelSpec.Builder`
+
+```java
+PanelSpec.builder(String title)                         // title for logs and the menu entry; may be lang.ref(...)
+    .access(Predicate<Player> access)                   // checked on open AND on every action (default: everyone)
+    .render(Function<PanelContext, Panel> render)       // required: build the panel from current state
+    .menu(MenuCategory category, Material icon, String description)   // also list it in /vmenu
+    .web(String moduleId, String subPath)               // "Open web page" button + WEB fallback
+    .dialogFallback(boolean on)                         // automatic Paper dialog for players without the mod
+    .fallback(Consumer<Player> fallback)                // your own chest/dialog menu (priority over dialog and web)
+    .build();
+```
+
+### 18.4 `Panel` and `Ui`
+
+`Panel.page(Object title)` → `.subtitle(Object)`, `.icon(Ui.Icon)`, `.size(Panel.Size.SMALL|MEDIUM|LARGE|FULL)`,
+`.theme(Panel.Theme.VYSTORM|VANILLA)`, `.accent(String color)`, `.children(Ui.Element<?>...)`, `.child(...)`,
+`.footer(Ui.Button...)`. Texts (`Object`) may be a `String`, a `lang.ref(...)` reference or an Adventure `Component`;
+Core renders them per viewer language and reduces them to the client's text format (colors and decorations; click,
+hover and insertion are dropped; > 64 segments or > 2048 characters are shortened server-side and logged once).
+
+Common setters on every element: `id(String)`, `tooltip(Object...)`, `visible(boolean)`, `disabled(boolean)`,
+`width(int px)`, `widthPercent(int)`, `fill()`, `grow(int)`, `minWidth(int)`, `maxWidth(int)`, `align(Ui.Align)`;
+containers also `children(...)`, `child(...)`.
+
+| Factory | Element | Setters / handler |
+| --- | --- | --- |
+| `Ui.section(Object title)` | card/group | `variant(Ui.Variant)`, `collapsible(boolean collapsed)` |
+| `Ui.row()`, `Ui.col()` | flex row/column (`Ui.Box`) | `gap`, `pad`, `justify(Ui.Justify.START|CENTER|END|BETWEEN)`, `wrap()`, `scrollY(int maxHeight)` |
+| `Ui.grid(int columns)`, `Ui.gridCells(int minWidth)` | grid | `gap` |
+| `Ui.tabs(String id)` | tabs | `tab(id, label, children...)`, `lazyTab(id, label)`, `select(tabId)`, `onTab(Change<String>)` |
+| `Ui.heading(Object)` | `Ui.Heading` | `level(1..3)` |
+| `Ui.text(Object)`, `Ui.lines(Object...)` | `Ui.Text` | `style(Ui.TextStyle)`, `maxLines(int)`, `nowrap()` |
+| `Ui.kv()` | key/value list | `row(key, value)`, `keyWidth(int)` |
+| `Ui.table(String id)` | table | `column(id, label)` + (for that last column) `sortable()`, `alignEnd()`, `alignCenter()`, `columnWidth(int px)`, `columnWidthPercent(int)`; `width(int)` is the width of the whole table like on every element; `row(Ui.row(key))`, `rows(list, mapper)`, `empty(Object)`, `sort(column, desc)`, `rowLines(int)`, `paging(page, pages, Change<Integer> onPage, Change<Ui.Sort> onSort)`, `onSelect(Change<String>)`, 0.26.4: `selected(rowKey)` |
+| `Ui.row(String key)` | table row | `cell(Object)` (text, `Ui.cell(text).sort(number)`, or an element), `tooltip(...)` |
+| `Ui.buttons(Element<?>...)` | several elements in one cell | – |
+| `Ui.list(String id)` | list | `item(Ui.listItem(key, title))`, `items(list, mapper)`, `empty(Object)`, `onSelect(Change<String>)`, 0.26.4: `selected(key)`; item: `subtitle`, `right`, `badge`, `icon`, `tooltip`, 0.26.4: `selected()` |
+| `Ui.button(String id)` | button | `label`, `icon`, `primary()`, `danger()`, `ghost()`, `confirm(title, text)`, exactly one of `onClick(Click)`, `navigate(panelName, arg)`, `web(module, page)`, 0.26.4: `openSettings("plugin:section")` (Core's settings panel with only that section; `""` = all) |
+| `Ui.toggle(id, label)` | switch | `description`, `value(boolean)`, `onChange(Change<Boolean>)` |
+| `Ui.slider(id, label)` | `Ui.Slider` | `range(min, max, step)`, `value(double)`, `format("{v} blocks")`, `decimals(int)`, `live()`, `onChange(Change<Double>)` |
+| `Ui.number(id, label)` | `Ui.NumberField` (−/+ field) | `range(min, max, step)`, `value(double)`, `decimals(int)`, `onChange(Change<Double>)` |
+| `Ui.input(id, label)` | text field | `value`, `placeholder`, `maxLength(≤ 256)`, `chars(Ui.Chars.ANY|NAME|INTEGER|DECIMAL)`, `submitOnEnter()`, `onChange(Change<String>)`, `search(Change<String>)` |
+| `Ui.select(id, label)` | choice | `option(id, label[, icon])`, `value(id)`, `segmented()`, `searchable()`, `onChange(Change<String>)` |
+| `Ui.form(id, Object submit)` | form | children, `onSubmit(Change<Map<String,Object>>)` – inputs inside send nothing themselves; disabled or hidden fields are not part of the map; 0.26.4: `confirm(title, text)` (asks before sending, like a button; client < 0.9.0 sends without asking – never rely on it) |
+| `Ui.progress(value, max)` | `Ui.Progress` | `label`, `color`, `segments`, `height`, 0.26.4: `rate(unitsPerSecond)` (client ≥ 0.9.0 advances the value itself, clamped to 0..max; older clients show the fixed value) |
+| `Ui.timer(remainingMs, totalMs)` | `Ui.Timer` (counts down on the client) | `format(Ui.TimerFormat)`, `bar()` |
+| `Ui.item(Material)`, `Ui.item(itemId, model)`, 0.26.4: `Ui.item(ItemStack)` (id, `item_model`, amount, enchantment glint; no custom model data) | item icon (also usable as `Ui.Icon`) | `count`, `glint()`, `size(16/24/32)`, `slot()`, `rarity(String)`, `onClick(Click)` |
+| `Ui.sprite(sprite, w, h)`, `Ui.webImage(path, w, h)` | `Ui.Image` | `alt(Object)`, `smooth()` |
+| `Ui.badge(Object)` | `Ui.Badge` | `color` |
+| `Ui.swatch(color)`, `Ui.divider()`, `Ui.spacer(int)` | `Ui.Swatch`, `Ui.Divider`, `Ui.Spacer` | `size` (swatch, divider) |
+
+Each factory returns its own builder type that only offers the fields its element has (0.25.1; 0.25.0 had one
+catch-all `Ui.Simple`, so `heading(..).segments(5)` compiled and was silently ignored).
+
+### 18.5 Handlers, values and results
+
+- `Ui.Click` = `Result handle(PanelAction a)`; `Ui.Change<T>` = `Result handle(PanelAction a, T value)`.
+- Value types: toggle `Boolean`, slider/number `Double`, input/select/search/tab/select-row `String`, page `Integer`,
+  sort `Ui.Sort(column, descending)`, form `Map<String, Object>`. Core has already checked type, range, step, option,
+  length and character class against **what it sent** before your handler runs.
+- `PanelAction`: `player()`, `value()`, `session()` (`PanelSession`: `id()`, `get/put/remove` – server-side state per
+  open panel, e.g. a filter), `refresh()` (re-render after the handler; Core diffs and sends a PATCH).
+- `PanelContext` (render): `player()`, `arg()`, `text(key, placeholders...)` / `component(key, ...)` (your plugin's
+  language bundle in the viewer's language), `session()`.
+- Return `Result.ok()`, `Result.ok(message)` (toast), `Result.error(message)` (shown at the element, optimistic value
+  reset), `Result.fieldErrors(Map<elementId, text>)` (form fields). `Result.success()` tells whether it was ok.
+- Exceptions in handlers are caught and logged; the player gets `panel.failed`.
+- **Deferred results (0.26.4).** Return `Result.pending()` and call `a.complete(result)` later **from any thread**
+  (Core hops to the server thread), e.g. after an async database write. Only the first `complete` counts; without one
+  within `Result.PENDING_TIMEOUT_SECONDS` (30 s) Core answers `panel.no-answer` as an error and ignores later calls.
+  `a.refresh()` (also from the async thread) re-renders after the result. In the Paper dialog fallback a pending result
+  counts as success without a message.
+
+  ```java
+  Ui.button("save").label("Save").onClick(a -> {
+      db.saveAsync(a.player().getUniqueId(), data).whenComplete((ok, err) -> {
+          a.refresh();
+          a.complete(err == null ? Result.ok("Saved") : Result.error("Database unavailable"));
+      });
+      return Result.pending();
+  })
+  ```
+- **Handing off to a Paper dialog or chest menu (0.26.4).** `a.closeAndThen(p -> openDialog(p))` closes **all** of the
+  player's native panels right after the handler (one `P_CLOSE` for every session, pending transfer parts dropped) and
+  runs `next` two server ticks later on the server thread (if the player is still online), so the client has closed
+  the panel before the dialog arrives. In the dialog fallback `next` runs instead of re-showing the dialog.
+  If you open a dialog directly while a panel is visible, client ≥ 0.9.0 closes the panel cleanly too (the vanilla
+  dialog would otherwise bring back the dead panel as its "previous screen"; the session is reported `CLOSED_REPLACED`).
+
+### 18.6 Rules
+
+- Panel IDs `<namespace>:<name>`, element IDs `[a-z0-9][a-z0-9_.:/-]{0,63}`, unique per panel; interactive elements
+  need one. Core gives unnamed, non-interactive elements path IDs (`~2/0/5`). **Derive IDs from what the element
+  means** (a setting key, a menu key, a portal id), never from its position: a click that races a refresh is then
+  answered "stale" instead of hitting another element.
+- Table cell elements get the prefix `<tableId>/<rowKey>/<id>` (e.g. `list/p17/rm`); longer than 64 characters →
+  `IllegalArgumentException` while rendering. Keep row keys short.
+- **Objects live in closures, not in IDs.** The client only sends element IDs; a button's handler knows its portal/
+  node/amount because the lambda captured it. Still re-check business rules in the handler (money, ownership, combat,
+  permission at the time of the click).
+- `ctx.arg()` from `navigate(...)` or the hotkey comes back from the client – treat it as user input.
+- Every action is answered (`P_RESULT`) except an exact duplicate (same session and `seq`), which is dropped silently;
+  a click on an element that a refresh removed or disabled is answered "stale" and the handler does not run. Rate
+  limits: 20 actions/s (burst 40) per player – checked first; above it Core answers at most 2×/s – and 10/s per
+  element (only for elements that exist in the sent document). Panel requests from the client: 2/s (burst 6).
+- `Panels.open` of the same panel and argument twice within one tick renders and sends once.
+- Opening a panel on your own initiative replaces the visible one; the replaced session stays alive until the client
+  confirms (`P_CLOSED`). If the client refuses the new panel (player setting, limit), the old one keeps working.
+- Big documents (≥ 32 KiB) are validated, diffed, serialised and compressed off the server thread on refresh; until
+  that is done, actions are checked against the document the player still sees. A result for a panel that is no longer
+  the visible one is dropped and re-rendered when it becomes visible again (0.25.2). Your render function itself always
+  runs on the server thread.
+- If the client reports a gap (`resync:`), Core sends the full document once the session is visible, at most once per
+  second per session; patches over 128 KiB are sent as a full document (0.25.2).
+- Limits of the client schema: ≤ 4096 elements, depth ≤ 24, ≤ 2000 table rows, ≤ 16 columns/tabs, ≤ 256 options,
+  texts ≤ 64 segments / 2048 characters. Documents > 8 KiB are compressed and chunked automatically (≤ 8 chunks per tick).
+- When your plugin is disabled, its panels are unregistered, open sessions close (`P_CLOSE`) and handlers are released.
+
+### 18.7 Events (synchronous, server thread)
+
+| Event | When | Getters |
+| --- | --- | --- |
+| `VystormPanelOpenEvent` | a panel was sent to the client | `getPlayer()`, `panelId()`, `session()` |
+| `VystormPanelCloseEvent` | a panel closed | `panelId()`, `session()`, `reason()` (0 player, 1 replaced, 2 error, 3 server) |
+| `VystormPanelErrorEvent` | the client refused a panel or element | `owner()`, `panelId()`, `elementId()`, `code()` (1 invalid, 2 limit, 3 unsupported, 4 unknown id, 5 timeout, 6 transfer), `detail()` |
+
+### 18.8 Complete example
+
+```java
+public final class PortalPanels {
+    private final Panels panels;
+
+    PortalPanels(JavaPlugin plugin, PortalStore store) {
+        panels = Panels.of(plugin);
+        panels.register("mine", PanelSpec.builder("My portals")
+                .access(p -> p.hasPermission("betterportals.use"))
+                .menu(MenuCategory.WORLD, Material.OBSIDIAN, "Your portals")
+                .web("portals", "")
+                .fallback(player -> openChestMenu(player))          // existing chest menu keeps working
+                .render(ctx -> Panel.page("My portals").size(Panel.Size.LARGE).children(
+                        Ui.table("list")
+                                .column("name", "Name").sortable()
+                                .column("uses", "Uses").alignEnd().sortable()
+                                .column("act", "").columnWidth(48)
+                                .rows(store.byOwner(ctx.player().getUniqueId()), g -> Ui.row(g.id())
+                                        .cell(g.name())
+                                        .cell(Ui.cell(String.valueOf(g.uses())).sort(g.uses()))
+                                        .cell(Ui.buttons(
+                                                Ui.button("rename").icon(Ui.item(Material.NAME_TAG)).tooltip("Rename")
+                                                        .navigate("rename", g.id()),          // opens panel "rename" with arg
+                                                Ui.button("rm").icon(Ui.item(Material.BARRIER)).danger()
+                                                        .confirm("Remove portal?", g.name() + " will be deleted.")
+                                                        .onClick(a -> remove(store, a, g.id())))))
+                                .empty("You have no portals yet.")))
+                .build());
+    }
+
+    private Result remove(PortalStore store, PanelAction a, String id) {
+        PortalGroup g = store.get(id);
+        if (g == null || !g.owner().equals(a.player().getUniqueId())) return Result.error("Not your portal.");
+        store.remove(id);
+        a.refresh();                                   // Core diffs → PATCH "rows remove <id>"
+        return Result.ok("Removed " + g.name());
+    }
+
+    void open(Player player) { panels.open(player, "mine"); }
+}
+```
+
+### 18.9 Settings and `/vmenu` for free
+
+- **Settings:** `SettingsPanels` builds the panel `vystorm_core:settings` from the same sections as the dialogs and the
+  web page (toggle, slider/number, select, text input, search field, personal/server tab). It saves through
+  `SettingsRegistry.save(player, key, values, "panel")` – same validation, `afterSave` once, change listeners fire;
+  `settings().changed(player)` refreshes open panels. Element IDs are `s:<section key>/<setting id>` (a hash when that
+  does not fit the ID rules), so they stay put when sections come and go. `/vsettings [server|<plugin:section>]` and the settings menu
+  entry open it for players with the mod; no plugin has to do anything.
+- **Main menu:** `MenuPanels` builds `vystorm_core:menu` – a grid of item buttons per `MenuCategory` from
+  `GuiInteface.menuEntries(...)`. Entries whose key is itself a registered panel (e.g. via `PanelSpec.menu`) open
+  natively with a back stack; all others call your `opener` as before. Tile IDs are `m:<menu key>`. `/vmenu` without arguments and key **K** open
+  it; without the mod `/vmenu` shows the dialog directory as before.
+
+### 18.10 `config.yml` – `web.client.panels`
+
+| Key | Default | Meaning |
+| --- | --- | --- |
+| `enabled` | `true` | Register `vystorm:panel`; WELCOME announces `SERVER_PANELS`. |
+| `hotkey-panel` | `""` | Panel the K key opens; `""` = `vystorm_core:menu`. Shift+K still opens the web page. |
+| `refresh-per-second` | `10` | Re-renders per open panel at most (`refresh()` calls are coalesced per tick). |
+| `chunks-per-tick` | `8` | Transfer chunks (≤ 30 KiB) per player and tick. |
+| `actions-per-second` / `action-burst` | `20` / `40` | Actions per player (each element at most 10/s). |
+
+`GuiInteface.unregisterMenu(Plugin owner, String key)` (0.25.1, default `false`) removes a single `/vmenu` entry;
+`Panels.unregister` uses it for `menu(...)` entries.
+
+### 18.11 Testing panels without a server (0.26.4, `CLIENT_UI_TESTING`)
+
+`panel.PanelTesting` renders a `Panel` (or a whole `PanelSpec` with a test context) to exactly the document Core would
+send – path IDs, table-cell prefixes, namespaced `navigate` targets – and validates it with the client's own schema.
+No running server, no Paper registries for string item ids (`Ui.item("minecraft:stone", null)`); handlers are not run.
+
+| Method | Result |
+| --- | --- |
+| `JsonObject render(Panel)` | Document with panel id `test:panel`; `IllegalArgumentException` (with the field) if the client would reject it or ids are invalid/duplicate. |
+| `JsonObject render(String panelId, Panel, Player viewer)` | Same with your id (namespace for relative `navigate`); `viewer` may be `null` or a mock. |
+| `JsonObject render(PanelSpec, Player viewer, String arg)` | Calls `spec.render()` with a test context (`text(key)`/`component(key)` return the key, fresh `session()`). |
+| `JsonObject find(JsonObject doc, String elementId)` | The element anywhere (children, footer, tabs, table cells), else `null`. |
+| `List<String> ids(JsonObject doc)` / `String plain(JsonElement text)` | All element ids / text JSON as plain string. |
+
+```java
+JsonObject doc = PanelTesting.render(spec, null, "portal-7");
+assertEquals("Remove", PanelTesting.plain(PanelTesting.find(doc, "list/p7/rm").get("label")));
+```
+
+## 19. Not public API
+
+These are `public` in the jar for technical reasons but are **not** part of the plugin API. They may change without
+notice; don't call or implement them.
+
+| Symbol | Why |
+| --- | --- |
+| `Vystorm.vystorm_core.web.internal.*` (incl. `clientproto.*`), `Vystorm.vystorm_core.internal.*` | Core-internal HTTP server, gateway tunnel, sessions, client protocol, test hooks. |
+| `main` (the plugin class) except the legacy `main.getApi()` | Plugin bootstrap. Use `CoreApi.api()`. |
+| `bundleclasses.*`, `commands.*`, `_uiMethods.commands.*` (`api.command()`), `_uiMethods.admin.CoreAdminDashboard`, `_uiMethods.admin.AdminRegistry` | Core's own commands, listeners and dashboard implementation. |
+| `API` constructor, `API.shutdownAdvanced()`, `API.shutdownDebugger()`, `API.releaseAdvancedResources(Plugin)` | Core lifecycle (runs automatically on disable). |
+| `API.override*(…)` and `singeltons.*` | Replace a handler for **all** plugins on the server. Only for Core tests or a deliberate server-wide replacement – never in normal plugins. |
+| `GuiInteface.handleClick/handleDrag/handleOpen/handleOpenResult/handleClose`, `DialogInterface.handle`, `DialogInterface.clear`, `GuiInteface.clearManaged`, `SettingsInterface.clear`, `AdminInterface.clear` | Called by Core's listeners / shutdown. |
+| Legacy auto-GUI: `GuiInteface.createGui/addItem/addMenu/removeMenu/removeItem/setSpecificItem/getGui/getInventory/getMenuNames`; `api.message()`, `api.ressource()` (`LanguageSystem`, `language/language.yml`) | Superseded by managed inventories and `api.lang()`. |
+| `SettingsRegistry` (the implementation class: `view`, `save`, `coerce`, `onChange`, `SaveResult`, `SectionView`, …) | Used by Core's dialogs and settings web page. Plugins use `SettingsInterface`. |
+| `lang.CoreLanguage`, `Localization.configure/installTranslator/uninstallTranslator/clearPlayers/setDefaultLanguage/setPersonalLanguage/rememberClientLocale/unregister/reloadAll` | Core-managed language state. |
+| `SharedDatabase.start(...)`, `SharedDatabase.shutdown()`, `SharedDatabaseSettings`, `SharedPool`; `DataBaseInterface.registerDataBase/unregisterDataBase/disconnectALL` | Pool lifecycle belongs to Core. Never close or unregister the shared pool. |
+| `CoreLifecycle.releaseAll(Plugin)` | Runs automatically on `PluginDisableEvent`. |
+| `_uiMethods.menu.CoreMenus`, `PauseMenuPack`, `_uiMethods.tutorial.TutorialGuide.Content/Page` | Core's menus and pause-menu data pack. |
+| `api.debug().shutdown(...)` | Requests a server shutdown. |
+| Deprecated: `DataStorageInterface.convertDataEntry/exportDataEntry`, `DataBaseEntry`, `Saver.saveDataEntryExtern`, `PlayerPickupItemListener`, `main.onReload()` | Not implemented / never called. |
+
+Further internal members of the item, mob, region and pack APIs are marked in sections 16 and 17.
+
+### Internal classes
+
+Since 0.63.0, implementation classes that are `public` only because other Core packages or the proxy entry points
+use them carry the Javadoc line "Internal: not part of the public API; may change or disappear in any version." and
+the annotation `@org.jetbrains.annotations.ApiStatus.Internal`. They are excluded from Core's API compatibility
+check, so do not import them. Marked are: every class in `network.core`, `network.paper` and `trace`;
+`metrics.CoreMetrics`; `mythic.MythicItemDrops`; `lifecycle.UpdateChecker` and `lifecycle.ReviewReminder`;
+`chat.TradeChatCommand`; `commands.CommandsAdmin` and `commands.CommandOverview`;
+`_uiMethods.settings.SettingsDraftDialog`, `FirstRunSetup` and `ConfigHistory`. The public network API is
+`Vystorm.vystorm_core.network` (`Network`, `NetworkListener`, `NetworkServer`, `Subscription`). Packages named
+`internal` stay internal as before.
+
+### Deprecated legacy types
+
+Since 0.63.0 these unused legacy types are `@Deprecated(since = "0.63.0", forRemoval = true)`. They keep their
+signatures for binary compatibility and do nothing: `AdminComand`, `CloudEntry`, `CSVEntry`, `DataBaseEntry`,
+`ConvertDatabase`, `EntityToDatabase`, `DefaultSaveSelector`, `SaveSelectorInterface`, `YMLConverter`,
+`JoinLeaveEntity`, `_uiMethods.autoGui.methods.Functions`, `BookHandler`, `BookInterface`, `BookEditorInterface`,
+`BookEditor`, `temp`, `AutoChecks`, `AutoComplete`, `CommandGuiSetup`, `MapStorageSingelton`.
+
+---
+
+## 20. Rules for AI assistants
+
+Start with the [AI guide](AI-GUIDE.md) for every capability, checked examples and current Screens behavior.
+
+Follow these when generating code against Vystorm Core.
+
+**Do**
+- Depend on `vystorm_core` in `plugin.yml`, compile against the jar with `compileOnly`, target Java 25 and
+  `api-version: '26.2'`.
+- Get the API with `CoreApi.api()`; check features with `CoreApi.has(CoreApi.Capability.X)` inside
+  `try { … } catch (LinkageError tooOld)` and degrade gracefully (or disable with a clear log line).
+- Register everything (lang, settings, menus, web modules, providers) once in `onEnable`, on the server thread.
+- Put every player-visible text into `lang/en.yml` (+ `de.yml`) and use `lang.send/component/text/...`; for text that
+  Core shows to many players (menu, settings, admin, web titles, `WebException`) pass `lang.ref("key")`.
+- Treat everything from the web (`WebRequest` path params, query, body), dialogs, chat and commands as untrusted:
+  validate ranges, lengths, ownership and state on the server; use `PreparedStatement` parameters for SQL.
+- In web handlers and snapshot sources use `request.sync(() -> …)` for any Bukkit/world/inventory/config access and
+  keep shared state in thread-safe types.
+- Use `WebServices.openOrElse`/`openOrLink` so players without the client mod or with the platform off still get a
+  working path; every client-mod feature needs a vanilla fallback.
+- Use the shared DB only via `sharedReady()`, off the server thread, with `SchemaMigrator` and your own table prefix.
+- Start debug messages with a `[Plugin/Component]` marker; log failures with `DebugMessages.high(msg, throwable)`.
+- Quote YAML strings in lang/config files.
+
+**Don't**
+- Don't call Bukkit API, `getConfig()` or player/world methods from web handlers, DB callbacks or other async code
+  without switching to the server thread.
+- Don't use `web.internal.*`, `main`, `singeltons`, `override*Handler` or anything listed as non-public in section 19.
+- Don't hard-code player-visible strings, don't concatenate translated fragments (use placeholders), don't put
+  MiniMessage tags into `web.ui.*` texts (they are sent raw).
+- Don't put secrets, tokens or player data into static web assets (they are public); don't log login tokens.
+- Don't use `innerHTML`, inline `<script>`/`style` or `onclick=` attributes in web pages (CSP blocks them; XSS risk).
+- Don't block the server thread (JDBC, HTTP, file-heavy work, `highConfirmed`, `Future.get()`).
+- Don't close or unregister Core's shared `DataSource`; don't keep connections open.
+- Don't re-register the same settings section/menu id without unregistering first (throws).
+- Don't assume the web platform, the shared database, Vault or the client mod is available – check
+  `WebServices.available()`, `sharedReady()`, `ClientServices.hasClient()` etc.
+
+**YAML gotchas (Bukkit uses YAML 1.1).** Unquoted `on`, `off`, `yes`, `no`, `true`, `false` (any case) become
+booleans – as keys *and* as values. `toggle: {on: An}` is read as key `toggle.true`, and `answer: no` as `false`. Quote
+them: `"on": "An"`, `value: "no"`. Also quote values starting with `{`, `[`, `*`, `&`, `!`, `%`, `@`, `` ` `` or
+containing `: ` / ` #`; MiniMessage values starting with `<` are safer quoted too. Keys are paths separated by `.`, so a
+key cannot itself contain a dot. A lang value can be a string or a list of lines. Invalid YAML makes the whole file
+unusable (Core logs it and falls back to English/jar texts).
+
+---
+
+## 21. Versioning and compatibility
+
+- **Additive only.** Public types and members are never removed or renamed and signatures never change. New methods on
+  existing interfaces always get a `default` body. Core's build enforces this with `ApiCompatibilityTest` against a
+  baseline dumped from the jar the plugins build against. Deprecated members stay.
+- **Capability flags.** Every new feature gets a `CoreApi.Capability` constant with its since-version. Check the
+  capability, not the version string; a plugin built against 0.24.0 can run on an older Core if it checks capabilities
+  and avoids newer calls.
+- **Behaviour changes** (security fixes, stricter validation) are listed in the changelog as "Geändert" (changed).
+- **Minecraft version.** The version suffix (`-Vystorm-Core-26.2`) names the Minecraft/Paper line; only the numeric
+  `x.y.z` part is compared by `CoreApi.atLeast`/`compare`.
+- **Changelog:** `CHANGELOG.md` in the Core repository (per version: Neu/Geändert/Deprecated). The README contains the
+  admin-facing overview (commands, permissions, configuration); operational details such as the web platform modes,
+  the shared database pool and the debug logger are in [TECHNICAL.md](TECHNICAL.md), the security model in
+  `WEB_SECURITY.md`.
+
+---
+
+## 22. Appendix: Core commands and permissions
+
+| Command | Aliases | Purpose | Permission |
+| --- | --- | --- | --- |
+| `/menu [list\|search\|settings\|player <player>\|access <player>\|<plugin:key>]` | `/vmenu`, `/vm`, `/m` | Main menu, menu entries (`access` = admin diagnosis, `player` = player menu, 0.43.0) | `vystorm_core.menu` (default: everyone) + entry `access` predicates; `player` also needs `vystorm_core.playermenu` |
+| `/einstellungen [server\|draft\|profile <export\|import> <name>\|<plugin:section>]` | `/vsettings`, `/vystormsettings` | Settings dialogs | `vystorm_core.settings` (default: everyone) + section permissions |
+| `/web [module\|logout\|status]` | – | Open a web page (directly with the client mod, else a one-time login link), logout, status (admin) | `vystorm.web.use` (default: everyone) |
+| `/language [code\|auto\|list]`, `/language <player> [code\|auto]` | `/lang`, `/sprache`, `/语言` | Language menu (flags, coverage, "Automatic"), set directly, list; admins show/set another player's language, also from the console (0.45.0) | `vystorm_core.language` (default: everyone); other players `vystorm_core.language.others` (op, part of `vystorm_core.admin`) |
+| `/vadmin [list\|status\|<module>\|language [reload\|audit\|export\|import]\|config [plugin]\|permissions [plugin] [page]\|diagnostics [player]\|migration <id>]` | `/admin`, `/ad` | Admin dashboard; `config` opens the config editor (0.27.0), `permissions` lists the permission nodes of Core and every plugin that (soft-)depends on it with default, description and whether you have it (0.27.0) | `vystorm_core.admin` (default: op); config sections need `vystorm_core.config.<plugin>` |
+| `/vregion at [player] \| list [kind]` | – | Region register | `vystorm_core.admin` |
+| `/nbt <key> <value>` | – | Set a Core item tag on the held item | `vystorm_core.admin` |
+| `/vworlds [list\|visits\|restore <player>\|check <player>]` | – | Managed worlds, running visits, admin restore, hand-item check (0.26.0) | `vystorm_core.admin` |
+| `/vhelp [plugin] [page]` | localized (`/vhilfe`, `/befehle`, `/v帮助`, `/vcommands`) | All commands of all Vystorm plugins the sender may use, by plugin, clickable (0.45.0, §24.4) | – |
+| `/vadmin commands [page]`, `/vadmin commands mode all\|default\|none`, `/vadmin commands alias <alias> on\|off` | – | Registered command trees, localized root aliases with collisions and toggles (0.45.0, §24.4) | `vystorm_core.admin` |
+
+Other permissions: `vystorm_core.playermenu` (player menu by shift-right-click or `/menu player`, default everyone,
+0.43.0), `vystormCore.debug` (HIGH debug messages in chat, default op), `vystorm_core.chat.teleport`
+(clickable coordinates teleport, default op), `vystorm_core.worlds.bypass` (creative/spectator admins may enter and
+edit managed worlds without a visit, default op), `vystorm_core.chat.trade.send`/`.receive` (`/vtrade`, default
+everyone), `vystorm_core.config.*` and `vystorm_core.config.<plugin>` (config editor, default op, children of
+`vystorm_core.admin`), `vcore.gui.access.<menu>`/`vgui.access.<menu>` (legacy chest menus) and `vcore.bookgui.<book>`
+(Core books), each with a `.*` parent (default op). `vystorm_core.*` grants all of them. Since 0.27.0 every Core command
+declares its permission, so Paper hides commands the sender may not use, and tab completion only suggests subcommands
+and arguments the sender may run.
+
+---
+
+## 23. Managed worlds and visits (`Vystorm.vystorm_core.worlds`)
+
+Capability `managed-worlds` (0.26.0). A plugin describes its own world (generator, layout hash, game rules, profile,
+region, protection, visibility, visit policy); Core loads it, rebuilds it deterministically when the hash changes and
+runs **visits**: Core saves the full player state to disk before changing anything and gives it back on exit,
+disconnect, server stop, crash and foreign teleports. Core's recovery listener is always on – also when the owning
+plugin is disabled after a crash.
+
+```java
+WorldSpec spec = WorldSpec.builder("myplugin:arena", "myplugin_arena", generator)   // id plugin:name, world name, ChunkGenerator
+        .layoutHash(hash)                     // change → region/, entities/, poi/ are wiped before load
+        .gameRule(GameRules.ADVANCE_TIME, false).time(6000).lockWeather(true).difficulty(Difficulty.PEACEFUL)
+        .viewDistance(6).simulationDistance(2).borderSize(512).spawn(new SpawnPoint(0.5, 65, 0.5, 0, 0))
+        .profile(worldProfile)                // WorldEnvironmentRegistry.WorldProfile (explicit profile)
+        .region(RegionSpec.square("arena", "main", RegionPriority.ARENA, 256, Set.of("instance"), Map.of("pvp", false)))
+        .protectAll()                         // or .protect(Protection.EDITS, Protection.MOB_SPAWNS, …)
+        .visibility(Visibility.PARTY)         // ALL | PARTY | NONE (between visitors of this world)
+        .adminPermission("myplugin.admin")    // creative/spectator admins without a visit may enter/edit
+        .policy(VisitPolicy.builder()
+                .allowCommands("arena", "msg", "r", "party")       // everything else is blocked during a visit, also for OPs
+                .toolKit(p -> Map.of(8, exitItem))                  // slot → item; Core marks them as visit tools (not tradable)
+                .gameMode(GameMode.ADVENTURE).cooldownSeconds(5).blockRegionKinds(List.of("dungeon"))
+                .returnTo((player, origin) -> origin)               // default: where the player entered
+                .build())
+        .hooks(new VisitHooks() {
+            @Override public void entering(Player p, Visit v) { /* own session, sidebar */ }
+            @Override public void leaving(Player p, Visit v, ExitReason r) { /* tear down; Core restores right after */ }
+        })
+        .build();
+ManagedWorld world = ManagedWorlds.register(this, spec);              // onEnable, server thread
+VisitResult result = ManagedWorlds.visits().enter(player, "myplugin:arena", arrival);
+ManagedWorlds.visits().exit(player, ExitReason.PLUGIN);
+ManagedWorlds.release(this);                                          // onDisable (CoreLifecycle does it as a fallback)
+```
+
+| `ManagedWorlds` (static) | |
+| --- | --- |
+| `ManagedWorld register(Plugin, WorldSpec)` | Loads/creates; refuses (`ManagedWorldException`) an already loaded world of that name, a folder with chunk data but no matching `vystorm-world.yml`, a taken id. |
+| `ManagedWorld rebuild(Plugin, WorldSpec)` | Ends visits (`REBUILD`), unloads, wipes, loads again. |
+| `ManagedWorld reconfigure(Plugin, WorldSpec)` | New settings without a rebuild (same world name and layout hash): rules, time, region, profile, visibility, visit policy, hooks; running visits continue. |
+| `boolean unregister(Plugin, String id)` / `void release(Plugin)` | Ends visits (`SHUTDOWN`), unloads according to `WorldSpec.autoSave()` (default false). During server stopping, only ends visits and detaches; Bukkit owns world shutdown. |
+| `Optional<ManagedWorld> get(String id)`, `of(World)`, `boolean managed(World)`, `List<ManagedWorld> all()` | Thread-safe. |
+| `VisitService visits()` | See below. |
+
+| `VisitService` | |
+| --- | --- |
+| `VisitResult enter(Player, String worldId, Location arrival)` | `OK` or a refusal (`NO_WORLD`, `WRONG_TARGET`, `ALREADY`, `PENDING_RECOVERY`, `DEAD`, `VEHICLE`, `GLIDING`, `SLEEPING`, `COOLDOWN`, `BLOCKED_REGION` – also when the region check fails, `SNAPSHOT_FAILED`). No visit state is applied on refusal; normal inventory-close handling can return cursor/crafting items or drop overflow. |
+| `boolean exit(Player, ExitReason)` | Decode saved items before voluntary exit, teleport out, then restore; failure keeps the visit active. `QUIT`/`SHUTDOWN`/`REBUILD` run synchronously; unsuccessful online restoration removes tools and visit privileges but retains marker and snapshot for recovery. |
+| `boolean inVisit(UUID)`, `boolean hasSnapshot(UUID)` | Thread-safe. |
+| `Optional<Visit> visit(UUID)`, `Collection<Visit> visits(String worldId)` | `Visit`: player, worldId, startedAt, phase (`ENTERING`, `ACTIVE`, `LEAVING`), returnLocation. |
+| `boolean isTool(ItemStack)`, `void regiveTools(Player)`, `void refreshVisibility(String worldId)` | |
+| `String restore(Player)` | Deprecated since 0.26.1; use the typed method below. Admin way out; returns `visit-ended`, `restored`, `discarded` (player data were already outside – nothing restored twice), `evicted` (no readable snapshot), `pending` (teleport, decoding or durable save is still pending; snapshot retained), `in-progress` (entry persistence, entry teleport, or exit is already running), or `nothing`. |
+
+| `default RestoreOutcome restoreOutcome(Player)` | Since 0.26.1; `VISIT_ENDED` means an exit was started, `IN_PROGRESS` means entry persistence, entry teleport, or exit is already running; `RESTORED`, `DISCARDED`, `EVICTED`, `PENDING`, `NOTHING` describe recovery. Handle a default case for future outcomes. `RestoreOutcome.code()` preserves legacy codes; `fromCode(String)` maps unknown codes to `PENDING`. |
+
+`rebuild`, `unregister` and `release` may block on disk I/O, including Bukkit's saved-data flush even with `save=false`.
+Prefer changing the layout hash on the next startup instead of runtime rebuild. Do not call these APIs off the server thread.
+Capability `visit-restore-outcome` (0.26.1) indicates typed restore results and the hardened recovery behavior.
+
+`RegionSpec` and `SpawnPoint` deliberately remain fixed-shape public records from 0.26.0; their canonical constructors
+and component lists are frozen. Future extensible options belong in the `WorldSpec` builder or a separate type.
+The builder promise applies to `WorldSpec` and `VisitPolicy`, not these value records.
+
+`ItemValidation(Status, List<String>)` is retained; its additive third component `boolean restricted` records a Core
+restriction explicitly. `restricted(String)` sets it with status `QUARANTINED`; message prefixes never determine it.
+Legacy `vystormskills:tw_item` tools are restricted and stripped on recovery even without a legacy snapshot.
+Pending Skills 1.16 source snapshots block new Core visits until migration succeeds. Join diagnostics include the blocked UUID.
+
+**Async entry (0.26.2).** `OK` means the entry request was accepted; use `VisitHooks.entering`/`arrived` for admission/arrival.
+Core closes the open inventory normally, captures and serializes on the server thread, and writes + file-fsync + rename +
+directory-fsync on one executor. Since 0.33.1, the Windows default JDK filesystem uses directory validation instead
+of directory-fsync (directory channels are unsupported); file-fsync and atomic renames remain required. Linux still
+forces directory metadata and propagates sync failures. Windows therefore has no directory-entry persistence guarantee
+for sudden power loss. The same platform boundary applies to debug log/state persistence.
+During this window `inVisit` is false, `visit` is empty, another `enter` returns `ALREADY`,
+and admin restore returns `IN_PROGRESS`. Since **0.26.3**, server-thread revalidation compares only valuables and identity:
+all captured inventory contents (slots 0–40, including armor/offhand), empty cursor/crafting, total XP, level, XP progress
+and gamemode. Player identity, online/dead state, vehicle/gliding/sleeping, world and position (0.01 block/degree tolerance)
+remain checked. Changes to these values or 2.5 seconds elapsed abort and queue deletion on the same writer, including late completions.
+Finite potion durations, regeneration, hunger, saturation/exhaustion, air, fire/freeze ticks and other scalar state may drift.
+The durable snapshot retains the **submit-time scalars**; restoring may bring back effect durations, health, food or air
+that are a few seconds older than admission. XP and the ender chest are not stored or restored by the current snapshot
+format; XP is still guarded during admission. Only successful validation permits marker, preparation and teleport.
+Normal close handling returns cursor/crafting items to inventory; overflow may drop normally before capture.
+Quit/death/external teleport, world release and shutdown abandon pending admission without applying visit state.
+Shutdown does not wait for in-flight writes; an unmarked crash snapshot is discarded by existing recovery.
+Writes over 50 ms emit a server warning. Snapshot I/O never runs on the server thread during entry; capture,
+serialization, revalidation, preparation and hooks still do. `async-durable-visits` reports this contract.
+
+**Manual legacy recovery.** `/vworlds legacy <player|uuid> retry` retries one Skills 1.16 file after repair and archives
+its source only after the Core snapshot is durable. `/vworlds legacy <player|uuid> archive` explicitly sets the old
+source aside without restoring it, removing the migration block; use only after inspecting/recovering its contents.
+Both require `vystorm_core.admin`, accept cached offline names or UUIDs, and refuse active/pending visits.
+Sources are kept collision-free under `plugins/VystormSkills/talentwelt/sessions-1.16/`, including `.applied` markers.
+For repair: retain a copy, inspect `sessions/<uuid>.yml` and any `visits/<uuid>.yml`/`.broken-*`, correct the legacy YAML,
+then retry. On an online player run `/vworlds restore <player>` afterward; otherwise join recovery handles it.
+Never replace an existing Core snapshot with an older legacy file. A bad UUID file does not block other migrations.
+
+World folder ownership uses the authoritative Paper path and `vystorm-world.yml`; obsolete `.path` files are no
+longer read or written. Existing `.path` files are harmless and retained.
+
+**What Core does during a visit.** Snapshot `plugins/vystorm_core/visits/<uuid>.yml` (format 2, written atomically with
+file fsync followed by rename and directory fsync) holds inventory 0–40 after normal inventory-close handling, held slot, effects (they pause during the visit), health, food,
+saturation, exhaustion, fire, freeze, air, fall distance, flight, speeds, collision, invulnerability and the return
+location. A marker in the player's PDC (`vystorm_core:visit`) tells after a crash whether the saved player data are in
+the visit state. Items the player receives during the visit (admin `/give`, deliveries) are kept on exit. Visitors with
+`lockInventory` cannot click, drag, drop, pick up, consume, place, break or interact with entities; on death they keep
+their inventory and get the tools again after respawn. Visit tools carry `vystorm_core:visit_tool` and
+`ItemRestrictions` (`ItemServices.validate` → `QUARANTINED`), so markets and storage reject them. Foreign teleports into
+the world are cancelled; foreign teleports out end the visit and restore the state where the player landed.
+
+**Hooks** run on the server thread; exceptions are logged and never change the flow. `leaving` runs exactly once per
+`entering` when a visit ends. The player may still be inside after a failed forced exit; Core then strips tools and
+neutralizes online visit privileges while preserving recovery evidence. An undecodable voluntary exit stays active
+and does not call `leaving`.
+
+At server stop, `autoSave(false)` only disables periodic world saves: autoSave(false) does not prevent the server shutdown save. Core detaches visits and leaves final world saving to Paper/Purpur.
+
+## Bedienung und Diagnose seit 0.26.5
+
+Alle folgenden Registrierungen und UI-Aufrufe laufen auf dem Serverthread. Vor Verwendung
+`CoreApi.has(CoreApi.Capability.<FLAG>)` prüfen. Jede Capability unten gilt seit **0.26.5**.
+
+| Capability | Einstieg | Verhalten |
+|---|---|---|
+| `MENU_HISTORY_CLEAR` (`menu-history-clear`, 0.49.0) | `MenuExplorer.clearRecent(Player)` | Löscht nur den persönlichen Menüverlauf. Favoriten bleiben erhalten. Auf dem Server-Thread aufrufen. |
+| `MENU_EXPLORER` (`menu-explorer`) | `MenuExplorer.open(Player, GuiInteface)`; `GuiInteface.menuEntries(Player)` | Gruppenübergreifende Suche, 20 Favoriten, acht zuletzt geöffnete Menüs; Zugriff wird beim Öffnen erneut geprüft. |
+| `MENU_ACCESS_DIAGNOSTICS` (`menu-access-diagnostics`) | `GuiInteface.inspectMenus(Player)`; `menuAccessReason(Plugin, String, Function<Player,String>)` | `MenuAccess(key, owner, enabled, allowed, reason)`; optional lokalisierter Grund für verweigerten Zugriff. `/vmenu access <Spieler>` benötigt `vystorm_core.admin`. |
+| `SETTINGS_DRAFTS` (`settings-drafts`) | `SettingsDraft.stage(String section, String id, Object before, Object after)`, `conflicts(SettingsRegistry, Player)`, `apply(SettingsRegistry, Player)` | Maximal 96 Änderungen, 15 Minuten gültig; prüft Ausgangswerte und Rechte erneut, verbraucht den Entwurf vor dem Speichern. Mehrere Abschnitte sind **keine atomare Transaktion**; `SaveResult` auswerten. |
+| `SETTINGS_PROFILES` (`settings-profiles`) | `SettingsProfiles.exportProfile(SettingsRegistry, Player, Path folder, String name)`; `importProfile(...)` | Export gibt Anzahl zurück; Import liefert nur einen `SettingsDraft`. Nur freigegebene Serverwerte, exakte Provider-Version, keine überschriebenen Profile. Namen: `[a-z0-9_-]{1,40}`. |
+| `LANGUAGE_AUDIT` (`language-audit`) | `Lang.audit()` | Fehlende Texte, Bundle-/Englisch-Fallbacks und abweichende Platzhalter; `/vadmin language audit`. |
+| `FEATURE_DIAGNOSTICS` (`feature-diagnostics`) | `FeatureDiagnostics.register(Plugin, String, Function<Player,Status>)`; `inspect(Player)` | Maximal 64 reine Prüfungen pro Provider. `Status(feature, provider, State, reason)`, Zustände `ACTIVE`, `FALLBACK`, `UNAVAILABLE`; Provider-Ausfälle werden isoliert. |
+| `MIGRATION_PREVIEWS` (`migration-previews`) | `MigrationPreviews.register(Plugin, String, Path, Converter)`; `keys()`; `run(String)` | Maximal 32 Adapter pro Provider; Quelle im eigenen Pluginordner, maximal 8 MiB. Converter erhält abgetrennte Bytes, keinen Schreibpfad. `Report` enthält Datensatzanzahlen, Summen und Probleme; `conserved()` prüft Übereinstimmung. Kein automatischer Import. |
+| `ONBOARDING` (`onboarding`) | `CoreOnboarding.open(Plugin core, API, Player)`, `CoreOnboarding.markFeature(Plugin owner, Player)` | Optionale Einführung; Sprachwahl und geöffnete Menüs werden gespeichert. Beteiligte Plugins bestätigen eine erfolgreiche Funktion mit `markFeature` auf dem Serverthread (XP: Sparziel setzen). Menüöffnungen allein schließen die Funktionsaufgabe nicht ab. |
+| `ROUTINE_MESSAGES` (`routine-messages`) | `RoutineMessages.send(Plugin provider, Player, Component)` | Ausschließlich nicht dringende Meldungen. Persönlich sofort/15/60 Sekunden; begrenzte Warteschlange, wiederholte Texte zusammengefasst. Logout/Provider-Deaktivierung/Core-Stopp verwerfen ausstehende Routinehinweise. |
+
+Einstellungen sind standardmäßig nicht für Profile freigegeben; die Aktivierung ist unbekannt.
+Nach der Registrierung bekannte, nicht vertrauliche Werte ausdrücklich kennzeichnen:
+
+```java
+SettingsRegistry registry = (SettingsRegistry) api.settings();
+registry.policy(plugin, "server", "preview-radius",
+    new SettingPolicy(SettingPolicy.Activation.IMMEDIATE, true));
+```
+
+`Activation` unterstützt `IMMEDIATE`, `RELOAD`, `RESTART`, `UNKNOWN`. Zugangsdaten, Tokens,
+Spielerbestände und kontobezogene Werte nicht als `profileSafe` markieren. Die Angabe dokumentiert
+den tatsächlichen Setter-Vertrag; sie führt selbst keinen Reload/Neustart aus.
+
+```java
+RoutineMessages.send(plugin, player, lang.component(player, "reminder.optional"));
+```
+
+Kauf-, Zahlungs-, Kampf- und Berechtigungsbestätigungen weiterhin direkt zustellen. Routine-
+Komponenten werden zu begrenztem Klartext (512 UTF-8-Bytes, 16 verschiedene Meldungen) abgeflacht.
+Neue providergebundene Registrierungen werden durch `CoreLifecycle` beim Deaktivieren freigegeben.
+
+`TREE_GROWTH_PROFILES` (`tree-growth-profiles`, seit 0.26.5) ergänzt
+`StructureGeneratorInterface.tree(StructureAccess, Random, TreeSpecies, TreeGrowthProfile)`.
+`TreeGrowthProfile(heightScale, crownScale, crownForm)` akzeptiert endliche Faktoren 0.5–1.5 und
+`CrownForm.RANDOM`, `OPEN_GROWN`, `FOREST`, `WINDSWEPT`, `ANCIENT`. Der Standard `(1,1,RANDOM)`
+behält den bisherigen Generatorpfad bei. Profile gelten für normale, mittlere, große und kolossale
+Bäume; verbundene Sträucher/Hecken behalten ihre eigene Form. Stammhöhe bleibt durch die bestehende
+Arten-/Größenobergrenze gedeckelt; Kronenradius höchstens 40. Das sind Generatorparameter, keine
+Garantie für die äußersten Blattkoordinaten. Der Aufrufer prüft alle tatsächlich geplanten Blöcke
+auf Platz, Schutzrechte und geladene Chunks. Alte Implementierungen der Schnittstelle unterstützen
+per Default nur `TreeGrowthProfile.DEFAULT`, sonst `UnsupportedOperationException`.
+
+`GuiInteface.menuRequiredPermission(Plugin owner, String localMenuKey, String permission)` ergänzt
+seit 0.26.5 die Capability `menu-access-diagnostics`. Erst das Menü registrieren, dann die benötigte
+Bukkit-Berechtigung deklarieren. Beide Prüfungen (deklarierte Berechtigung und Provider-Predicate)
+müssen bestehen; `null` löscht die Zusatzprüfung. Fehlende Berechtigung inklusive Node, verweigerte
+Provider-Prüfung und Provider-Ausfall werden getrennt erklärt. `inspectMenus`-Ausgaben nur in
+Admin-Oberflächen zeigen. Rechte werden bei jedem Öffnen erneut geprüft; Metadaten werden beim
+Entfernen des Menüs/Providers bereinigt. Die Methode hat für alte Interface-Implementierungen
+einen No-op-Default. Berechtigungsnamen: nicht leer, keine Leer-/Steuerzeichen, maximal 128 Zeichen.
+
+
+### Party activities (`party-activities`, since 0.26.5)
+
+Additive, optional methods on `PartySource` have default empty/false results. The existing PartyServices registration and lifecycle apply.
+
+- `PartyServices.readyCheck(UUID partyId): Optional<PartyReadyCheck>` (server thread) returns a time-limited, immutable roster/answer snapshot. `PartyReadyCheck.allReady(long now)` is advisory: callers must recheck current membership, time and their own arena/dungeon access rules at entry. Never teleports or grants access.
+- `PartyServices.recordProgress(Plugin provider, UUID partyId, UUID eventId, String goal, double sharedXp): boolean` (server thread) reports **already granted** group XP or a completed provider goal into an opted-in party session. Finite nonnegative XP, stable event IDs for retries, ≤120 character goal. Disabled providers, missing sessions and bounded/deduplicated entries return false; no rewards are granted or retried by Core. Capability-check before calling from plugins that support older Core versions.
+- `PartySource.readyCheck(UUID)` and `PartySource.recordProgress(UUID, UUID, String, String, double)` are additive default methods. Runtime provider stores are server-local; a restart cancels ready checks and reports.
+
+### Reward eligibility (0.26.5)
+Capability `reward-eligibility`. `progression.RewardEligibility.allowed(Entity): boolean` checks the shared `PRACTICE_TAG` scoreboard marker (`vystorm_practice`), on the server thread. Session providers mark participants and managed training entities **before** combat and remove participant markers on exit, disable, and recovery after restart. Reward providers must check both the recipient and relevant defeated/attacked entity before awarding progression. This is an opt-out contract, not an inventory snapshot or universal interception of third-party rewards.
+
+
+## Chat channels (0.26.6)
+
+Capability: `CoreApi.Capability.CHAT_CHANNELS` (`chat-channels`, since 0.26.6).
+`chat.ChatChannels.Channel` provides `GLOBAL`, `PARTY`, `TRADE`, `SYSTEM` and `String wireKey()`.
+`Component ChatChannels.tag(Channel, Component)` is a pure, thread-safe rich-component wrapper.
+`void ChatChannels.send(Player, Channel, Component)` sends on the server thread. **The caller retains responsibility
+for recipients and authorization.** The helper does not broadcast or grant membership. For example:
+
+```java
+ChatChannels.send(member, ChatChannels.Channel.PARTY, richMessage);
+```
+
+Wire representation: root translatable key `vystorm.chat.channel.<wireKey>`, fallback `%s`, one component argument.
+Unmodified clients render the same rich message through the fallback. Do not register translations for these reserved
+keys or strip/flatten their wrapper. Vystorm Client 0.10.0 classifies the envelope; no separate copy of the message is
+sent and existing signed player chat remains untouched. Untagged player/server/client messages keep their source tabs.
+
+Core `/vtrade <message>` provides trade chat, maximum 240 characters, two-second per-player cooldown. Permissions:
+`vystorm_core.chat.trade.send` and `.receive` (both default true); sender receives its own accepted message.
+`chat.ChannelChatEvent(Player, Channel, Component)` runs synchronously before trade delivery. APIs: `channel()`,
+`message()`, `message(Component)`, `isCancelled()`, `setCancelled(boolean)`, Bukkit handler methods. Cancellation
+prevents all delivery; modified content is delivered after a fresh sender permission check. Moderators should handle
+this event or block the command: command-based trade chat is not `AsyncChatEvent` or signed player chat. The command
+also follows normal Bukkit command dispatch/preprocess rules. There is no new persistent chat store or provider registry.
+VystormParties 1.4.5 tags its existing authorized party/spying recipients; Core does not duplicate party membership.
+
+
+## Visuals (0.29.0)
+
+Capability `CoreApi.Capability.VISUALS` (`visuals`). Public package `Vystorm.vystorm_core.visual`. Independently authored geometry and rendering primitives; no portal rules or ProtocolLib.
+
+- `Point3(double x, double y, double z)`: finite immutable vector, `add/subtract/scale/distanceSquared`.
+- `ViewFrame(UUID world, Point3 origin, int quarterTurns, double halfWidth, double height)`: bottom-centre origin, local +Z towards the viewer. `local/global`, `through(destination, point)`, `directionTo(destination, vector)`, `visible(eye, point)`, `crosses(from, to, bodyRadius, bodyHeight)`, `contains(x,y,margin)`. Quarter turns map the normal from +Z to -X, -Z, +X. Pure geometry is thread-safe.
+- `BlockPosition(int x,int y,int z)`, `centre()`, `containing(Point3)`.
+- `ParticlePaths.line(start,end,count)` (2..512), `outline(frame,pointsPerEdge)` (2..128). Immutable points; safe off-thread.
+- `Visuals.open(Plugin owner,Player viewer) -> BlockView`. Server thread only. One view per player across owners; conflicts throw. `BlockView.replace(Map<BlockPosition,BlockData>,int budget) -> int` accepts <=4096 blocks, clones BlockData, sends <=budget changes (1..4096), and returns pending change count. Repeat while nonzero. `covers(BlockPosition)` checks actually sent illusion blocks, `isClosed()` and idempotent `close()`; current real blocks restored without modifying the world.
+- `Visuals.projection(entrance,destination,eye,radius,depth,maxBlocks) -> Map<BlockPosition,BlockData>`. Server thread only; radius1..12, depth1..16, maxBlocks1..4096. No chunk loads. Samples cardinally rotated block states; no tile-entity payloads, light, entities or physical collision. Caller schedules refreshes and enforces distance/work budgets.
+- `Visuals.particles(Player,Particle,List<Point3>,T data)`: server thread, <=512 points, emits only to that player in their current world.
+- `Visuals.release(Plugin)` and `shutdown()` restore outstanding views. Core registers lifecycle cleanup automatically. `lifecycleListener()` is the Core bootstrap hook; consumers do not register it.
+
+```java
+if (!CoreApi.has(CoreApi.Capability.VISUALS)) throw new IllegalStateException("Core 0.29.0 required");
+BlockView view = Visuals.open(plugin, player);
+// On the server thread; refresh while the viewer remains eligible:
+view.replace(Visuals.projection(entrance, destination, eye, 8, 8, 1024), 256);
+// Explicitly end your view when it is no longer wanted:
+view.close();
+```
+
+No automatic teleportation or interaction is provided. Consumer plugins must close stale views and prevent interaction with illusion blocks if appropriate. World-change/respawn/quit cleanup prevents restoring data into a different client world. Do not run these Bukkit operations from async tasks or Folia region threads.
+
+### Horizontal projections (0.30.0)
+
+Capability `CoreApi.Capability.HORIZONTAL_VISUALS` (`horizontal-visuals`).
+`HorizontalFrame(UUID world, Point3 origin, double halfWidth, double halfDepth)` describes an upward-facing
+rectangle. `intersection(Point3 eye, Point3 point)` returns an Optional intersection only from above to below;
+`through(HorizontalFrame destination, Point3 point)` translates without rotating axes.
+
+`Visuals.projection(HorizontalFrame entrance, HorizontalFrame destination, Point3 eye, int radius,
+int depth, int maxBlocks, Set<BlockPosition> opening)` samples loaded destination chunks into loaded source
+chunks. The mask is the set of open source block cells at `floor(origin.y())`; holes such as central pillars
+remain occluded. Dimensions are 0..16 (exclusive zero), radius 1..12, depth 1..16, maxBlocks 1..4096,
+and the mask has at most 1024 cells. Bukkit operations remain server-thread only. No automatic chunk loads,
+generation, teleportation, tile payloads or world mutation. Use the existing `BlockView.replace` budget and
+owner lifecycle to display/restore the result. Caller chooses destination height and handles its own rules.
+
+```java
+HorizontalFrame source = new HorizontalFrame(worldId, new Point3(10.5, 64.75, 20.5), 1.5, 1.5);
+HorizontalFrame destination = new HorizontalFrame(targetWorldId, new Point3(100.5, 55.75, .5), 1.5, 1.5);
+Map<BlockPosition, BlockData> blocks = Visuals.projection(source, destination, eye, 8, 12, 768, openCells);
+view.replace(blocks, 256);
+```
+
+## World-event runtime (0.31.0)
+
+Capability `CoreApi.Capability.WORLD_EVENT_RUNTIME` (`world-event-runtime`). `API.events()` returns `WorldEvents`. This service is available without WorldForge/WorldDirector. All mutations and callbacks are server-thread operations; a plugin schedules its own asynchronous calculations before handing results back.
+
+```java
+WorldEvents events = CoreApi.api().orElseThrow().events();
+WorldEvents.Domain domain = events.domain(this, "my-plugin");
+domain.register(definition); // worldevent.engine.EventDefinition; replaces this domain's own saved definition
+AutoCloseable execution = events.handler(this, definition.id(), new WorldEventHandler() {
+    public void start(ActiveEvent event) { /* apply this plugin's effects, using instanceId for deduplication */ }
+    public void resume(ActiveEvent event) { /* restore effects without replaying one-time rewards */ }
+    public void stop(ActiveEvent event, EventEndReason reason) { /* release effects */ }
+});
+var result = domain.start(definition.id(), EventScope.WORLD, world.getUID().toString());
+if (result.started()) events.stop(result.event().orElseThrow().instanceId());
+```
+
+`domain(owner,id)` stores its catalog, instance IDs, time bounds and cooldowns atomically under Core's `worldevents/<id>.json`. Existing invalid data fails closed. Scope, conflicts, compatibility groups, cooldowns and concurrent limits are enforced; foreign domains participate in cross-plugin checks. Generic execution does not contain city generation, factions, mobs or storyteller selection. Duplicate executor IDs/foreign domain ownership are rejected. `WorldEvents.start(id,scope,key)` rejects ambiguous IDs; explicit domain starts are unambiguous.
+
+`Domain.start(id,scope,key,true)` reports an event already started by its owning content plugin; it bypasses cooldown and does not call the start handler again, but still checks concurrency/conflicts. Handler failures are contained and trigger cleanup. On plugin disable, Core releases registrations and effects; owning domains retain durable instances for explicit resume on the next registration. Handlers must be idempotent: crashes cannot guarantee exactly-once external side effects. Close executor registrations before rebinding them during reload.
+
+For an existing storage format, `externalDomain(owner,id)` exposes `registry()`, `runtime()` and `lifecycle()` as migration seams. Load the original catalog/state, bind `checkpoint(Runnable)` to its durable save, then call `ready()`. Execute via `Domain.start/stop`, not direct runtime mutation. This preserves existing IDs/formats and SQL namespaces without a silent reset; the adapter remains responsible for its storage readiness/durability. `source(WorldEventSource)` supplies domain-specific regional matching and modifiers.
+
+Existing `WorldEventServices` methods remain binary compatible, combining Core-owned domains with the optional legacy external source. Start/end Bukkit events keep their existing types. `ConfigMigrator.migrate(Plugin)` and `VersionedStore.open(Plugin,...)` are additive overloads for modules with separate resources/config/storage; original JavaPlugin overloads are retained.
+
+
+## Durable reward pouch (0.32.0)
+
+Capability `CoreApi.Capability.REWARD_POUCH` (`reward-pouch`). Server thread only:
+
+```java
+RewardPouch pouch = RewardPouch.open(plugin, api, "dream"); // one instance per namespace
+pouch.credit(playerId, runId + ":cloud", new ItemStack(Material.DIAMOND));
+RewardPouch.ClaimResult result = pouch.claim(player);
+int remaining = pouch.pending(playerId);
+boolean mayEnterTemporaryInventory = pouch.readyForVisit(playerId);
+// PlayerJoinEvent, after Bukkit has loaded fresh player data:
+pouch.reconnected(player);
+```
+
+`credit(UUID, String, ItemStack...)` saves before returning, returns false for an already credited source ID, and throws on storage failure. Retry the **same** ID after a failure. Accepted rewards stay available across disconnect/restart. One delivery is attempted per `claim`; `FULL` leaves the entire reward untouched, `BUSY` means dead/offline or a managed visit/recovery is active. `RECOVERY_REQUIRED` preserves evidence if interrupted delivery conflicts with inventory contents. Never turn this result into a new credit ID. `DELIVERED` and `EMPTY` are normal outcomes.
+
+Prepared deliveries contain before/after storage inventory, a reward ID and transaction ID. Player inventory and PDC receipt are saved together before ledger completion. An ambiguous player save blocks the instance until fresh player data is loaded. Do not call `reconnected` to bypass this barrier during an online session. Rewards are stored per player under the owning plugin's `rewards/<namespace>/`; do not delete the ledger or player receipts. Maximum 1024 pending rewards and 100,000 retained source receipts per player/namespace; reaching the limit refuses new credits. This service is local to one backend, and does not coordinate proxy moves, shared player-data writers or rollback of player files. Keep both storage and player data in consistent backups.
+
+For temporary inventories also opt into `VisitPolicy.builder().isolateExperience(true)`. Core snapshot format 3 records level/total/progress and restores them after the visit; default false preserves existing consumers. Older formats have no XP snapshot. End visits before a Core downgrade; older Core rejects format 3 rather than discarding recovery evidence.
+
+
+## Client-only snowy biomes (0.33.0)
+
+Capability: `CoreApi.Capability.CLIENT_BIOMES` (`client-biomes`, since 0.33.0).
+All calls require the server thread. `ClientBiomes.supported()` checks the supported runtime (Minecraft 26.2 or 26.3; 26.3 keeps the 26.2 biome packet format).
+`boolean ClientBiomes.snow(Plugin owner, Player viewer, Set<String> excludedBiomes)` opens/retains a view; returns false on unsupported runtime, conflicting owner, or adapter failure.
+`ClientBiomes.clear(Plugin owner, Player viewer)` restores real biome data; `release(Plugin owner)` closes all owner views. Core lifecycle also releases disabled owners.
+
+```java
+if (ClientBiomes.snow(this, player, Set.of("minecraft:desert"))) {
+    // The caller separately controls precipitation, e.g. existing seasonal weather.
+}
+// On thaw/reload:
+ClientBiomes.release(this);
+```
+
+This sends ordinary biome packets containing vanilla snowy_plains IDs to the client only. The server registry, saved biomes, blocks, spawning and temperature remain unchanged. Client grass/foliage/water/sky colours and biome-dependent sounds may change. Exclusions accept namespaced keys or Bukkit-style upper-case names. This is a per-player view, not a region editing API.
+
+Newly delivered chunks are updated on the next budgeted sender tick (8 chunks/player, 64 total/tick); a brief original-biome appearance is possible. Existing views are periodically refreshed every 200 ticks to repair other biome packets. No packet interception framework, client mod or resource pack is required. Clearing sends current original data for loaded, sent chunks without generating or forcing chunks. A reconnect always receives original server data. Dimension changes discard the old view; the owning plugin reapplies according to its policy.
+
+## Shared loot tables (0.34.0)
+
+Capability `CoreApi.Capability.LOOT_TABLES` (`loot-tables`, since 0.34.0). Owner-scoped `loot.LootTables`
+provides `replace(Plugin, Map<String,LootTable>)`, `release(Plugin)`, `find(String)`, `ids()` and
+`generate(String, LootTable.Source, RandomGenerator)`. Immutable `LootTable` supports `roll(Source, RandomGenerator)`;
+`Source` is `MOB` or `CHEST`. Item rarity weights are 0 (trash)..10000 (mythic+), converted to
+`10001 - weight` selection tickets, with independent mob/chest overrides. Each selected unit is
+created through ItemRefs, retaining its provider's normal random item rolls. Register/generate on the
+server thread; pure selection is thread-safe. Config reload is atomic, conflicting owners are rejected,
+and disabled owners are released by CoreLifecycle. See [full API signatures, YAML and consumer examples](SHARED-LOOT.md).
+
+**Loot rolls, categories and basic vanilla lists (0.44.0).** Capability `CoreApi.Capability.LOOT_ROLLS` (`loot-rolls`).
+`LootRoll.table(id)` / `LootRoll.of(table)` with `source`, `rolls`, `luck`, `weights`, `tier`, `minTier`, `guarantee` (pity),
+`exclude`, `unique`, `seed`, `random`, `context(RollContext)`; `roll()` (pure, any thread) and `generate()` return a `LootResult`
+(hits with rarity, `LootTier`, per-draw probability and source table, items, problems). Entries may reference tables
+(`table: <id>`, `table: self`), carry `enchant-levels`, `potion`, conditions (`min-y`, `max-y`, `environments`, `biomes`,
+`min/max-difficulty`) and `fallback`. Core ships `loot-vanilla.yml` (`vystorm_core:vanilla/*` tiers and themes,
+`vystorm_core:default/*` mixes) and `loot-categories.yml` (`category:boss_chest`, `category:fishing`, ...); plugins roll a
+category with their own list as `self`, and `LootTables.choose(configured, default)` gives the per-source override.
+`LootLuck.register(plugin, player -> points)` adds player luck. `LootTableConfig.load(plugin, files...)` loads a plugin's own files.
+Admin: `/vadmin loot list|show|roll|simulate|reload`. Full model, API, tuning, German summary and the shipped lists: [LOOT.md](LOOT.md).
+
+## Source-based stats (0.35.0)
+
+Capability: `stat-sums` (CoreApi.Capability.STAT_SUMS).
+
+StatSum is a standalone, synchronized value container, not a global player registry. Each caller owns its containers and removes contributions when their sources cease to apply. It holds no plugin/player references and needs no lifecycle registration.
+
+```java
+import Vystorm.vystorm_core.stat.StatSum;
+import static Vystorm.vystorm_core.stat.StatSum.Operation.*;
+StatSum armor = new StatSum();
+armor.put("items:head", ADD, 3);
+armor.put("items:chest", ADD, 8);
+armor.put("skills:defense", MULTIPLY, 0.20); // +20%
+armor.put("buffs:blessing", MULTIPLY_TOTAL, 1.5); // x1.5
+armor.value(); // 19.8
+armor.put("items:head", ADD, 5); // replaces the old 3
+armor.remove("buffs:blessing");
+Map<String, StatSum.Contribution> sources = armor.contributions(); // immutable copy
+```
+
+Formula: sum(ADD) * (1 + sum(MULTIPLY)) * product(MULTIPLY_TOTAL). Base values use an ADD source. Empty sums return zero. Negative contributions and zero factors are supported; nonfinite inputs and arithmetic overflow throw. Evaluation uses sorted source order. A source identifies one contribution; use separate keys for multiple components of one effect.
+
+Public methods: StatSum(), StatSum(Map<String, Contribution>), put(String, Contribution), put(String, Operation, double), remove(String), clear(), contributions(), value(). put returns this; remove returns whether a source existed.
+
+ItemServices.equipmentStatContributions(Player) and the default ItemProvider method of the same name return Map<String, Map<String, StatSum.Contribution>> (stat -> source -> contribution). The facade returns immutable maps and contains provider failures. Older providers return an empty map. Player queries run on the server thread. ItemServices.equipmentStats(Player) continues to return the final numeric values including the provider's caps/curves; a raw contribution sum is not a replacement for those explicit content policies. Items reports resolved item and set contributions here, so item-local multipliers are never reapplied to the entire equipment set.
+
+### Spatial biome overlays and prioritized views (0.36.0)
+
+Capability `CoreApi.Capability.PROJECTED_BIOMES` (`projected-biomes`). `ClientBiomes.project(Plugin owner, Player viewer, Map<BlockPosition, NamespacedKey> cells) -> boolean` replaces a private biome overlay: at most 4096 cells across 16 chunks, coordinates at four-block-aligned quart origins within world height. Server thread only; Paper/Purpur 26.2 and 26.3 only. One overlay owner per player; false on owner conflict/unsupported runtime. Empty maps clear the overlay. `ClientBiomes.clearProjection(owner, viewer)` restores the active snowy base, or real biomes. Snow and overlay owners may differ; lifecycle release handles both. Dirty biome packets are batched (4 chunks/view/tick, 64 globally); chunk delivery and periodic repair reapply them without loading chunks. Vanilla quart resolution and biome blending can tint neighboring blocks; lighting and dimension sky do not change.
+
+`BlockView.replacePrioritized(Map<BlockPosition, BlockData> desired, int budget) -> int` is additive/default-compatible. Visible changes follow map iteration order; at least one, otherwise a quarter of the budget, is initially reserved for stale restorations. Unused budget drains more cleanup. Total changes never exceed the supplied budget; unchanged blocks cost no budget. The original replace method still restores first.
+
+## World-tree plans (0.37.0)
+
+Capability: `CoreApi.Capability.WORLD_TREE_PLANS` (`world-tree-plans`). `api.structureGenerator().worldTree(Material plant, StructurePos origin, long seed, int height, int radius)` returns an immutable `Map<StructurePos, Material>`. `WorldTreePlan.supports(Material)` accepts nine sapling species, red/brown mushrooms and crimson/warped fungi. Origin is the minimum corner of the 10x10 formation. Height is 32..192 blocks including crown, radius 12..40 (sapling trees 12..48 since 0.39.0); maximum 120,000 output blocks (400,000 since 0.39.0). Deterministic pure geometry performs no Bukkit world access and may run off-thread. Callers must validate world limits, chunk availability, collisions and permissions, supply persistent leaf data as needed, fire growth events and budget all world writes themselves.
+
+## Fungus growth plans (0.38.0)
+
+Capability `CoreApi.Capability.FUNGUS_GROWTH_PLANS` (`fungus-growth-plans`). `api.structureGenerator().fungus(Material plant, StructurePos origin, long seed, int width, int height, int radius)` returns an immutable, deterministic block map. Accepts red/brown mushrooms and crimson/warped fungi; widths 1, 2, 3, 5, 10; height 6..192; radius 2..40. Ten-wide plans with height >=32 and radius >=12 retain the 0.37.0 world-tree design. Pure geometry, no world reads/writes; callers retain protection, chunk, collision and placement responsibilities. Maximum 120,000 blocks.
+
+Reproduce the actual-voxel review: run `gradle fungusPreview` with the CustomTrees repository alongside Core, then `node scripts/fungus-preview.mjs build/preview/fungi.json build/preview/preview.html`. The standalone HTML embeds all 20 exposed-voxel models, supports detail/shared-scale views and needs no network access. Colors are schematic, not Minecraft textures.
+
+## Giant world trees (0.39.0)
+
+Capability `CoreApi.Capability.GIANT_WORLD_TREES` (`giant-world-trees`). `worldTree(...)` keeps its signature; for the nine sapling species it now returns Yggdrasil-scale trees (flared braided hollow trunk, buttress/arching roots, space-colonisation crown with leaf curtains) with radius 12..48. Mushrooms and Nether fungi keep the 0.38.0 geometry and radius 12..40. Plans may contain the species log/wood, leaves, `VINE`, `MOSS_CARPET`/`PALE_MOSS_CARPET`, `MANGROVE_ROOTS` and `PALE_HANGING_MOSS`; callers set block data themselves (vine faces, hanging-moss tip, persistent leaves). Since 0.39.1 (capability `underground-tree-roots`) sapling-tree roots dig below the planting level: `WorldTreePlan.depth(Material plant, int height, int radius) -> int` (6..14 for saplings, 0 for mushrooms/fungi) bounds them, so every block satisfies `origin.y - depth <= y < origin.y + height`; only wood (species log/wood, `MANGROVE_ROOTS`) is planned below origin.y. Callers should check the world minimum height for this part. Maximum 400,000 blocks (`WorldTreePlan.MAX_BLOCKS`). `WorldTreePlan.footprint(Material plant, int height, int radius) -> int` returns the horizontal half-extent: every block satisfies `|x - (origin.x + 5)| <= footprint` (same for z), e.g. 56 at height 160 / radius 44, so callers can check chunk availability before planning. Output is ordered bottom-up for staged placement.
+
+Reproduce the previews: `gradle worldTreePreview -PpreviewDir=<dir>` renders real voxels to PNG (no game server or browser needed).
+## Managed anvil bridge (0.40.1)
+Capability: CoreApi.Capability.ITEM_ANVIL (item-anvil). ItemServices.prepareAnvil(original, ingredient, proposed, rename, player) passes defensive copies to the provider and returns a copied optional result. Run on the server thread. Preview must not consume items or commit ledger state. ItemServices.commitAnvil(delivered, player) runs only after native delivery; providers must make repeated commits idempotent. Both methods fail closed without an enabled provider. ItemProvider adds default methods, preserving existing implementations. Consumers must guard the capability before linking these methods on older Core.
+
+## Update check registration (0.40.2)
+
+Each plugin registers its own SpigotMC resource in `onEnable`; Core then lists it under `/vadmin updates` and tells admins about newer versions. The registration is removed when the plugin is disabled.
+
+```java
+try {
+    if (CoreApi.has(CoreApi.Capability.UPDATE_SOURCES)) Vystorm.vystorm_core.lifecycle.UpdateSources.spigot(this, 140049);
+} catch (LinkageError olderCore) {}
+```
+
+Server owners can add other plugins through `update-check.extra` in Core's config and silence single plugins or versions with `update-check.ignore` (0.42.0).
+
+## Player menu (0.43.0)
+
+Capability `CoreApi.Capability.PLAYER_MENU` (`player-menu`). A player sneaks and right-clicks another player with an
+empty main hand and gets a chest menu about that player: the target's head and name at the top, below it the entries
+of every plugin that registered one (invite to party, invite to city, view stats, ...). Use it instead of commands such
+as `/party invite NAME`. `/menu player <name>` opens the same menu.
+
+The menu only opens if at least one entry is visible for this viewer and target; otherwise the click stays a normal
+vanilla interaction and the event is not cancelled. Core ignores off-hand clicks, NPCs (Citizens `NPC` metadata or not
+an online player), spectators, clicks another plugin already cancelled, and players without `vystorm_core.playermenu`
+(default: everyone) or who switched it off in `/vsettings` → Player menu. Server owners use `player-menu.enabled` and
+`player-menu.require-sneak` in Core's `config.yml`. A short per-viewer cooldown stops double opens.
+
+`Vystorm.vystorm_core.playermenu.PlayerMenu` (static):
+
+```java
+String register(Plugin owner, PlayerMenuEntry entry)   // returns "<plugin lowercase>:<id>"; same id again replaces your entry
+boolean unregister(Plugin owner, String id)
+void unregister(Plugin owner)                          // automatic when your plugin is disabled
+List<String> registered()                              // all keys in menu order
+boolean hasEntries(Player viewer, Player target)       // server thread
+boolean open(Player viewer, Player target)             // server thread; skips sneak/hand/permission/settings checks
+PlayerMenu.PERMISSION   = "vystorm_core.playermenu"
+PlayerMenu.MAX_ENTRIES  = 45                           // five rows; more entries are cut off by priority
+enum PlayerMenu.Result { CLOSE, REFRESH, KEEP }
+interface PlayerMenu.ClickHandler { Result onClick(Player viewer, Player target, ClickType click); }
+```
+
+`PlayerMenuEntry.builder(String id)` (`[a-z0-9_.-]`, 1..64):
+
+| Method | Meaning |
+| --- | --- |
+| `priority(int)` | Lower values come first (default 0), ties keep registration order. Suggested: 0-99 social (party, friends), 100-199 groups (city, guild), 200+ info (stats). |
+| `icon(BiFunction<Player, Player, ItemStack>)` | Required. `(viewer, target)`; drawn every time the menu is shown, so it can show live data. `null`/air hides the entry. |
+| `visibleWhen(BiPredicate<Player, Player>)` | Optional, default always. Checked when drawing and again right before the click runs. |
+| `onClick(PlayerMenu.ClickHandler)` | Required. Runs one tick after the click (you may open another menu or dialog); `CLOSE` closes the menu only if it is still open, `REFRESH` redraws all entries, `KEEP` (or `null`) leaves it. |
+
+All callbacks run on the server thread. An exception (or `LinkageError`) in one entry hides or cancels only that entry
+and is logged through `ProviderFailures`; the viewer gets a short "action failed" message. Before a click runs Core
+checks again that the target is still online and the entry still visible.
+
+Example: an "Invite to party" entry that also works on an older Core. Keep the code that touches `playermenu` in its
+own class, which is only loaded after the capability check:
+
+```java
+// onEnable
+try {
+    if (CoreApi.has(CoreApi.Capability.PLAYER_MENU)) PartyMenuEntries.register(this, parties, lang);
+} catch (LinkageError olderCore) {
+    // Core < 0.43.0: no player menu, /party invite still works
+}
+
+final class PartyMenuEntries {
+    static void register(Plugin plugin, Parties parties, Lang lang) {
+        PlayerMenu.register(plugin, PlayerMenuEntry.builder("party-invite")
+                .priority(10)
+                .visibleWhen((viewer, target) -> parties.canInvite(viewer) && !parties.sameParty(viewer, target))
+                .icon((viewer, target) -> {
+                    ItemStack item = lang.name(new ItemStack(Material.CAKE), viewer, "menu.invite", "player", target.getName());
+                    return parties.hasPendingInvite(viewer, target)
+                            ? lang.lore(item, viewer, "menu.invite-pending") : item;
+                })
+                .onClick((viewer, target, click) -> {
+                    parties.invite(viewer, target);           // your existing /party invite logic
+                    return PlayerMenu.Result.REFRESH;         // the icon now shows "invitation sent"
+                })
+                .build());
+    }
+}
+```
+
+## News board (0.44.0)
+
+Since 0.46.0 (`NEWS_EDIT`), writers can edit existing posts in the dialog or with
+`/vadmin news edit <id> [title | text]` (command requires admin and news write permissions).
+Omitting text opens the prefilled editor for players. Edits preserve ID, author, timestamp,
+ordering and read status; they do not announce the post again or extend its expiry.
+The existing `News.posts()` returns the corrected content.
+
+`news.News` (capability `NEWS`): the server news board. Admins (`vystorm_core.news.write`) write short posts in game;
+players (`vystorm_core.news`, everyone by default) get one clickable chat line for posts they have not read yet when
+they join, a line right away when a post is published while they are online, and read everything in `/menu news` or
+the main menu ("News (2 new)"). Players can switch the join line off in `/vsettings`. Plugins may post as well, e.g.
+an event announcement:
+
+```java
+try {
+    if (CoreApi.has(CoreApi.Capability.NEWS)) News.post(this, "Summer event", "From Friday: double XP at the arena.");
+} catch (LinkageError olderCore) {
+    // Core < 0.44.0: no news board
+}
+```
+
+| Method | Meaning |
+| --- | --- |
+| `Optional<Post> post(Plugin, String title, String text)` | Publishes a post signed with the plugin's name and announces it. Empty when the board is off (`news.enabled: false`). Plain text: no colours, title up to 64, text up to 1000 characters, line breaks kept. Any thread (the announcement runs on the server thread). |
+| `List<Post> posts()` | Current posts, newest first. Thread-safe. |
+| `int unread(Player)` | Posts the player has not opened yet. |
+| `boolean open(Player)` | Opens the news dialog; false if the board is off or the player lacks `News.PERMISSION`. Server thread. |
+| `record Post(int id, long time, String author, String title, String text)` | Ids count up and are never reused. |
+
+Posts older than `news.max-age-days` (default 30) disappear, at most `news.max-posts` (default 20) are kept. Do not
+post on every restart or for routine events; the board is meant for news a player should see once.
+
+## Client-only displays (0.44.0)
+
+`display.ClientDisplays` (capability `CLIENT_DISPLAYS`, `client-displays`) shows walls of map item frames that exist
+only as packets on the clients near them: no server entity, no server map, no entity ticking and no server-side map
+rendering. Vystorm Boards uses it for its billboards. No ProtocolLib or PacketEvents needed.
+
+```java
+try {
+    if (CoreApi.has(CoreApi.Capability.CLIENT_DISPLAYS) && ClientDisplays.supported()) {
+        MapWall wall = ClientDisplays.mapWall(this, MapWall.Spec.of(world, x, y, z, BlockFace.NORTH, 4, 2)
+                .viewDistance(48)).orElseThrow();
+        wall.shared(pixels);                          // 512 x 256 map colour bytes, row-major
+        wall.content(player, personalPixels);         // this viewer sees their own picture
+        wall.onClick(click -> player.sendMessage("pixel " + click.pixelX() + "," + click.pixelY()));
+    } // else: fall back to real item frames
+} catch (LinkageError olderCore) {
+    // Core < 0.44.0
+}
+```
+
+| Member | Meaning |
+| --- | --- |
+| `boolean supported()` | The packet adapter works on this server. Probed once (it builds and encodes one packet of each kind with the server's own codecs); false on unknown server builds, with the reason in `unsupportedReason()`. |
+| `Optional<MapWall> mapWall(Plugin owner, MapWall.Spec)` | A new wall; empty when unsupported or the owner is disabled. |
+| `MapWall.Spec(world, x, y, z, facing, width, height, glow, invisible, viewDistance)` | `(x, y, z)` is the block of the top-left frame seen from the front, tiles run to the viewer's right and down. `facing` NORTH/SOUTH/EAST/WEST, 1x1 to 32x32 tiles, view distance 1-256 blocks. `Spec.of(...)` = glowing, invisible frames, 48 blocks. |
+| `wall.shared(byte[])` / `wall.content(Player, byte[])` / `wall.clearContent(Player)` | Map colour bytes (`MapPalette` indices), `width*128` x `height*128`, row-major. Core keeps the array (no copy): pass a new array per change. Per tile only the changed rectangle is sent. |
+| `wall.viewers()`, `isViewing(Player)`, `hasContent(Player)`, `hasOwnContent(Player)` | Who currently gets the wall. A viewer's own content is dropped when they leave the range; provide it again when they come back. |
+| `wall.onClick(Consumer<MapWall.Click>)` | Left (`attack`) and right clicks with tile and wall pixel (from the look ray). Same reach rule as vanilla entities (interaction range + 3 blocks); a right click arrives once, not per hand. |
+| `wall.resend(Player)`, `wall.remove()`, `ClientDisplays.release(Plugin)` | Resend everything, remove one wall, remove all of a plugin. Walls of a disabled plugin are removed automatically. |
+| `ClientDisplays.budgets(perPlayer, total)` | Map packets per player and per tick (defaults 8 and 64; a full tile is 16 KiB before compression). Frame spawns are limited to 128 per player and tick. |
+| `ClientDisplays.stats()` | Walls, viewers, client-only frames, packets sent, map pixels, estimated bytes, clicks, ids in use, display tick time. |
+
+Behaviour: viewers are players in the wall's world within the view distance whose client has the frame's chunk. Frames
+are spawned again after the chunk is re-sent, after respawn and world change, and forgotten on quit. All calls require
+the server thread (Folia is not supported).
+
+Ids: entity ids come from the server's own counter (`UnsafeValues#nextEntityId`), so they never collide with real
+entities. Map ids are taken from the reserved range `ClientDisplays.MAP_ID_FIRST` (`0x7F000000` = 2130706432) up to
+`Integer.MAX_VALUE`; real maps count up from 0 and never get there. The client keeps fake map data like real map data
+until it changes world. If a creative player pick-blocks a fake frame they get a map item with such an id that shows
+nothing on the server.
+
+Versions: one reflective adapter (Mojang-mapped Paper) for Paper/Purpur 1.21.8, 1.21.9, 1.21.10, 1.21.11, 26.1.x and
+26.2. All packet constructors used are identical in these versions; 26.2 moved the entity type constants to
+`EntityTypes` and per-world entity ids (`nextEntityId(World)`), both handled. Clicks use Paper's
+`PlayerUseUnknownEntityEvent`. Verified by booting Paper 1.21.8, 1.21.9, 1.21.10, 1.21.11, 26.1.2 and Purpur 26.2 (the probe
+encodes every packet) and,
+on 1.21.8, 1.21.11 and 26.1.2, with real protocol clients (spawns, map data, range/teleport/world change, clicks).
+
+Measured (2026-10-30, Vystorm Boards with 200 boards = 2757 tiles from 1x1 to 16x16, pages every 2 s, per-player
+greetings, rankings, polls, animated GIFs; each mode on a fresh world):
+
+| | client displays (packets) | real item frames |
+| --- | --- | --- |
+| Server entities | 0 | 2757 |
+| Idle, no players, Paper 1.21.8: MSPT / live heap | 0.8 ms / 311 MB | 1.5 ms / 370 MB |
+| Idle, no players, Purpur 26.2: MSPT / live heap | 0.8 ms / 303 MB | 1.9 ms / 366 MB |
+| 5 moving protocol bots, 1.21.8: MSPT avg (5 s windows) | 7-12 ms | 10-23 ms |
+| same: MSPT max (5 s windows) | 45-130 ms | 150-550 ms |
+| same: live heap after GC | 366 MB | 865 MB |
+| same: per viewer, uncompressed / zlib estimate | 516 / 36 KiB/s | 907 / 57 KiB/s |
+
+The display layer itself (`stats()` tick time) averaged 0.2-0.4 ms per tick in these runs. Map ids and entity ids in use
+stayed equal to the number of tiles through 20 reloads, 15 create/remove cycles, chunk unload/reload, world changes,
+deaths and mode switches; the heap did not grow over repeated churn rounds.
+
+## Client-only chunks (0.45.0)
+
+`packet.ClientChunks` (capability `CLIENT_CHUNKS`, `client-chunks`) sends whole chunks to one player's client as
+ordinary chunk packets, for chunks the server does not have yet (Vystorm Strata shows a coarse preview of terrain that
+is still being generated). The server never has these chunks: nothing is loaded, saved, ticked, mined or built, and
+the server's own chunk sending is left alone. When the server later sends the real chunk, it simply replaces the
+client-only one on the client. No ProtocolLib or PacketEvents needed.
+
+```java
+try {
+    if (CoreApi.has(CoreApi.Capability.CLIENT_CHUNKS) && ClientChunks.supported()) {   // server thread, once
+        ClientChunks.onReplaced(this, (player, cx, cz) -> { /* the real chunk arrived */ });
+        // any thread:
+        ClientChunks.Draft d = new ClientChunks.Draft(world, cx, cz);
+        d.fill(x, z, 40, 70, stone).set(x, 70, z, grass).biome(x, z, NamespacedKey.minecraft("plains"));
+        Optional<ClientChunks.Prepared> chunk = ClientChunks.prepare(d);
+        // server thread:
+        chunk.ifPresent(c -> ClientChunks.send(this, player, c));
+    }
+} catch (LinkageError olderCore) {
+    // Core < 0.45.0
+}
+```
+
+| Member | Meaning |
+| --- | --- |
+| `boolean supported()` / `unsupportedReason()` | The adapter works on this server: probed once on the server thread by building and encoding one test chunk with the server's own codec. Checked on Paper 1.21.8, 1.21.11, 26.1.2, 26.3 and Purpur 26.2, 26.3. |
+| `Draft(World, chunkX, chunkZ)` | Blocks (`set`, `fill` with world y, x/z 0-15) and a biome per column (`biome`, applied at the client's 4-block biome resolution). Unset blocks are air, unset biomes plains. Any thread, not thread safe. |
+| `Optional<Prepared> prepare(Draft)` | Builds the packet (any thread, after `supported()` returned true once): a detached chunk serialized by the server's own `ClientboundLevelChunkWithLightPacket`, heightmaps primed, sky light computed from the blocks (15 above the highest block, minus 1 per transparent block such as water, 0 under solid blocks). `bytes()` is the payload, `compressedBytes()` the payload deflated like the network layer (about the bytes on the wire), `buildNanos()`. A `Prepared` may be sent to several players of its world. |
+| `boolean send(Plugin, Player, Prepared)` | Server thread. Refused when unsupported, the owner is disabled, the player is in another world, the server has already sent the real chunk to the player (`Player.isChunkSent`), or another plugin shows a client-only chunk there. |
+| `boolean forget(Plugin, Player, x, z)`, `forgetAll(Plugin, Player)` | Remove client-only chunks from the client (`forgetAll(owner, null)` = all players). A real chunk is never forgotten. |
+| `shown(Plugin, Player)`, `showing(Player, x, z)` | Chunk keys (like `Chunk.getChunkKey`) a plugin shows to a player, as far as Core knows. Core stops tracking a chunk when the server sends the real one (`PlayerChunkLoadEvent`, then your `Replaced` listener runs), on quit, world change and respawn, and when it leaves the client's storage range (server view distance + 3, `clientRange`). |
+| `onReplaced(Plugin, Replaced)`, `release(Plugin)`, `stats()` | Listener for real chunks replacing yours; forget everything of a plugin (also its listener; tracking is dropped when it disables); counters (prepared, build time, sent, bytes, forgotten, replaced, refused). |
+
+The vanilla client only keeps and draws chunks within the view distance the server gives it (`getSendViewDistance()`;
+its own render distance caps it further), so client-only chunks farther away are not shown. Rate-limit what you send:
+a terrain shell chunk is about 10-20 KB of payload but only 0.5-1 KB on the wire after compression (measured with
+Vystorm Strata previews on Purpur 26.2).
+
+---
+
+## 24. Commands (`Vystorm.vystorm_core.commands`)
+
+Capability `commands` (0.45.0). Declare a command tree once; Core registers it, parses and checks it, and localizes
+everything a player sees: subcommand names, keyword values, tab completion, usage lines, generated help pages and
+error messages. It also adds localized root aliases from your language files and lists the command in `/vhelp`.
+Guard it with `CoreApi.has(CoreApi.Capability.COMMANDS)` (and `catch (LinkageError)`) if you still support older Cores.
+
+### 24.1 The global-label constraint and how Core handles it
+
+Minecraft has **one** command tree per server, so a label such as `/schienen` exists for everyone or for no one.
+Core therefore splits localization into two levels:
+
+| Level | Localized how | Example |
+| --- | --- | --- |
+| Root label | The English label (`CommandSpec.command("rails")`) and the fixed aliases always exist. **Localized root aliases** come from `commands.<cmd>.aliases` in each language file and are registered server-wide according to the admin's policy (`config.yml` `commands.localized-aliases`: `all` = every installed language, `default` = only the server language, `none`). Core never takes a label another command already has: the alias is skipped and shown as a collision in `/vadmin commands`. Aliases are applied on the first server tick, after every plugin has registered its own commands, so a Vystorm alias never steals a later plugin's label. | `/rails`, `/vrails`, `/schienen` (de), `/铁轨` (zh_cn) |
+| Subcommands, keyword values | **Per player.** Every installed language's names are accepted for everyone (`/rails ziel` = `/rails dest` = `/rails 目的地`); tab completion, usage and help use the player's language. When a typed name means two different subcommands in different languages, the player's own language wins, then English, then the others (`/vadmin commands` lists such conflicts). | `/rails ziel Hafen`, `/rails power an` |
+
+Arguments are parsed by Core's own engine and mounted as one greedy argument, so suggestions are computed per player
+on every keystroke (Paper asks the server). When a player's language changes (`PlayerLanguageChangeEvent`), Core
+re-sends their command tree.
+
+### 24.2 Declaring and registering
+
+```java
+import Vystorm.vystorm_core.commands.*;
+
+Lang lang = CoreApi.api().orElseThrow().lang().register(this);
+CoreCommands.register(this, lang, CommandSpec.command("rails")
+        .permission("vystormrails.use")
+        .aliases("vrails", "cart")                              // fixed aliases, like plugin.yml
+        .sub("dest", s -> s.aliases("destination").playerOnly()
+                .arg(Arg.greedy("name").optional().suggests((ctx, prefix) -> stations(ctx.player())))
+                .executes(ctx -> {
+                    String name = ctx.get("name");
+                    if (name == null) showDestination(ctx.player());
+                    else if (ctx.keyword(name, "clear") != null) clearDestination(ctx.player()); // clear / löschen / 清除
+                    else setDestination(ctx.player(), name);
+                }))
+        .sub("speed", s -> s.arg(Arg.integer("kmh", 1, 200)).cooldown(Duration.ofSeconds(2))
+                .executes(ctx -> setSpeed(ctx.player(), ctx.<Integer>get("kmh"))))
+        .sub("reload", s -> s.permission("vystormrails.admin").async().executes(ctx -> reload(ctx.sender())))
+        .build());
+```
+
+Call `register` in `onEnable` and **remove the command from plugin.yml** (otherwise two commands fight for the
+label). In `onEnable` Core uses Paper's Brigadier lifecycle API (`LifecycleEvents.COMMANDS` + `BasicCommand`, owned by
+your plugin, so `/vystormrails:rails` works too); later calls, other servers or `commands.registration: bukkit` use the
+Bukkit command map. Both work from the console. Core removes your commands when your plugin is disabled.
+
+`CoreCommands` (static, server thread):
+
+| Method | Description |
+| --- | --- |
+| `CommandRegistration register(Plugin, Lang, CommandSpec)` | Registers a tree (`lang` `null` = the plugin's registered bundle). The same label again replaces the earlier tree. |
+| `CommandRegistration adopt(JavaPlugin, Lang, CommandSpec declaration)` | Migration adapter for a plugin.yml command, see 24.6. |
+| `void unregister(CommandRegistration)` / `unregister(Plugin)` | Removes trees (Bukkit entries and aliases; a Paper root answers "not available" until restart). |
+| `List<CommandRegistration> registrations()` / `registrations(Plugin)` | Everything registered through Core. |
+| `Optional<CommandRegistration> find(String label)` | Owner of an English label, fixed alias or active localized alias (e.g. to treat `/nachricht` like `/msg` in a mute filter). |
+| `AliasPolicy aliasPolicy()` / `void refreshAliases()` | Current policy; re-apply aliases after editing language files. |
+
+`CommandSpec.Builder` (one builder for root and subcommands):
+
+| Method | Description |
+| --- | --- |
+| `command(String)` | Root; the English label. Ids are lower case `a-z 0-9 _ -`. |
+| `sub(String id, Consumer<Builder>)` | Subcommand with an English id; nest freely. |
+| `aliases(String...)` | Fixed names: root aliases (registered like plugin.yml aliases) or extra accepted subcommand names. Not localized. |
+| `permission(String)` | Checked for this node; Paper hides the root from players without it. |
+| `playerOnly()` | Console gets `command.error.player-only`; hidden from the console's help and completion. |
+| `cooldown(Duration)` | Per player; bypass with `vystorm_core.commands.bypass-cooldown`. |
+| `async()` | The handler runs on the async scheduler (parsing and checks stay on the server thread). |
+| `hidden()` | Runs, but not in help or completion. |
+| `arg(Arg<?>)` | Arguments in order; only trailing ones optional, only the last greedy. |
+| `executes(CommandHandler)` | What the node does. A node without handler but with subcommands shows its help. |
+| `description(String)` / `usage(String)` | English fallbacks when the language files have no text. |
+| `lang(String prefix)` | Root only: key prefix instead of `commands.<label>`. |
+| `help(boolean)` | Root only: switch off the generated `help` subcommand (default on when there are subcommands). |
+
+`Arg` types: `word`, `greedy`, `integer(id[, min, max])`, `decimal(id, min, max)`, `player` (online, visible; value
+`Player`), `playerName` (any name as text, suggests online players), `world` (value `World`), `choice(id, keys...)`
+(value: English key), `enumeration(id, Class<E>)`, `bool` (on/off/true/false/yes/no; value `Boolean`),
+`custom(id, Parser<T>)`. Modifiers: `optional()`, `suggests(Suggester)` / `suggests(Collection<String>)`.
+
+`CommandContext`: `sender()`, `player()`, `isPlayer()`, `label()` (as typed, e.g. `schienen`), `rawArgs()`, `node()`,
+`path()`, `get(id)` / `optional(id)` / `getOr(id, fallback)` / `has(id)` / `input(id)`, `lang()`, `language()`,
+`reply(key, placeholders...)`, `fail(key, placeholders...)` (returns a `CommandException` to throw), `usage()`,
+`keyword(input, keys...)`, `valueName(key)`, `registration()`.
+
+`CommandException(key, placeholders...)` (or `CommandException.withUsage(...)`): the key is looked up in your bundle,
+then Core's, so `command.error.*` can be reused.
+
+`CommandRegistration`: `plugin()`, `lang()`, `spec()`, `label()`, `mount()` (`PAPER`, `BUKKIT`, `ADAPTER`, `NONE`),
+`fixedAliases()`, `registeredLabels()`, `labelConflict()`, `localizedAliases()` (`Alias(alias, language, status,
+detail)` with `ACTIVE`, `OFF_BY_POLICY`, `DISABLED`, `COLLISION`, `PENDING`), `activeAliases()`, `conflicts()`,
+`adapter()`, and to run the tree directly (menus, admin panels): `execute(sender, label, args)`,
+`suggest(sender, label, args)`, `help(sender, label, page)`, `usage(sender, label, node)`, `description(sender, node)`,
+`entries(sender)`.
+
+### 24.3 Language key convention
+
+All keys live in **your** bundle (`lang/<code>.yml`); the prefix is `commands.<label>` unless you set `lang(...)`.
+`.sub.<id>` nests for every subcommand level.
+
+```yaml
+commands:
+  rails:
+    description: "Minecarts: destination, network map, cart info"   # /vhelp, help header
+    aliases: [schienen]          # localized ROOT aliases of this language (server-wide, admin policy)
+    usage: "..."                 # optional: arguments part of the root usage line (no <tags>, write NAME)
+    args:
+      name: NAME                 # display name of a root argument
+    sub:
+      dest:
+        name: ziel               # the subcommand's name in this language (shown in completion and help)
+        aliases: [reiseziel]     # more accepted names in this language
+        description: "Set or show your destination"
+        usage: "[BAHNHOF|löschen]"   # optional; generated from the arguments otherwise
+        args:
+          name: BAHNHOF          # argument display name; optional args are shown as [BAHNHOF]
+        sub:                     # deeper levels: commands.rails.sub.dest.sub.<id>...
+    values:
+      fast: schnell              # keyword values of choice/enum args (a list: first shown, all accepted)
+```
+
+Rules: keep the key set identical in every language file (use `aliases: []` where a language has none); `en.yml` may
+leave out `name` (the English id is used). A missing text falls back as usual (language → English → the id). Shared
+keyword values (`on`, `off`, `true`, `false`, `yes`, `no`, `clear`, `list`, `all`) come from Core's
+`command.values.*`; your `commands.<cmd>.values.<key>` overrides them for your command. Core's own framework texts are
+under `command.*` (singular): `command.help.*` (header, lines, hover, page buttons, the help subcommand's name:
+`help`/`hilfe`/`帮助`), `command.error.*`, `command.overview.*`, `command.admin.*`. Even plugins that have not migrated
+can add `commands.<cmd>.description` to localize their line in `/vhelp`.
+
+### 24.4 Help, errors and `/vhelp`
+
+- `/<label> help [page]`, `/<label> help <sub>` (also `?` and the localized name): one clickable line per runnable
+  node the sender may use (commands without required arguments run on click, others are typed into the chat), paged
+  (`commands.help-page-size`, default 8), filtered by permission and player-only.
+- Errors: no permission, player only, unknown subcommand with a clickable *did you mean* (edit distance, own language
+  first) and a link to the help, missing argument / too many arguments / bad number / unknown player or world / bad
+  keyword, each with the localized usage line, cooldown, plugin disabled, internal error (logged through
+  `ProviderFailures`).
+- `/vhelp [plugin] [page]` (aliases from Core's language files, e.g. `/vhilfe`, `/befehle`, `/v帮助`): every command
+  of every Vystorm plugin the player may use, grouped by plugin, in the player's language, with the active localized
+  alias of the player's language. Commands registered through Core open their help on click; plugin.yml commands are
+  typed into the chat (description from `commands.<name>.description` if the plugin has it, else plugin.yml).
+- `/vadmin commands [page]`: every tree with mount, fixed aliases, localized aliases (state, owner of a colliding
+  label, clickable **[switch off]/[switch on]**), subcommand name conflicts and the commands not migrated yet;
+  `/vadmin commands mode all|default|none`, `/vadmin commands alias <alias> on|off` (writes `config.yml`, applies at
+  once, players get the new command tree).
+
+`config.yml`:
+
+```yaml
+commands:
+  localized-aliases: all     # all | default | none
+  disabled-aliases: []       # e.g. [karte, "vystormrails:schienen"]
+  help-page-size: 8          # 3-20; /vhelp shows twice as many
+  registration: auto         # auto = Paper Brigadier during startup, bukkit = always the command map (restart)
+```
+
+### 24.5 Tests without a server
+
+`CommandTesting.detached(plugin, lang, spec)` returns a registration that is not mounted anywhere; call `execute`,
+`suggest`, `help`, `usage` and `conflicts` with mocked senders. Core's own texts are read from Core's jar. Build your
+spec in a static method (`static CommandSpec commandSpec(MyPlugin p)`) so tests can pass `null` when they do not run
+handlers.
+
+```java
+Lang lang = Lang.create("VystormRails", Map.of("en", read("en.yml"), "de", read("de.yml"), "zh_cn", read("zh_cn.yml")));
+CommandRegistration r = CommandTesting.detached(plugin, lang, RailsPlugin.commandSpec(null));
+assertEquals(List.of("ziel", "karte", "info", "bloecke", "hilfe"), r.suggest(germanPlayer, "rails", new String[]{""}));
+assertEquals(List.of(), r.conflicts());
+```
+
+### 24.6 Step-by-step migration: `adopt`
+
+Keep the plugin.yml command and its executor and let Core add the localization on top:
+
+```java
+CoreCommands.adopt(this, lang, CommandSpec.command("worlds")       // the plugin.yml command
+        .sub("tp", s -> s.arg(Arg.word("world")))                   // declare what you want localized
+        .sub("create", s -> s.permission("vystormworlds.admin"))
+        .build());
+```
+
+The adapter translates localized subcommand names and keyword values to the English ids before your old executor
+sees them (`/welten teleport Nether` reaches it as `tp Nether`), answers `help` itself, merges your old tab completer's
+suggestions with the localized ones, registers the localized root aliases and lists the command in `/vhelp`. Unknown
+tokens pass through unchanged, so dynamic subcommands keep working. Declared nodes with their own `executes(...)` run
+that handler instead, so you can move one subcommand at a time. When the whole tree has handlers, switch to
+`register` and delete the plugin.yml entry. `docs/COMMANDS-MIGRATION-de.md` lists every Vystorm plugin with an effort
+estimate.
+
+### Server polls (0.47.0)
+
+`CoreApi.Capability.SERVER_POLLS` (`server-polls`, since 0.47.0) indicates the built-in `/vpoll` system. Example: `CoreApi.has(CoreApi.Capability.SERVER_POLLS)`. Commands: `/vpoll`, `/vpoll results`, `/vpoll start <seconds> <question> | <answer> | <answer>`, `/vpoll close`, `/vpoll cancel`. Reading/voting requires `vystorm_core.poll`; management requires `vystorm_core.admin`. No public poll registry is exposed. Poll state is server-thread-only, in memory, and cleared on disable.
+
+
+## Guided setup (0.52.0)
+
+Capability: `CoreApi.Capability.SETUP_WIZARD` (`setup-wizard`). All calls below run on the server thread and are additive.
+
+```java
+SetupWizard.open(player, registry);
+List<String> plugins = SetupWizard.plugins(registry, player);
+int captured = SettingsProfiles.exportProfile(registry, player, folder, "shared",
+    Set.of("myplugin:cfg-general", "otherplugin:main"));
+SettingsDraft preview = SettingsProfiles.importProfile(registry, player, folder, "shared",
+    Set.of("myplugin", "otherplugin"));
+```
+
+The public classes are in `Vystorm.vystorm_core._uiMethods.settings`. Capture and import require `vystorm_core.admin` and each selected section's existing permission. Explicit config-editor sections allow their already-filtered scalar values without changing broad legacy profile exports. Hidden/secret paths are never exposed by that editor. Other providers still opt individual values in using `SettingPolicy.profileSafe`. Capture never overwrites an existing profile, contains at most 96 values and records each provider version. Import only stages changes; show the preview and require confirmation before applying. Missing providers selected for import, incompatible versions, revoked rights and stale values fail validation. Disabled providers are removed by the existing registry lifecycle.
+
+The wizard is available through `/vsettings setup` or `/einstellungen setup`. It uses the same native/portable dialog adapters as existing settings. Application invokes existing setters and save hooks; it is intentionally not an atomic transaction across independent plugins. Inspect partial-result messages and config history when a provider fails.
+
+## Network (0.53.0, experimental)
+
+Capability `CoreApi.Capability.NETWORK` (`network`, since `0.53.0`). Core on a Velocity or BungeeCord/Waterfall proxy is the hub; Core on each Paper/Spigot server connects to it. Without a proxy every call is a safe no-op.
+
+```java
+Network net = CoreApi.network();                 // never null
+if (net.connected()) {
+    net.broadcast("myplugin:refresh", payload);  // every other server
+    net.send("survival", "myplugin:mail", payload);
+    net.sendToPlayer(playerId, "myplugin:mail", payload); // follows server switches
+    net.sendPlayer(playerId, "lobby").thenAccept(ok -> { /* async, may complete off-thread */ });
+}
+Subscription sub = net.subscribe("myplugin:mail", (fromServer, bytes) -> {
+    // server main thread; bytes is a private copy
+});
+sub.close(); // also closed automatically when Core stops
+```
+
+| Method | Behaviour |
+|---|---|
+| `connected()` | true while connected to the hub |
+| `serverName()` | this server's name in the proxy config, `""` if unknown |
+| `servers()` | `NetworkServer(name, connected, players)` for every proxy server, sorted; empty when not connected |
+| `serverOf(UUID)` | server of a player anywhere in the network |
+| `sendPlayer(UUID, String)` | asks the proxy to move an online player; `false` after 10 s or on failure |
+| `send` / `sendToPlayer` / `broadcast` | fire-and-forget; dropped silently when not connected or the target is unknown |
+| `subscribe(channel, NetworkListener)` | delivery on the main thread until closed |
+
+Rules: channels are `"<plugin>:<name>"` in lowercase (`[a-z0-9_.-]{1,32}:[a-z0-9_./-]{1,64}`); `vystorm:*` is reserved and throws `IllegalArgumentException`. Payloads are opaque bytes, at most about 1 MiB per message. Messages are not persisted: a server that is offline at send time does not receive them later. Admin setup and security model: `docs/NETWORK.md`.
+
+
+## Inbox (0.55.0)
+
+`inbox.Inbox` (capability `INBOX`) leaves short personal messages for one player: a rent ran out, a payment failed,
+a contest was won. Online players get a clickable chat line at once, everyone else a "N new messages" line when they
+join; `/menu inbox` (main menu "Inbox") lists them, newest first, until they expire (`inbox.max-age-days`, default 30;
+at most `inbox.max-per-player`, default 50).
+
+```java
+try {
+    if (CoreApi.has(CoreApi.Capability.INBOX))
+        Inbox.send(this, ownerUuid, "inbox.rent-expired", "plot", plot.name(), "price", price);
+} catch (LinkageError olderCore) {}
+```
+
+`send` stores your plugin's language namespace, the key and the placeholder values (as strings); the text is rendered
+from your bundle when the player reads it, so every player sees their own language. Use a key that exists in your
+`lang/en.yml`. `sendText(plugin, player, text)` stores plain text instead. Both are thread-safe and return `false`
+when the inbox is switched off. `unread(player)` and `open(player)` (server thread) are also available.
+
+
+## Profile cards (0.56.0)
+
+`profile.Profiles` (capability `PROFILES`) lets your plugin add a short section to the player profile card that
+players open with `/menu profile [player]`, from the main menu or the player menu. Register once in `onEnable`:
+
+```java
+try {
+    if (CoreApi.has(CoreApi.Capability.PROFILES))
+        Profiles.register(this, (viewer, target) -> List.of(lang.component(viewer, "profile.balance", "xp", balance(target))));
+} catch (LinkageError olderCore) {}
+```
+
+The provider runs on the server thread when a card opens; return up to `Profiles.MAX_LINES` (6) lines, or an empty
+list to leave your section out. `target` may be offline. Failures are logged and skipped; your section disappears
+when your plugin is disabled.
+
+## Screens (0.57.0, prototype)
+
+Current through **0.59.0**. Clickable screens in the player's view work without a client mod and are free for every
+plugin. Capability `CoreApi.Capability.SCREENS` (`screens`) starts at 0.57.0; check `CoreApi.atLeast("0.58.0")` for
+widget styling and `CoreApi.atLeast("0.59.0")` for maps, inside the usual `LinkageError` guard on older Cores.
+The public package is `Vystorm.vystorm_core.screen`. All facade and session operations run on the server thread.
+
+### Modes and display settings
+
+- **PINNED:** fixed on the monitor with a pointer controlled by head movement. Requires the loaded Core resource
+  pack and `screen.classic` off. A different resource pack is not a substitute for Core's screen shader.
+- **FLOATING:** a screen 2.5 blocks in front of the player with the crosshair as cursor. Used when pinning is unavailable.
+- **AUTO:** chooses PINNED when the pack is loaded and classic mode is off, otherwise FLOATING.
+  An explicit PINNED preference also degrades to FLOATING; it is not a guarantee that map widgets will render.
+
+Iris and other shader packs can replace Core's shader. Players using them should choose `/screen classic on`;
+this prevents pinning and retains the floating/classic path. `/screen settings` configures resolution/aspect ratio,
+field of view and UI scale; `/screen close` closes the current screen.
+
+`Screens.of(Plugin)` returns an owner-bound facade. Its methods are `open(Player, ScreenSpec): ScreenOpenResult`,
+`close(Player)`, `session(Player): Optional<ScreenSession>`, `profile(Player): ScreenProfile` and
+`saveProfile(Player, ScreenProfile)`. `ScreenProfile(double aspect, int fov, double scale)` clamps values to its
+supported range (aspect 1.0–4.5, FOV 30–110, scale 0.6–1.6), with default 16:9, 70, 1.0. Use `viewWidth()` and
+`viewHeight()` to fit layouts to the viewer, and `withAspect`, `withFov`, `withScale` to derive modified profiles.
+
+`ScreenSpec.builder(String id, ScreenLayout)` supports `mode`, `backdrop`, `claim`, `onInput`, `fallback`, `build`.
+The default backdrop is BLACK. `ScreenSpec.Backdrop` also has DIM (world faintly visible), GRAY, WHITE and NONE.
+In 0.59.0 opaque backgrounds hide clouds and world text and cover ultrawide views using display settings.
+Pinned sessions temporarily hide the viewer's own hand/held item and rain locally and restore presentation on close.
+The pointer tip is the click hotspot; widget boxes and their text are aligned consistently.
+
+### Panels and existing inventory menus (0.58.0)
+
+Prefer `Panels` with a `PanelSpec` and `Ui` tree for ordinary menus. Core renders that tree as a screen automatically
+when the native client panel is unavailable and `screens.panels` is enabled (default true). The screen path is tried
+before the plugin's fallback, optional dialog and web fallback. It supports headers, sections/cards, rows/grids,
+tabs, sortable paged tables, lists with icons/selection, progress bars, key-value lists, toggles, number/choice
+fields and forms. The wheel scrolls content and the footer shows hover hints; text fields use a typing dialog.
+Keep the existing public panel action handlers and fallback; consumers do not implement a second layout engine.
+
+Core also mirrors chest, hopper and dispenser menus opened by plugins declaring `depend` or `softdepend` on Core.
+The implementation accepts dropper, barrel and shulker menu inventories too, but excludes real block/entity containers.
+`screens.inventories` enables this (default true); `screens.inventories-exclude` excludes plugin names
+(default DeepInventory, SkyInventory, Limitless). Missing packet support leaves the original inventory visible.
+The server inventory remains open while its client window is hidden: plugins still receive ordinary inventory
+click/close events and can open subsequent pages. Item tiles show names/counts with name/lore hover hints.
+An uncancelled item-moving click falls back to the actual inventory. Keep real inventory/transaction validation
+in your plugin; the screen mirror is for navigation, not a replacement for transfer mechanics.
+
+### Layout, boxes and input
+
+`new ScreenLayout(double width, double height, List<ScreenWidget> widgets)` uses panel units (blocks at distance 1).
+Widget `(u, v)` positions are top-left corners, u right and v down. Layouts preserve widget drawing order.
+Click coordinates instead have the panel center as origin, u right and v up.
+
+Factories: `ScreenWidget.label/button/input(id, u, v, width, height, text)`,
+`ScreenWidget.icon(id, u, v, width, height, icon)` (Material or ItemStack), and, since 0.58.0,
+`ScreenWidget.fill(id, u, v, width, height, int argb)` for a plain `Kind.FILL` rectangle.
+Text is a String or Adventure Component; render player-visible text from your language bundle.
+
+| Method/constant | Behavior |
+| --- | --- |
+| `withFill(int argb)` | Resting box color behind the entire widget; ARGB, not a map-palette index. |
+| `FILL_AUTO` | Kind default: slate boxes for buttons/inputs, none for labels. |
+| `FILL_NONE` | No box. |
+| `withAlign(ScreenWidget.Align)` | START, CENTER or END text alignment inside the box. |
+| `withSelected(boolean)` | Uses the highlight appearance for a selected tab or row. |
+| `withHighlight(int argb)` | Hover/selection color; automatic highlight is gold, with dark text on bright colors. |
+| `withTextHeight(double)` | Fixes text line height in panel units; over-wide text still shrinks to fit. |
+| `withText(Object)` / `withEnabled(boolean)` | Returns a modified immutable widget. |
+
+`ScreenSession.setText`, `setEnabled` and `setLayout` redraw an open screen. A replacement layout keeps the
+session's placement/backdrop; use unique stable widget IDs. Labels, icons and FILL rectangles are not clickable;
+enabled buttons, inputs and map widgets are. Put an explicit button over an item icon if it needs an action.
+
+`ScreenInput` variants:
+
+- `Click(widgetId, u, v, right)`: widgetId is null when no enabled clickable widget is hit.
+- `Hover(widgetId)`: pointer target changed; null means no clickable widget.
+- `Scroll(delta)`: wheel input.
+- `KeyInput(key, pressed)`: only keys requested with `ScreenSpec.Builder.claim(...)`; needs Paper 1.21.3+.
+- `Closed(reason)`: terminal session input; cancel consumer-owned animation/tasks here.
+
+Opening is refused when a screen is already open, while riding/gliding/falling/in liquid, or within five seconds of
+damage. `ScreenOpenResult.opened()` reports success; `mode()` gives the chosen mode and `refusedKey()` the failure key.
+The spec's fallback runs on refusal or unsupported rendering. Closing occurs on sneak (unless SNEAK is claimed),
+`/screen close`, damage, death, teleport, world change, quit, owner disable, or `ScreenSession.close()`.
+
+### Map widgets (0.59.0)
+
+`ScreenWidget.MapGrid(int columns, int rows)` allows 1×1 through 8×8 tiles. Each tile is a 128×128 client map,
+but one row carries a shader header: usable dimensions are **128×127**. `pixelWidth()` and `pixelHeight()` return
+the canvas size. Use `height = width * grid.pixelHeight() / grid.pixelWidth()` to keep square pixels.
+
+```java
+// On the server thread; plugin, player and lang are your Plugin, Player and registered Lang.
+ScreenWidget.MapGrid grid = new ScreenWidget.MapGrid(2, 1);
+ScreenWidget map = ScreenWidget.map("map", 0.05, 0.1, 0.8,
+        0.8 * grid.pixelHeight() / grid.pixelWidth(), grid,
+        lang.component(player, "screen.map-unavailable"));
+ScreenLayout layout = new ScreenLayout(0.9, 0.6, List.of(
+        ScreenWidget.fill("background", 0, 0, 0.9, 0.6, 0xFF1B1F27), map,
+        ScreenWidget.button("close", 0.3, 0.5, 0.3, 0.07, lang.component(player, "screen.close"))
+                .withSelected(true).withHighlight(0xF0E3B04B)));
+Screens screens = Screens.of(plugin);
+ScreenOpenResult opened = screens.open(player, ScreenSpec.builder("example:map", layout)
+        .onInput((session, input) -> {
+            if (input instanceof ScreenInput.Click click && "close".equals(click.widgetId())) session.close();
+        })
+        .fallback(p -> lang.send(p, "screen.unavailable"))
+        .build());
+if (opened.opened()) screens.session(player).ifPresent(session -> {
+    byte[] colours = new byte[grid.pixelWidth() * grid.pixelHeight()];
+    java.util.Arrays.fill(colours, (byte) 34); // Minecraft map-palette index, not RGB
+    session.setMap("map", colours);
+});
+```
+
+Add the example language keys to your bundle. `ScreenSession.setMap(String widgetId, byte[] colours)` takes
+row-major Minecraft map-palette bytes of exactly the canvas size. Core retains the array, so submit a fresh buffer
+per change and never mutate it afterwards. Unknown IDs/non-map widgets are ignored. Early updates are retained
+until deferred visual construction finishes; `showsMap(id)` can be false initially and reports actual drawn frames.
+
+Maps are drawn only in PINNED mode with Core's shader and supported client-only frames; otherwise the supplied
+placeholder text appears. They use packet-only frames/maps, with no server map or frame entity per tile.
+Maps draw above ordinary widgets; only the pointer stays above them. Place controls outside map bounds.
+Map clicks carry the widget ID; `map.mapPixel(click.u(), click.v(), layout.width(), layout.height())` returns
+clamped `{x, y}` canvas pixels (y down). Validate current UI and game state before applying click actions.
+
+### GIFs and per-viewer bandwidth (0.59.0)
+
+`/screen demo map` shows loaded terrain around the viewer (sneak zooms in, jump zooms out; click reports coordinates).
+`/screen demo gif NAME` plays `plugins/vystorm_core/screens/NAME.gif`. The demo decodes at most 300 frames off-thread,
+composes frame offsets/disposal, preserves aspect ratio, and converts to Minecraft's limited map palette using
+Floyd–Steinberg dithering. It loops at GIF timing with a minimum of one server tick per frame, stopping on close.
+
+There is no public GIF decoding helper: consumers own decoding, palette conversion and scheduling and submit pixels
+through `ScreenSession.setMap` on the server thread. Do expensive image work off-thread and release buffers/tasks
+when the session ends. Palette limits mean this is not full-color video; dithering trades color appearance for detail.
+
+Every update sends full 128×128 tiles only to the viewer. Screen maps do not inherit the world-map-wall service's
+changed-rectangle sender or packet budgets. Estimate uncompressed pixel payload as
+`tile count × 16,384 bytes × frames per second × viewers`, plus protocol overhead, before compression.
+A 2×2 canvas at 10 FPS is about 640 KiB/s per viewer; 8×8 at 20 FPS is about 20 MiB/s per viewer.
+Use small canvases, lower frame rates and unchanged-frame suppression; cache palette frames and stop idle animations.
+Use direct Screens for custom maps/minigames; prefer Panels for normal UI and retain an accessible fallback.

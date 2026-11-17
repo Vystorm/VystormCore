@@ -1,0 +1,47 @@
+title: Vystorm Core
+permission: ''
+pages:
+  - title: Einstieg mit /vmenu
+    text: |
+      1. Gib /vmenu im Chat ein.
+      2. Wähle „Tutorials“.
+      3. Wähle „Pluginname · Anleitung“ und danach ein Thema.
+      4. „Alle Tutorials“ bringt dich zur Plugin-Auswahl; dort führt „Zurück zu /vmenu“ zum Hauptmenü.
+
+      Core verbindet die Bedienung der eigenen Plugins. Inventare mit echten Items bleiben Inventare; Eingaben, Bestätigungen und Anleitungen öffnen sich als Minecraft-Dialoge.
+  - title: Hauptmenü und ESC-Menü
+    text: |
+      Das Vystorm-Hauptmenü öffnest du auf drei Wegen:
+      1. /vmenu im Chat.
+      2. ESC drücken und „Vystorm-Menü“ wählen.
+      3. Die Schnellaktions-Taste (Minecraft-Tastenbelegung „Schnellaktionen“).
+
+      Das Hauptmenü ordnet alle Plugins in Bereiche: Charakter, Wirtschaft, Gemeinschaft, Welt & Abenteuer, Bauen & Technik, Tutorials und – für Admins – Administration. Ein Bereich erscheint nur, wenn du dort etwas öffnen darfst.
+  - title: Einstellungen
+    text: |
+      Hauptmenü → „Einstellungen“ oder /einstellungen öffnet deine persönlichen Einstellungen aller Plugins. Werte ändern und „Speichern“ drücken; nur geänderte Werte werden übernommen.
+
+      Admins sehen zusätzlich „Server-Einstellungen“: die Konfiguration der Plugins. Änderungen gelten sofort für den ganzen Server. /einstellungen server öffnet sie direkt.
+  - title: Anleitungen finden
+    text: |
+      1. Öffne /vmenu und wähle „Tutorials“.
+      2. Wähle „Pluginname · Anleitung“.
+      3. Wähle ein Thema. „Weiter“ und „Zurück“ blättern durch die Anleitung; „Alle Themen“ führt zur Übersicht.
+
+      Direkt öffnet /vmenu tutorials die Tutorial-Kategorie; vorhandene direkte Schlüssel wie /vmenu deepinventory:tutorial bleiben verfügbar.
+
+      Mit /vmenu list siehst du die verfügbaren Menü-Schlüssel. Einen Schlüssel kannst du direkt hinter /vmenu setzen, z.B. /vmenu deepinventory:tutorial. Die Tab-Taste hilft beim Auswählen.
+  - title: Dialoge bedienen
+    text: |
+      Eingaben: Fülle die beschrifteten Felder aus und drücke „Übernehmen“ bzw. den angezeigten Aktionsknopf.
+      Bestätigungen: Lies Ziel und Kosten, bevor du bestätigst. „Abbrechen“ führt die Aktion nicht aus.
+      Anleitungen: Die Knöpfe blättern nur; sie kaufen, bauen und verändern nichts.
+
+      Dialoge laufen nach ungefähr einer Minute ab. Öffne das Menü neu, wenn eine alte Antwort nicht mehr angenommen wird. Auch zwischenzeitlich geänderte Rechte, Bestände oder Ziele können eine Aktion ungültig machen.
+  - title: Wenn etwas nicht verfügbar ist
+    text: |
+      Fehlt ein Eintrag, prüfe zuerst /vmenu list. Ein Plugin kann abgeschaltet sein oder dir kann die Berechtigung fehlen.
+
+      Lies bei einer abgelehnten Aktion die Meldung im Chat und das entsprechende Tutorial: Häufig fehlen Platz, Guthaben, ein vollständiger Aufbau oder Zugriff auf das Ziel.
+
+      Hat sich seit dem Öffnen etwas geändert, öffne die Ansicht erneut. Bleibt der Fehler, melde dem Serverteam das Plugin, deine Aktion und den genauen Meldungstext.

@@ -1,0 +1,1356 @@
+# Português (Brasil) — UTF-8. Keep keys, placeholders and formatting tokens unchanged.
+language:
+  name: Português (Brasil)
+common:
+  close: Fechar
+  menu-unavailable: <red>Este menu não está disponível.
+  settings-unavailable: <red>Essas configurações não estão disponíveis.
+  settings-gone: <red>Essas configurações não estão mais disponíveis.
+  previous: ← Voltar
+  next: Próximo →
+dialog:
+  legacy:
+    input: <yellow>Clique para digitar um valor, depois envie o comando.
+    invalid: <red>Valor inválido. Por favor, tente de novo.
+    'yes': Sim
+    'no': Não
+  cancel: Cancelar
+  close: Fechar
+  apply: Aplicar
+  confirm: Confirmar
+chat:
+  teleport-hover: 'Clique: teletransporte para lá'
+  coordinates: '<gray>Coordenadas: {world} {coords}'
+  copy-clipboard-hover: 'Clique em: copiar para a área de transferência'
+  copy-hover: 'Click: copiado'
+  no-permission: <red>Você não tem permissão para fazer isso.
+  already-used: <gray>Esta ação já foi usada.
+  menu-hover: 'Clique: abra o menu'
+  settings-hover: 'Clique: abrir configurações'
+  teleported: <gray>Teleportado para {world} {x} {y} {z}.
+menu:
+  screen:
+    search: "Buscar"
+    display: "Tela"
+    close: "Fechar"
+    hint: "<gray>Roda do mouse: rolar · agachar ou Fechar: sair · página {page}/{pages}"
+  explorer:
+    clear-recent: Limpar menus recentes
+    recent-cleared: <gray>Seu histórico do menu foi limpo.
+    title: Encontrar e salvar menus
+    all: Todos
+    favorites: Favoritos
+    recent: Abertos recentemente
+    search: Pesquisar
+    pin: ☆ Salvar
+    unpin: ★ Remover
+    full: Você pode economizar até 20 menus favoritos.
+    summary: '{count} menus · Página {page}/{pages}'
+  access:
+    missing-permission: 'Falta a permissão necessária: {permission}.'
+    provider-failed: A verificação de acesso do plugin falhou.
+    allowed: Acesso permitido
+    disabled: O plugin está desativado.
+    denied: O controle de acesso do plugin negou acesso, nenhuma explicação detalhada foi registrada.
+    no-permission: Você precisa de vystorm_core.admin para esta ação.
+    online-only: Por favor, escolha um jogador que esteja online.
+    line: '{menu} para {player}: {reason}'
+  panel:
+    subtitle: Tudo de relance - clique para abrir
+    general: Geral
+  home: ⌂ Menu principal
+  back: ← Voltar
+  settings-button: ⚙ Configurações
+  players-only: Só os jogadores podem abrir menus.
+  unavailable: <red>Menu não disponível ou sem permissão.
+  directory:
+    title: Vystorm · Menu principal
+    group-title: Vystorm · {group}
+    welcome: Bem-vindo, {player}! Escolha uma área.
+    empty: Nada está disponível aqui agora.
+    choose: Escolha um menu.
+  category:
+    character:
+      title: Carácter
+      description: Habilidades, companheiros e sua condição
+    economy:
+      title: Economia
+      description: Dinheiro, mercado e armazenamento
+    community:
+      title: Comunidade
+      description: Cidades, grupos e outros jogadores
+    world:
+      title: Mundo e Aventura
+      description: Arenas, recompensas e eventos mundiais
+    building:
+      title: Construção e tecnologia
+      description: Ferramentas de construção e blocos funcionais
+    tutorials:
+      title: Tutoriais
+      description: Guias para todos os plugins
+    admin:
+      title: Administração
+      description: Ferramentas para administradores
+  settings:
+    title: Configurações
+    description: Suas configurações - para administradores também as configurações do servidor
+pause:
+  pack-description: 'Vystorm Core: Vystorm menu no menu de pausa (ESC) e como uma ação rápida'
+  external-title: Menu Vystorm
+  body: Todos os menus, configurações e guias dos Vystorm plugins.
+  main: ⌂ Menu principal
+  main-tooltip: 'Todas as áreas: caráter, economia, comunidade, mundo...'
+  settings: ⚙ Configurações
+  settings-tooltip: Configurações pessoais – e para administrar as configurações do servidor
+  tutorials: '"Tutoriais"'
+  tutorials-tooltip: Guias para todos os plugins
+  back: Voltar
+settings:
+  profile:
+    exported: 'Perfil {name}: exportado {count} valores de servidor aprovados para configurações-perfils. Só explicitamente
+      configurações seguras de perfil estão incluídas.'
+    failed: Não foi possível processar o perfil. Verifique o nome, formato, versões de plugins e valores aprovados; detalhes
+      no registro do servidor.
+    usage: /einstellungen profile <export|import> <name>
+  draft:
+    title: Prepare as mudanças do servidor
+    intro: '{count} mudanças encenadas. Escolha seções, nada foi salvo ainda.'
+    preview: Reveja as mudanças
+    stage: Mudanças de palco
+    continue: Adicione mais mudanças
+    apply: Aplique alterações revisadas
+    warning: Permissões e valores originais são verificados novamente. Plugins individuais podem falhar, isso não é uma transação
+      atômica e não tem uma anulação automática.
+    expired: O rascunho expirou ou está cheio (máximo 96 mudanças / 15 minutos). Por favor, comece de novo.
+    conflicts: 'Nada aplicado: valores, permissões ou plugins alterados: {keys}'
+    partial: Algumas mudanças não poderiam ser aplicadas. Verifique as configurações atuais e o registro do servidor.
+    line: '{setting}: {before} → {after} · {activation}'
+    activation-immediate: Imediatamente
+    activation-reload: Depois do plugin recarregar
+    activation-restart: após o servidor reiniciar
+    activation-unknown: plugin não é especificado quando as mudanças fazem efeito
+  panel:
+    filter: Pesquisar
+    filter-hint: Colocando ou plugin...
+    no-match: Nenhuma configuração bate com a busca.
+    all: Todas as configurações
+    read-failed: Não consegui ler esse valor.
+  players-only: Só os jogadores podem abrir as configurações.
+  no-server: <red>Nenhuma configuração do servidor disponível.
+  not-found: <red>Configurações não encontradas ou sem permissão.
+  title: Configurações
+  choose: Escolha o que quer mudar.
+  personal: Configurações pessoais
+  personal-tooltip: Suas próprias configurações para todos os plugins
+  server: <gold>Configurações do servidor
+  server-title: Configurações do servidor
+  server-tooltip: Configuração do plug-in (admin)
+  up: ↑ Configurações
+  web: Abra a página web
+  web-tooltip: As mesmas configurações de uma página. Com o mod de Vystorm clientes que abre imediatamente, caso contrário
+    você tem um link de login no chat.
+  empty: Não há nada para definir aqui ainda.
+  personal-text: Escolha uma área. As mudanças só se aplicam a você.
+  server-text: Escolha um plugin. Mudanças se aplicam a todo o servidor imediatamente.
+  read-failed: <red>⚠ {label} não puderam ser lidos.
+  save: <green>✔ Salvar
+  overview: ← Visão geral
+  invalid: '<red>{label}: valor inválido'
+  error: '<red>✖ {label}: {error}'
+  save-failed: '<red>{label}: erro ao salvar'
+  apply-failed: <red>A aplicação falhou – veja o registro do servidor
+  saved-one: <green>✔ 1 moedas salvas.
+  saved-many: <green>✔ {count} mudanças salvas.
+  no-changes: <gray>Sem mudanças.
+  not-integer: Não um número inteiro
+  not-number: Não um número
+  range: 'permitido: {min} – {max}'
+  language:
+    title: Idioma
+    description: Linguagem dos menus e mensagens
+    label: Idioma
+    hint: '"Automática" segue sua linguagem Minecraft.'
+    auto: Automático (língua do jogo)
+  menu:
+    description: Menus e menu de pausa
+    pause-menu: Vystorm menu no menu ESC
+    pause-menu-hint: Botão no menu de pausa e ação rápida (chave). Faz efeito após o próximo servidor reiniciar.
+    restart: <yellow>O menu de pausas muda após o próximo servidor reiniciar.
+nbt:
+  players-only: Só jogadores.
+  no-permission: Você não tem permissão para fazer isso.
+  set: NBT em {value}
+  entry: 'Chave: {key} Valor: {value}'
+region:
+  no-permission: <red>Você não tem permissão.
+  list: '<gold>Regiões: <white>{count}'
+  more: <gray>... {count} mais
+  player-not-found: <red>Jogador não encontrado.
+  at: '<gold>Regiões em <white>{player} <gray>({x}, {y}, {z}): <white>{count}'
+  none: nenhum
+  usage: <gray>/vregion at [player] <dark_gray>| <gray>/vregion list [kind]
+web:
+  no-permission: <red>Você não tem permissão.
+  status: '<gray>Web: {status}'
+  modules: '<gray>Módulos: {modules}'
+  console-only: <red>Apenas Console.
+  link-usage: /web link <player|uuid> [module]
+  unknown-player: 'Jogador desconhecido (nome não armazenado: use o UUID).'
+  unknown-module: 'Módulo desconhecido: {module}'
+  link: 'Link de login para {player} (uso único, expira em breve): {link}'
+  disabled: A interface da web está desligada.
+  players-only: Só jogadores.
+  logout-none: <gray>Você não teve nenhuma sessão web ativa.
+  logout-done: <gray>Todas as suas sessões web foram encerradas ({count}).
+  console-usage: /web status | /web link <player|uuid> [module]
+  unknown-ui: '<red>Interface web desconhecida: {name}'
+  not-active: <red>A interface web não está ativa neste servidor.
+  not-for-you: <red>Esta interface web não está disponível para você.
+  open-label: Abrir interface web
+  link-hover: <gray>Abre a interface da web no seu navegador.
+  link-warning: <yellow>O link é válido brevemente e apenas uma vez. Não compartilhe!
+  link-suffix: <dark_gray> (link válido {seconds} s, uso único, não compartilhar)
+  client-too-fast: Não tão rápido.
+  client-not-active: A interface web não está ativa neste servidor.
+  client-unknown: Essa interface não existe.
+  client-not-for-you: Esta interface web não está disponível para você.
+  ui:
+    index:
+      loading: Carregando...
+      not-logged-in: Você não está conectado. Digite /web no jogo e clique no link no chat.
+      choose: 'Entraram como {player}. Escolha uma interface:'
+      none: Entraram como {player}. Nenhuma interface está disponível para você agora.
+    login:
+      title: Vystorm - Login
+      running: Entrando...
+      overview: Para a visão geral
+      bad-link: Não é um link de login válido. Tipo /web no jogo e clique no novo link.
+      failed: O login falhou (HTTP {status}).
+      success: Entraram como {player}. Continuando...
+      unreachable: Servidor não acessível. Por favor, tente novamente mais tarde.
+    header:
+      logout: Sair
+      theme: Luz / Escuro
+      theme-toggle: Alternar luz/escuro
+      language: Idioma
+      online: on-line
+      offline: off-line
+    login-hint: Você não está mais conectado. Digite {command} no jogo e clique no link para entrar novamente.
+    profile:
+      title: Vystorm - Perfil
+      heading: Perfil
+      live: Viva
+      live-hint: Atualizações sem recarregar (join/quit, nível, mudança mundial).
+      connecting: Conectando...
+      echo: Teste de conexão
+      echo-hint: Envia um texto para o servidor e volta (checa login, CSRF proteção e limite de taxa).
+      echo-placeholder: Olá, Vystorm
+      echo-label: Texto
+      send: Enviar
+      name: Nome
+      status: Estado
+      online: on-line
+      offline: off-line
+      world: Mundo
+      level: Nível (XP)
+      health: Vida
+      offline-in-game: Desligado no jogo.
+      online-in: Online em {world}, nível {level}.
+      answer: 'Resposta: {echo} ({at})'
+      error: 'Erro: {message}'
+    app:
+      server-unreachable: Servidor não acessível
+      not-found: Não encontrado
+      overview: Para a visão geral
+      auth-lost: Você não está mais conectado. Digite {command} no jogo e clique no link.
+      live-title: 'Canal ao vivo: {status}'
+      live-ready: Viva
+      live-connecting: conectando...
+      live-offline: off-line
+      loading: Carregando...
+      not-logged-in: Não conectado. Digite {command} no jogo e clique no link no chat.
+      components: Visão geral do componente
+      hello: Olá, {player}
+      login-running: Entrando...
+      login-bad-link: Não é um link de login válido. Tipo /web no jogo e clique no novo link.
+      login-success: Entraram como {player}. Continuando...
+      login-failed: O login falhou.
+      unavailable: Não disponível
+      no-page: Não há página para "{id}" aqui.
+      no-page-update: A interface do servidor ainda não tem página para "{title}". Peça ao administrador do servidor para
+        atualizar o web UI (um novo Vystorm Core ou o gateway vystorm-web-ui build).
+      login-required: Por favor, entre no jogo com {command}.
+      not-unlocked: Esta interface não está destrancada para você ou o servidor não oferece agora.
+      page-failed: 'A página não pôde ser carregada: {message}'
+      loading-page: Carregando {title}...
+      page:
+        core: Perfil
+        skills: Árvore de talentos
+        items: Forjar & Itens
+        kit: Componentes
+      profile:
+        in-game: No jogo
+        offline: Off-line
+        world-level: '{world}, nível {level}'
+        live-hint: Atualizações sem recarregar (join/quit, nível, mudança mundial).
+        waiting: Esperando por dados ao vivo...
+    settings:
+      title: Vystorm - Configurações
+      heading: Configurações
+      personal: Configurações pessoais
+      personal-hint: Só para você. Mudanças se aplicam no jogo imediatamente.
+      server: Configurações do servidor
+      server-hint: Configuração do plug-in para todo o servidor (admins). Mudanças se aplicam imediatamente.
+      offline: Junte-se ao servidor para ver e alterar suas configurações, eles estão armazenados no jogo.
+      unsupported: Este servidor substituiu o menu de configurações do Core. Abra as configurações no jogo com {command}.
+      empty: Não há nada para definir aqui ainda.
+      loading: Carregando configurações...
+      saving: Salvando...
+      saved: Salvo
+      invalid: '{label}: valor inválido'
+      rejected: '{label}: {message}'
+      failed: '{label}: erro ao salvar'
+      apply-failed: Salvo, mas a aplicação falhou – veja o registro do servidor.
+      unreadable: Não podia ser lido.
+      updated: As configurações foram alteradas no jogo.
+      gone: Esta seção não está mais disponível.
+      state-on: Ativado
+      state-off: Desativado
+      range: '{min} – {max}'
+      filter: Configurações do filtro
+      no-match: Nenhuma configuração combina com "{query}".
+      sections: Seções
+    kit:
+      close: Fechar
+      confirm: Confirmar
+      ok: OK
+      cancel: Cancelar
+      tabs: Seções
+      canvas: Canvas
+      zoom-in: Ampliar
+      zoom-out: Reduzir
+      fit: Mostre a todos
+      center: Centro
+      count: '{count} PCS'
+      pieces: '{name}, {count} pcs'
+      empty-slot: Espaço vazio
+      not-possible: Não é possível
+      recipe: Receita
+      result: 'Resultado: {name}'
+      no-result: Nenhum resultado
+      progress: Progresso
+      done: Feito
+      remaining: '{time} esquerda'
+      level: Nível
+      max: Max
+      item-level: Nível {level}
+      item-level-range: Nível {from}-{to}
+      unidentified: Não identificado, propriedades desconhecidas.
+      vanilla: Vanilla item
+      range-title: Alcance do valor base
+      random-affixes: + afixos aleatórios dependendo da raridade
+      empty-socket: Soquete vazio ({type})
+      fixed: '[fixed]'
+      set-pieces: ({count} peças)
+      requirements: Requisitos
+      broken: Quebrado
+      durability: Durabilidade
+      durability-max: Durabilidade {max}
+      quality: Qualidade {value} %
+      upgrade: Atualização +{value}
+      bound: Preso
+      bound-self: Preso a você
+      bound-to: Limitado a {name}
+  module:
+    profile:
+      title: Perfil
+      description: Seu perfil de Vystorm e um teste de conexão da interface web.
+    settings:
+      title: Configurações
+      description: Suas configurações pessoais de todos os Vystorm plugins (e configurações de servidor para administradores).
+  error:
+    not-found: Não encontrei.
+    method-not-allowed: Método não permitido.
+    bad-origin: Origem inválida.
+    bad-path: Caminho inválido.
+    unexpected-body: Corpo de pedido inesperado.
+    internal: Erro interno.
+    no-web-permission: Você não tem permissão para usar a interface web.
+    too-large: Pedido muito grande.
+    too-many-requests: Muitos pedidos.
+    bad-target: Alvo inválido.
+    bad-line-end: Fim de linha inválido.
+    bad-json: JSON inválidos.
+    shutting-down: O servidor está desligando.
+    json-expected: JSON esperados.
+    no-permission: Você não tem permissão para fazer isso.
+    bad-csrf: CSRF fichas desaparecidas ou erradas.
+    too-many-connects: Muitas tentativas de conexão.
+    too-many-params: Muitos parâmetros.
+    too-many-live: Muitas conexões abertas ao vivo.
+    too-many-headers: Muitos cabeçalhos.
+    too-many-logins: Muitas tentativas de login.
+    read-timeout: Tempo esgotado enquanto lia o pedido.
+    timeout: Tempo esgotado.
+    bad-utf8: UTF-8 inválidos.
+    bad-param: Parâmetro inválido.
+    bad-header-value: Valor de cabeçalho inválido.
+    bad-header-name: Nome de cabeçalho inválido.
+    bad-header: Cabeçalho inválido.
+    bad-module-list: Lista de módulos inválida.
+    bad-method: Método inválido.
+    bad-content-length: Comprimento de Conteúdo Inválido.
+    bad-request-line: Linha de solicitação inválida.
+    bad-request: Pedido inválido.
+    unknown-host: Hospedeiro desconhecido.
+    no-transfer-encoding: A codificação de transferência não é suportada.
+    busy-retry: Servidor ocupado, por favor tente novamente em um momento.
+    busy: Servidor ocupado.
+    param-too-long: Parâmetro muito longo.
+    http11-only: HTTP/1.1 apenas.
+    not-logged-in: Não conectado.
+    module-not-found: Módulo não encontrado.
+    live-busy: Canal ao vivo ocupado.
+    json-too-deep: JSON aninhados muito profundamente.
+    host-missing: Anfitrião desaparecido.
+    echo-too-long: No máximo 200 personagens.
+    header-folding: Dobrar cabeças não é permitido.
+    echo-missing: Falta a mensagem de campo.
+    no-expect: A expectativa não é suportada.
+    busy-now: O servidor está ocupado agora, por favor tente de novo em um momento.
+    link-invalid: O link é inválido ou expirou. Obter um novo no jogo com /web.
+    must-be-online: Precisa estar online para isso.
+    body-mismatch: Pedido de corpo não bate.
+    body-missing: Pedido de corpo desaparecido.
+    aborted: Abortado.
+    url-too-long: Morada longa demais.
+    login-required: Não conectado. Obter um link de login no jogo com /web.
+    line-too-long: Pedir fila demais.
+    header-too-large: Cabeçalhos muito grandes.
+    param-missing: 'Parâmetro faltando: {name}'
+    settings-unavailable: As configurações não estão disponíveis na web neste servidor.
+    settings-not-found: Seção de configurações não encontrada ou não permitida.
+pack:
+  prompt: Vystorm precisa de seu pacote de recursos para itens personalizados e interfaces.
+  declined: Recusou
+  failed: não carregado ({status})
+  problem: <yellow>O pacote de recursos Vystorm era {reason}. Alguns itens e interfaces parecerão errados, serão oferecidos
+    novamente na próxima vez que você entrar.
+tutorial:
+  gif-pinned-only: "<gray>A animação de construção precisa de telas fixas (pacote do Core carregado, telas clássicas desligadas)."
+  menu-title: '{title} · Guia'
+  choose: Escolha um tópico. Página {page}/{pages}
+  topics-back: ← Tópicos anteriores
+  topics-more: Mais tópicos →
+  all-tutorials: Todos os tutoriais
+  all-topics: Todos os tópicos
+admin:
+  language-audit: '{plugin}/{language}: {total} chaves, {missing} faltando, {bundled} empacotado recuo, {english} Inglês recuo,
+    {placeholders} placeholder mismatchs'
+  language-audit-keys: '{kind}: {keys}'
+  menu-title: Painel de administração
+  menu-description: Comandos e status de todos os plugins
+  no-permission: <red>Você precisa de vystorm_core.admin para isso.
+  usage: /vadmin <list|status|module|language [reload|audit]|config [plugin]|permissions [plugin]|updates [check]|diagnostics
+    [player]|migration <id>|loot>
+  list-line: <gray>{id} <white>{title} <dark_gray>{state}
+  unknown-module: <red>Módulo desconhecido ou não permitido. /vadmin list
+  ingame-only: <red>Módulos só abrem no jogo como diálogo.
+  active: '{version} ativos'
+  unavailable: não disponível
+  title: Vystorm Administrador
+  page: Módulos {page} / {pages}
+  native: Abra a interface nativa
+  server-settings: ⚙ Configurações do servidor
+  settings-unavailable: <red>Configurações não disponíveis.
+  overview: ⌂ Visão geral
+  module-info: 'Versão: {version} Comando: {command}'
+  syntax: |-
+    Sintaxe: {command} {fixed} {hint}
+    Exemplo: {example}
+  next: Próximo
+  invalid-input: <red>Inválido ou não permitido.
+  confirm-title: Confirmar ação
+  action-gone: <red>Ação não está mais disponível.
+  wrong-owner: <red>O comando não pertence ao plugin esperado.
+  language: |-
+    <gold>Língua: <white>{default}</white> <gray>(auto = linguagem cliente de cada jogador, console = en)
+    <gold>Bundles: <white>{bundles}
+  language-reloaded: <green>Arquivos de idiomas recarregados ({count} plugins).
+  language-setup: |-
+    <gold>Língua do servidor: <white>{server}</white> <gray>{forced} · /language ofertas: <white>{languages}</white> <gray>(min. cobertura {coverage} %)
+    <gold>Recuos: <white>{fallbacks}</white> <gray>(Então a parte da linguagem, então en)
+  language-usage: <gray>/vadmin language [reload | audit [plugin|*] [lang] | export <plugin> <lang> [yml|csv] | import <file>
+    [plugin] [lang]]
+  language-audit-header: <gold>Auditoria de tradução <gray>- {plugins} plugins, {languages} idiomas; chaves comparadas com
+    en
+  language-audit-total: <gold>{name} <white>({language})</white> <gray>- {coverage} % de todos os plugins
+  language-audit-line: <gray> · <white>{plugin}</white>/<white>{language}</white>{coverage} % · {total} chaves · <red>{missing}
+    desaparecidos</red> · <yellow>{untranslated} não traduzidas</yellow> - {placeholders} descompassos
+  language-audit-more: <dark_gray>   ... e {count} mais
+  language-audit-hint: '<gray>Detalhes com listas de chaves: /vadmin language audit <plugin> [lang] · Todos os plugins para
+    uma língua: /vadmin language audit * <lang>'
+  language-kind-missing: Desaparecido
+  language-kind-untranslated: não traduzido (mesmo que inglês)
+  language-kind-placeholders: Os placeholders diferem
+  language-kind-unfilled-tags: etiquetas desconhecidas
+  language-export-button: <aqua><u>[export]</u></aqua>
+  language-export-hover: |-
+    <gray>Clique: {command}
+    Escreve todas as chaves com a fonte inglesa e a tradução atual para traduções.
+  language-exported: '<green>✔ {plugin}/{language}: {count} chaves ({missing} faltando) escritas para <white>{file}</white>.'
+  language-import-button: <aqua><u>[import after review]</u></aqua>
+  language-import-hover: '<gray>Clique: coloca {command} na conversa'
+  language-imported: '<green>✔ {file} → {plugin}/{language}: {added} adicionado, {changed} alterado, {unchanged} inalterado,
+    {skipped} ignorado. <gray>Backup: {backup}'
+  language-import-skipped: '<yellow>  Salto {key}: {reason}'
+  language-reason-unknown-key: A chave não existe na fonte inglesa
+  language-reason-placeholders: Os {placeholders} diferem da fonte inglesa
+  language-files: '<gray>Arquivos em traduções: <white>{files}'
+  language-unknown-plugin: '<red>Nenhum pacote de idiomas para {plugin}. Pacotes: {plugins}'
+  language-error-language: '<red>Código de linguagem inválido: {detail} (e.g.'
+  language-error-io: '<red>Lendo ou escrevendo o arquivo falhou: {detail}'
+  language-error-file-name: '<red>Nome de arquivo inválido: {detail} (apenas um nome de arquivo dentro de traduções/).'
+  language-error-file-missing: '<red>Arquivo não encontrado em traduções /: {detail}'
+  language-error-format: '<red>Tipo de arquivo desconhecido: {detail} (yml ou csv).'
+  language-error-empty: '<red>O arquivo está vazio: {detail}'
+  language-error-csv-header: '<red>{detail}: a primeira linha CSV precisa da chave das colunas e tradução.'
+  language-error-invalid: '<red>O arquivo não é válido YAML: {detail}'
+  language-error-target: '<red>{detail}: plugin ou linguagem desconhecida. Diga o nome do arquivo <plugin>.<lang>.Yml ou adicione-os:
+    /vadmin language import <file> <plugin> <lang>'
+  language-error-plugin: <red>Nenhum pacote de idiomas para {detail}.
+  language-error-no-folder: <red>{detail} não tem pasta de idiomas editável.
+  language-error-source-language: <red>O inglês é a língua de origem e não pode ser importado; edite diretamente o idioma
+    en.yml.
+  language-error-target-invalid: <red>O arquivo atual {detail} não é válido YAML; consertá-lo primeiro, nada foi mudado.
+  catalog:
+    core:
+      status: Estado do painel
+    economy:
+      info: Situação econômica
+      set: Defina o equilíbrio
+    market:
+      open: Mercado aberto
+    cities:
+      info: Cidade no local
+    blocks:
+      status: Estado
+    inventory:
+      status: Situação da transação
+    trees:
+      status: Estado
+    arena:
+      admin: Administração da Arena GUI
+      start: Começar arena
+      stop: Pare a arena
+    bounty:
+      list: Ativos recompensas
+      set: Defina a recompensa
+    bloodmoon:
+      status: Estado
+      start: Comece a Lua Sangrenta
+      stop: Pare a lua de sangue
+    insomnia:
+      get: Status do jogador
+      rest: Rest player
+    director:
+      status: Estado
+      debug: Jogador debug
+      events: Eventos no jogador
+      wave: Onda de gatilho
+      population: População Estrutura
+      reload: Recarregar
+    farms:
+      status: Estado
+      inspect: Campo alvo
+    build:
+      dialog: Diálogo de compilação
+    pets:
+      reload: Recarregar
+      status: O que é isso?
+      list: Animais de estimação de um dono
+      info: Informação do animal de estimação
+    worlddirector:
+      active: Eventos ativos
+      reservations: Reservas
+      modifiers: Modificadores
+      select: Previsão da seleção
+      weights: Pesos
+      start: Iniciar evento
+      stop: Pare o evento
+      save: Salvar
+      storyteller: Contador de histórias
+    worldforge:
+      info: WorldForge informações
+      population: População
+      events: Eventos
+      list: Planos e instâncias
+      town: Planejar e construir cidade
+      dungeon: Planeje e construa o calabouço
+      plan: Crie um plano
+      place: Coloque o plano
+      remove: Remova a estrutura
+      recover: Recuperar
+    parties:
+      reload: Recarregar
+      disband: Despedir a grupo
+      spy: Espionar na conversa de grupo
+    skills:
+      inspect: Inspecione o jogador
+      reload: Recarregar
+    factions:
+      list: Fações
+      map: Mapa da Facção
+      regions: Regiões
+      region: Definir região
+      info: Informação
+      members: Membros
+      member: Mude de membro
+      pause: Pausa
+      resume: Retomar
+      capital: Capital no bloco alvo
+      capitalat: Defina o capital
+      retry: Tente novamente
+panel:
+  no-permission: Você não pode abrir isso.
+  unknown: Este menu não existe no servidor.
+  failed: Este menu encontrou um erro - os administradores foram informados.
+  unavailable: Este menu não está disponível agora.
+  no-answer: Nenhuma resposta do servidor. Por favor, tente novamente.
+  screen:
+    page: "Página {page}/{pages}"
+    scroll: "<gray>Roda do mouse: rolar · agachar ou Fechar: sair"
+  dialog:
+    apply: Aplicar
+    web: Abra a página web
+    rejected: Esse valor não se encaixa.
+    close: Fechar
+    'yes': Sim
+    'no': Não
+    slow-down: Muito rápido, tente novamente em um momento.
+worlds:
+  visit:
+    command-blocked: <red>Esse comando não é permitido aqui.
+    teleport-blocked: <red>Não pode se teletransportar lá.
+    restore-failed: <red>Os itens salvos não puderam ser decodificados. Sua visita continua ativa, contate um administrador.
+    return-failed: <red>O retorno falhou. Por favor, tente novamente em um momento. Suas coisas estão seguras.
+    enter-aborted: <yellow>A entrada foi cancelada porque seu estado mudou ou salvou muito tempo. Por favor, tente novamente
+      enquanto está parado.
+    enter-failed: <red>O teletransporte falhou, seu inventário e estado voltaram.
+    restored: <gray>Seu inventário e estado de <white>{world}<gray> foram restaurados.
+  admin:
+    no-permission: <red>Você não tem permissão.
+    usage: <gray>/vworlds list <dark_gray>| <gray>Visitas <dark_gray>| <gray>restore <player> <dark_gray>| <gray>check <player>
+      <dark_gray>| <gray>legado <player|uuid> archive|retry
+    list: '<gold>Mundos gerenciados: <white>{count}'
+    entry: <gray> · <white>{id} <gray>→ {world} <dark_gray>[{owner}, hash {hash}, {visitors} visitors]
+    visit: <gray> · <white>{player} <gray>em {id} <dark_gray>[{phase}, {seconds} s]
+    no-visits: <gray>Sem visitas.
+    player-offline: <red>Jogador não online (uma foto aberta é restaurada automaticamente no próximo lançamento).
+    check: '<gray>{player}: visita <white>{visit}<gray>, marcador <white>{marker}<gray>, instantâneo <white>{snapshot}<gray>;
+      mão <white>{item}<gray>: ferramenta <white>{tool}<gray>, restrito <white>{restricted}<gray>, validação <white>{validation}'
+    legacy:
+      archived: <yellow>Imagem de legado para {player} arquivados sem restaurar; arquivos fonte retidos.
+      retried: <green>Foto de legado para {player} entregues ao Core; use restauração ou junte-se à recuperação.
+      nothing: <gray>Nenhuma foto de legado para {player}.
+      failed: <red>A recuperação do legado para {player} falhou. Inspecione o diagnóstico UUID e os arquivos de origem.
+      in-progress: <yellow>Entrada ou visita para {player} está em andamento, tente depois que terminar.
+    restore:
+      visit-ended: <green>A visita de {player} terminou, o estado volta depois do teletransporte.
+      restored: <green>Imagem de {player} restaurada.
+      discarded: <yellow>{player} dados do jogador já estavam fora da visita - instantâneo apagado, nada restaurado duas vezes.
+      evicted: <yellow>Nenhuma imagem legível para {player} - ferramentas removidas e visitar estado limpo (verifique visitas
+        / *. quebrado-*).
+      in-progress: <yellow>O retorno para {player} já está em andamento.
+      pending: <yellow>A restauração para {player} está pendente, a foto foi retida.
+      nothing: '<gray>Nada a fazer por {player}: nenhuma foto e nenhuma visita ao estado.'
+diagnostics:
+  title: Verifique os recursos
+  line: '{feature} · {provider} · {state}: {reason}'
+  state-active: ativo
+  state-fallback: Recuar
+  state-unavailable: indisponível
+  probe-failed: O diagnóstico do provedor falhou, veja o registro do servidor.
+  mob-active: Um fornecedor de criaturas está registrado.
+  mob-fallback: 'Nenhum fornecedor de criaturas: consumidores usam sua alternativa de baunilha/legado.'
+  database-disabled: Banco de dados compartilhado desativado; verifique armazenamento de plugins local separadamente.
+  database-connecting: Ligando ao banco de dados.
+  database-available: O banco de dados compartilhado está disponível.
+  database-failed: A conexão do banco de dados falhou; veja o registro do servidor.
+  database-closed: O banco de dados foi fechado.
+  target-required: Selecione um jogador online para verificar os clientes.
+  client-disabled: Canal do cliente desativado no servidor; diálogos são usados.
+  client-absent: Nenhum aperto de mão completo, diálogos são usados.
+  client-old: O cliente não tem painéis ou painéis estão desativados no servidor; diálogos são usados.
+  client-active: O cliente suporta esse recurso e o servidor permite.
+  hud-hidden: O jogador escondeu HUD elementos.
+  hud-fallback: HUD canais desativados ou falta a capacidade do cliente; o retorno do plugin ainda é necessário.
+migration:
+  available: 'Cheques de dados registrados: {ids}. Uso: /vadmin Migração <id>'
+  result: '{id}: registros {before} → {after}, no total {before-sums} → {after-sums}; problemas: {problems}'
+  conserved: A cópia foi aprovada. Nenhum dado ao vivo foi escrito, isso não aprova automaticamente uma migração.
+  review: O cheque encontrou problemas ou diferenças. Dados vivos permanecem inalterados.
+onboarding:
+  menu-title: Primeiros passos
+  menu-description: Escolha quando revisar o guia opcional do Core.
+  title: Seus primeiros passos
+  intro: Um guia opcional para escolher uma língua e encontrar recursos de plugins. Pode sair a qualquer momento.
+  task-language: 'Escolha seu idioma: {status}'
+  task-first-menu: 'Abra um menu principal: {status}'
+  task-plugin-menu: 'Tente com sucesso um recurso de plugin: {status}'
+  done: Feito
+  todo: Ainda não
+  continue-hint: Plugins participantes confirmam esta tarefa após uma ação bem sucedida, por exemplo, definir uma meta de
+    poupança com /xpeconomy goal. Abrir um menu sozinho não o completa.
+  skipped-status: Você pulou esse guia. Escolha Show nas configurações do núcleo para começar de novo.
+  open-language: Configuração da linguagem
+  open-menus: Navegue nos menus
+  skip: Skip guide
+  setting-label: Guia dos primeiros passos
+  setting-description: Mostre o guia de novo ou pule.
+  setting-show: Mostrar / reiniciar
+  setting-skip: Saltou
+  settings-title: Primeiros passos
+  settings-description: Escolha se o guia opcional fica disponível.
+notifications:
+  preference:
+    title: Notificações de rotina
+    section-description: Escolha como grupos centrais não urgentes mensagens de status.
+    label: Frequência de entrega
+    description: Confirmações urgentes continuam imediatas.
+    immediate: Imediatamente
+    15s: A cada 15 segundos
+    60s: A cada 60 segundos
+  routine-title: Atualizações de rotina ({count})
+  routine-repeat: '{message} (repetido {count} vezes)'
+  routine-omitted: '{count} mais atualizações foram combinadas porque a fila estava cheia.'
+channel-chat:
+  players-only: Só os jogadores podem mandar conversa.
+  usage: 'Uso: /vtrade <message>'
+  too-long: Use no máximo 240 caracteres sem caracteres de controle.
+  wait: Por favor, espere antes de enviar outra mensagem comercial.
+  trade-prefix: '[Trade] '
+features:
+  entry: "⚙ Recursos"
+  entry-tooltip: "Ligar e desligar os recursos de cada plugin"
+  title: "Recursos"
+  title-plugin: "Recursos: {plugin}"
+  count: "{on}/{total} ligados"
+  state-on: "<green>ON"
+  state-off: "<red>OFF"
+  restart: "vale após reiniciar"
+  hint-overview: "<gray>Clique em um plugin · roda do mouse: rolar · página {page}/{pages}"
+  hint-plugin: "<gray>Clique em uma linha para alternar · passe o mouse para detalhes · página {page}/{pages}"
+  none: "<gray>Nenhum plugin tem chaves de recursos, ou falta vystorm_core.config.<plugin>."
+  unknown-plugin: "<red>{plugin} não tem chaves de recursos, ou você não pode configurá-lo."
+  ingame-only: "<gray>As chaves de recursos abrem no jogo. Plugins: {plugins}"
+config:
+  entry: Configuração do plug-in
+  entry-tooltip: Cada valor dos arquivos de configuração de cada plugin (segredos ficam escondidos)
+  overview-title: Configuração do plug-in
+  overview-text: Escolha um plugin. Senhas, acesso ao banco de dados e fichas nunca são mostradas aqui.
+  overview-empty: Nenhum plugin registrou sua configuração, ou você não tem vystorm_core.config.<plugin>.
+  plugin-button: 'Configuração: {plugin}'
+  plugin-title: 'Configuração: {plugin}'
+  plugin-text: '{count} seções de {files}. Salvar escreve apenas os valores alterados no arquivo (outros valores, edições
+    manuais e comentários permanecem) e recarrega o plugin se ele suporta isso.'
+  file-only: '<gray>Edição no arquivo ({file}): {keys}'
+  back-overview: ← Todos os plugins
+  back-server: ↑ Configurações do servidor
+  applied: '<green>✔ {plugin}: salvos e recarregados.'
+  reload-needed: '<yellow>{plugin}: salvo. Faz efeito depois de {command} recarregar ou reiniciar.'
+  restart-needed: '<yellow>{plugin}: salvo. Esses valores entram em vigor após um servidor reiniciar.'
+  reload-failed: '<red>{plugin}: salvo, mas o carregamento falhou. Veja o registro do servidor.'
+  not-saved: '<red>{plugin}: {file} não foi mudado - {reason}'
+  reason-invalid-yaml: O arquivo no disco não é válido YAML. Conserte no arquivo primeiro.
+  reason-dotted-keys: O arquivo contém chaves com um ponto, que o menu não pode salvar sem mudá-las. Edite no arquivo.
+  reason-io: A escrita falhou, veja o registro do servidor.
+  too-long: Muito tempo para o menu - editá-lo no arquivo
+  list-commas: entradas contêm vírgulas – edite-as no arquivo
+  list-invalid: 'Lista inválida: {value}'
+  unknown-plugin: <red>Sem configuração editável para {plugin}, ou você não tem permissão.
+  ingame-only: '<red>A configuração abre no jogo como um diálogo. Plugins: {plugins}'
+  usage: <gray>/vadmin config [plugin]
+permissions:
+  usage: <gray>/vadmin Permissões [plugin] [page]
+  plugins: '<gold>Nós de permissão dos Vystorm plugins <gray>(/vadmin Permissões <plugin>):'
+  plugin-line: <gray>· <white>{plugin}</white> <dark_gray>{version}</dark_gray> - {count} nós
+  header: <gold>{plugin} <gray>- nós de permissão, página {page}/{pages} <dark_gray>(✔ - Você tem)
+  line: '{mark} <white>{node}</white> <dark_gray>[{default}]</dark_gray> <gray>{description}'
+  no-description: Sem descrição
+  more: '<gray>Próxima página: /vadmin Permissões {plugin} {next}'
+  unknown-plugin: '<red>Plug-in desconhecido ou não um plugin Vystorm: {plugin}'
+  default-true: Todos
+  default-false: Ninguém
+  default-op: Op
+  default-not_op: não-op
+review:
+  one: '<gold>[Vystorm] <gray>Você tem usado <yellow>{plugin}</yellow> Por {days} dias. Gostou? Uma breve crítica ajuda muito:'
+  many: '<gold>[Vystorm] <gray>Obrigado por usar Vystorm! Você gosta dos plugins? Uma breve crítica ajuda muito:'
+  link: <aqua><u>[⭐ {plugin}]</u></aqua>
+updates:
+  checking: <gray>Checando SpigotMC para atualizações...
+  not-yet: <gray>Nenhuma atualização terminou ainda. Use /vadmin updates check.
+  disabled: <gray>A atualização está desligada (atualização-check.enabled no config.yml do Core).
+  line-newer: '<yellow>{plugin}: <white>{installed}</white> → <green>{latest}</green>'
+  download: <aqua><u>[download]</u></aqua>
+  line-current: '<gray>{plugin}: {installed} (atual)'
+  line-unknown: '<gray>{plugin}: {installed}'
+  all-current: <green>Todos os Vystorm plugins estão atualizados.
+  summary: <yellow>{count} atualização(s) disponível. Clique em um link acima ou veja /vadmin updates.
+  join: '<yellow>[Vystorm] {count} atualização do plugin(s) disponível: <white>{list}</white>. <gray>/vadmin updates'
+  join-hover: <gray>Clique para listar as atualizações com links de download
+  ignored: <dark_gray>(ignorado)
+  last-check: '<dark_gray>Última verificação: {minutes} min atrás.'
+player-menu:
+  title: <dark_gray>{player}
+  header: <yellow>{player}
+  header-lore: <gray>O que você quer fazer?
+  unavailable: <gray>Esta ação não está mais disponível.
+  failed: <red>Essa ação falhou. Os detalhes estão no registro do servidor.
+  offline: <gray>{player} não está online.
+  empty: <gray>Não há nada que possa fazer com {player} agora.
+  self: <gray>Este menu é para outros jogadores. Sneak e clique com o botão direito de outra pessoa.
+  disabled: <gray>O menu do jogador está desligado neste servidor.
+  no-permission: <red>Você não pode abrir o menu do jogador.
+  settings:
+    title: Menu do jogador
+    description: Ações para outros jogadores, e.g. convites para grupos ou cidades.
+    toggle: Abra com Shift + botão direito
+    toggle-hint: Esgueirar-se e clicar com o botão direito de outro jogador com uma mão vazia para ver o que você pode fazer
+      com eles.
+config-history:
+  button: Mude a história
+  button-tooltip: Quem mudou o valor quando - com um clique para desfazer (na conversa)
+  usage: <gray>/vadmin config history [plugin] [page] · /vadmin config undo [number] [force]
+  disabled: <gray>A história da mudança está desligada (configuração history.enabled no núcleo config.yml).
+  empty: <gray>Nenhuma mudança de configuração ainda. Mudanças salvas com /vadmin config Apareça aqui.
+  header-all: <gold>Mudanças de configuração <gray>- O mais novo primeiro, página {page}/{pages}
+  header-plugin: <gold>Mudanças de configuração de {plugin} <gray>- O mais novo primeiro, página {page}/{pages}
+  entry: <gold>#{id}</gold> <gray>{time} · <white>{actor}</white> · {plugin}/{file}
+  change: '<dark_gray>   {path}: <red>{before}</red> → <green>{after}'
+  more-changes: <dark_gray>   ... e {count} mais
+  undo-of: '<dark_gray>(segundo de #{id})'
+  undone-by: '<dark_gray>(um por #{id})'
+  undo-button: <aqua><u>[↶ undo]</u></aqua>
+  undo-hover: '<gray>Clique: coloque os valores de #{id} de volta'
+  next-page: <aqua><u>Página {page} →]</u></aqua>
+  unknown: '<red>Não há nenhuma mudança de configuração #{id}, ou você não pode mudar esse plugin.'
+  already-undone: '<yellow>#{id} já foi desfeito por #{by}.'
+  plugin-gone: '<red>{plugin} não está funcionando ou {file} não pode mais ser editado no jogo, então #{id} não pode ser desfeito.'
+  conflict: '<yellow>Desde #{id} estes valores foram mudados novamente: <white>{paths}</white>. Desfazer os substituiria.'
+  force-button: <red><u>[undo anyway]</u></red>
+  force-hover: '<gray>Clique: coloque os velhos valores de volta mesmo que eles foram mudados novamente'
+  nothing: '<gray>#{id}: nada para desfazer.'
+  undone: '<green>✔ #{id} desfeitos ({count} valor(s) de volta), registrado como {new}.'
+profile:
+  menu-title: "👤 Perfil"
+  menu-description: "Seu cartão de perfil – e o de outros pelo menu de jogador"
+  title: "Perfil: {player}"
+  online: "<green>● online</green> <white>{player}"
+  offline: "<gray>○ offline</gray> <white>{player}"
+  first-join: "<gray>Primeiro acesso: <white>{date}"
+  last-seen: "<gray>Visto por último: <white>{date}"
+  playtime: "<gray>Tempo de jogo: <white>{hours} h"
+  no-sections: "<gray>Nenhum plugin tem algo para mostrar ainda."
+  unavailable: "<gray>Cartões de perfil estão desligados ou você não pode abri-los."
+  unknown: "<red>Nenhum jogador chamado {player} jogou aqui."
+  player-menu: "Perfil de {player}"
+inbox:
+  menu-title: "📬 Caixa de entrada"
+  title: "📬 Caixa de entrada"
+  menu-title-unread: "📬 Caixa de entrada ({count} novas)"
+  menu-description: "Mensagens do servidor e dos plugins"
+  empty: "Sua caixa de entrada está vazia."
+  meta: "<gray>{date} · {source}"
+  meta-new: "<gold>● nova</gold> <gray>{date} · {source}"
+  delete-read: "🗑 Apagar lidas"
+  deleted: "<green>✔ {count} mensagem(ns) lida(s) apagada(s)."
+  join: "<gold>📬 [Caixa] <yellow>{count} mensagem(ns) nova(s)</yellow> <gray>– clique para ler"
+  arrived: "<gold>📬 [{source}]"
+  hover: "<gray>Clique: abrir a caixa de entrada"
+  unavailable: "<gray>A caixa de entrada está desligada ou você não pode lê-la."
+  settings:
+    title: "Caixa de entrada"
+    description: "Mensagens pessoais dos plugins."
+    join: "Avisar sobre novas mensagens ao entrar"
+    join-hint: "Uma linha clicável curta no chat quando há mensagens não lidas."
+news:
+  edit-button: 'Editar #{id}'
+  edit-title: Editar notícias
+  edit-hint: Corrija este posto. Autor, data e status de leitura permanecem inalterados, nenhum novo anúncio é enviado.
+  save: Salve as mudanças
+  edited: '<green>Notícias atualizadas #{id}: {title}'
+  edit-usage: '<gray>/vadmin news edit [number] [title | text] — sem texto: abra o editor (players only).'
+  title: Notícias
+  menu-title: Notícias
+  menu-title-unread: Notícias ({count} novas)
+  menu-description: O que há de novo no servidor?
+  empty: Não há notícias agora.
+  empty-writer: Ainda não há notícias. Use "Escreva" para publicar o primeiro post.
+  post-title: <gold><b>{title}</b>
+  post-meta: <gray>{date} · {author}
+  write-button: Escreva
+  delete-button: 'Delete #{id}'
+  delete-tooltip: Delete "{title}"
+  delete-title: Apagar o post
+  delete-question: Excluir o número {id} "{title}" para todos?
+  write-title: Escreva notícias
+  write-text: Texto simples, sem códigos de cor. Jogadores online recebem um aviso clicável, todos os outros quando entram.
+  input-title: Título
+  input-text: Texto
+  publish: Publicar
+  title-missing: <red>O correio precisa de um título.
+  posted: '<green>✔ Notícias #{id} "{title}" publicadas.'
+  deleted: '<green>✔ Notícias #{id} "{title}" deletadas.'
+  unknown: <red>Não há notícias no {id}.
+  join: '<gold>📰 [News] <yellow>{count} novos: <white>{titles}</white> <gray>- Clique para ler'
+  announce: <gold>📰 [News] <white>{title}</white> <gray>{author} - clique para ler
+  hover: '<gray>Clique: abra a notícia'
+  unavailable: <gray>O quadro de notícias está desligado ou você pode não ler.
+  disabled: <gray>O quadro de notícias está desligado (news.enabled em config.yml do Core).
+  no-permission: <red>Você não pode escrever notícias.
+  usage: <gray>/vadmin news [list] · Escreva · post [title] | [text] · delete [number] · edit [number] [title | text]
+  list-empty: <gray>Sem postagens.
+  list-header: '<gold>Posts de notícias ({count}):'
+  list-line: <gold>#{id}</gold> <gray>{date} · {author} · <white>{title}
+  list-delete: <red>[delete]
+  list-delete-hover: '<gray>Clique: coloca o comando delete no chat'
+  settings:
+    title: Notícias
+    description: Serviço de notícias.
+    join: Mostre novos posts quando eu entrar
+    join-hint: Uma pequena linha de bate-papo clicável quando há mensagens que você ainda não leu.
+loot:
+  usage: <gray>/vadmin loot list [tables|categories] · show [id] · roll [id] [luck=1 tier=rare pity=epic rolls=3 seed=42 self=table
+    level=30] · simulate [id] [count] [options] · give [id] [player] [options] · reload
+  invalid: '<red>Comando de saque inválido: {error}'
+  unknown: '<red>Tabela de saques ou categoria desconhecida: {id}'
+  list-header: '<gold>Loot tabelas e categorias ({count}):'
+  list-line: <gray>{id} <dark_gray>{entries} entradas · rolos {rolls} · {owner}
+  show-header: <gold>{id} <gray>· Rolos {rolls} · chance {chance}
+  show-line: <gray>{item} x{amount} <dark_gray>· Peso {weight} ({tier}) · {percent} por sorteio
+  roll-header: '<gold>Preview {id}: {count} hit(s) <dark_gray>(Nada é dado)'
+  roll-empty: <gray>Nada caiu.
+  roll-line: <gray>{amount}x {item} <dark_gray>{tier} {percent} de {table}
+  problem: <yellow>⚠ {text}
+  sim-header: '<gold>{id}: {n} rolos <gray>{hits} hits por rolo. {empty} vazios'
+  sim-tier: '<gray>  {tier}: {percent} de hits'
+  sim-line: <gray>  {item} <dark_gray>· em {percent} de rolos · avg {avg} por rolo
+  reloaded: <green>Mesas carregadas ({count} mesas e categorias).
+  reload-failed: '<red>As mesas não recarregadas, as anteriores permanecem ativas: {error}'
+  give-done: <green>Deu {count} itens de {id} a {player}.
+  give-no-player: '<red>Jogador {player} Não está on-line (do console): /vadmin loot give [id] [player]).'
+command:
+  help:
+    name: ajuda
+    aliases: []
+    header: <gold>── <yellow>{command}</yellow> ── <gray>Ajuda {page}/{pages}
+    description: <gray>{description}
+    line: <yellow>{usage}</yellow><dark_gray> – <gray>{description}
+    line-plain: <yellow>{usage}
+    hover-run: |-
+      <gray>{description}
+      <yellow>Clique para correr {command}
+    hover-suggest: |-
+      <gray>{description}
+      <yellow>Clique para digitar {command}
+    previous: <yellow>[« Página anterior]
+    next: <yellow>[próxima página »]
+    empty: <gray>Não há nada aqui que possa usar.
+  error:
+    no-permission: <red>Você não tem permissão para fazer isso.
+    player-only: <red>Só os jogadores podem fazer isso.
+    unknown-sub: '<red>Subcomando desconhecido: <white>{input}'
+    did-you-mean: <gray>Você quis dizer <yellow>{suggestion}</yellow>? <dark_gray>(clique)
+    see-help: '<gray>Todos os comandos: <yellow>{command}'
+    missing-arg: '<red>Desaparecido: <white>{arg}'
+    too-many: <red>Muitos argumentos.
+    usage: '<gray>Uso: <yellow>{usage}'
+    not-a-number: <red>{input} não é um número.
+    number-range: <red>{input} deve estar entre {min} e {max}.
+    player-not-found: <red>Nenhum jogador chamado {input} está online.
+    world-not-found: <red>Não há mundo chamado {input}.
+    bad-choice: '<red>{input} não é possível aqui. Escolha: <white>{choices}'
+    cooldown: <red>Por favor, espere {seconds} s antes de usar isso novamente.
+    disabled: <red>Este comando não está disponível agora.
+    internal: <red>Algo deu errado. O erro foi registrado para os administradores.
+  values:
+    'on': ativado
+    'off': desativado
+    'true': Verdade
+    'false': Falso
+    'yes': sim
+    'no': não
+    clear: limpar
+    list: lista
+    all: todos
+  overview:
+    header: <gold>── <yellow>Comandos</yellow> ── <gray>Página {page}/{pages}
+    plugin: <aqua><bold>{plugin}
+    line: <yellow>/{command}</yellow>{also}<dark_gray> – <gray>{description}
+    also: <dark_gray> (/{aliases})
+    hover: |-
+      <gray>{description}
+      <yellow>Clique: {action}
+    action-help: Mostre a ajuda
+    action-type: Digite o comando
+    empty: <gray>Não há comandos que possa usar.
+    unknown-plugin: <red>Nenhum plugin com comandos chamados {plugin}.
+    footer: '<dark_gray>Clique em um comando. Apenas um plugin: /vhelp PLUGIN'
+  admin:
+    header: <gold>── <yellow>Comandos registrados</yellow> ── <gray>{count} árvores, página {page}/{pages}
+    mode: '<gray>Aliases de raiz localizados: <white>{mode}</white> <dark_gray>(língua servidora: {language})'
+    mode-option: <yellow>[{mode}]
+    mode-hover: 'Clique: use {mode}'
+    line: <aqua>{plugin}</aqua> <yellow>/{command}</yellow> <dark_gray>({mount})</dark_gray><gray>{fixed}
+    fixed: ' · Aliases: {aliases}'
+    label-conflict: <red>  {command} é tomada por {owner}; apenas {prefix}:{command} obras.
+    fixed-conflict: <red>  Alias fixo /{alias} é tomado por {owner}; ele comanda esse comando, não este.
+    alias: '<gray>  {language}: <white>/{alias}</white> {state}'
+    state-active: <green>ativo
+    state-off_by_policy: <dark_gray>Off (língua não habilitada)
+    state-disabled: <red>Desligado
+    state-collision: <gold>Saltou, tomada por {owner}
+    state-pending: <gray>aplicado após a inicialização
+    turn-off: <red>[switch off]
+    turn-on: <green>[switch on]
+    toggle-hover: 'Clique: /vadmin commands Alias {alias} {value}'
+    conflict: <gold>  Nome do conflito {conflict}
+    other: '<gray>Ainda não migrado (plugin.yml apenas): <white>{commands}'
+    mode-set: '<green>Aliases de raiz localizados: {mode}. Aplicado.'
+    alias-set: <green>{alias} agora é {state}.
+    alias-unknown: <red>Sem apelido localizado /{alias}. Veja /vadmin commands.
+    usage: <gray>/vadmin commands [PAGE] | mode all|default|none | Alias ALIAS on|off
+commands:
+  screen:
+    description: "Screens: close an open screen; admins: demo screen"
+    sub:
+      settings:
+        name: "settings"
+        args:
+          resolution: "WIDTHxHEIGHT"
+        description: "Display settings for screens: aspect ratio, field of view, size"
+      classic:
+        name: "classic"
+        args:
+          state: "on|off"
+        description: "Classic screens on/off (for shader packs)"
+      close:
+        name: "close"
+        description: "Close your open screen"
+      demo:
+        name: "demo"
+        args:
+          mode: "MODE"
+          backdrop: "BACKDROP"
+        description: "Open the screen demo (pinned or floating)"
+  vpoll:
+    description: Enquetes do servidor
+    sub:
+      start:
+        name: start
+        args:
+          seconds: SECONDS
+          question: QUESTION | ANSWER | ANSWER
+        description: 'Comece uma pesquisa: pergunta de segundos responda'
+      vote:
+        name: vote
+        args:
+          id: POLL-ID
+          option: ANSWER
+        description: Vote usando as respostas clicáveis /vpoll
+      close:
+        name: close
+        description: Termine a pesquisa e publique resultados
+      cancel:
+        name: cancel
+        description: Cancele sem publicar os resultados
+      results:
+        name: results
+        description: Mostre a última pesquisa completa
+  vnet:
+    description: "Rede entre servidores (hub do proxy)"
+    sub:
+      status:
+        name: "status"
+        description: "Conexão com o hub do proxy"
+      servers:
+        name: "servers"
+        description: "Servidores da rede com número de jogadores"
+      broadcast:
+        name: "broadcast"
+        args:
+          message: "MENSAGEM"
+        description: "Anúncio em todos os servidores (MiniMessage)"
+      pair:
+        name: "pair"
+        description: "Parear este servidor com o proxy"
+        sub:
+          accept:
+            name: "accept"
+            args:
+              code: "CÓDIGO"
+            description: "Confirmar o pareamento com o código mostrado nos dois consoles"
+      unpair:
+        name: "unpair"
+        description: "Esquecer a chave de pareamento"
+  vhelp:
+    description: Todos os comandos que você pode usar, por plugin
+    aliases:
+    - vcommands
+    args:
+      filter: PLUGIN
+      page: PAGE
+  menu:
+    description: Abre o menu principal Vystorm
+  vadmin:
+    description: Vystorm painel de administração
+  admin:
+    description: Vystorm painel de administração
+  einstellungen:
+    description: Configurações pessoais e servidor de todos os Vystorm plugins
+  web:
+    description: 'Interface web: abre uma página ou envia um link de login único'
+  vtrade:
+    description: 'Canal de comércio: mensagem para todos que o recebem'
+  nbt:
+    description: Define uma etiqueta no item em sua mão (admin)
+  vregion:
+    description: Mostra o registro da região compartilhada
+  vworlds:
+    description: Plugin mundos e visitas
+  language:
+    description: Escolha sua língua (menu com todas as línguas)
+language-select:
+  current: "Atual"
+  choice: "Sua escolha"
+  menu-title: Idioma
+  info-name: <gold>Idioma
+  info-lore:
+  - '<gray>Agora: <white>{language}'
+  - '<gray>Sua escolha: <white>{choice}'
+  - ''
+  - <gray>Clique em uma bandeira para trocar, ou digite /language <code>. O mesmo cenário está em /vsettings.
+  auto-name: <aqua>Automático (língua do cliente)
+  auto-lore:
+  - '<gray>Segue sua língua Minecraft ({client}): <white>{language}'
+  code: '<gray>Código: <white>{code}'
+  coverage: '<gray>Traduzido: <white>{coverage} %'
+  in-use: <gray>Em uso agora
+  selected: <green>✔ Seleccionado
+  click: <yellow>Clique para escolher
+  changed: '<green>✔ Língua: <white>{language}</white>.'
+  changed-auto: <green>✔ A língua segue sua língua Minecraft novamente (agora <white>{language}</white>).
+  admin-set: '<green>✔ Língua de {player}: {language}'
+  status: '<gold>{player}: <white>{language}</white> <gray>(escolha: {choice}, Minecraft idioma: {client})'
+  unknown: '<red>Língua desconhecida: {input}. <gray>Disponível: {languages}'
+  forced: '<yellow>Este servidor usa uma linguagem para todos: {language}.'
+  failed: <red>A língua não podia ser salva.
+  list-header: '<gold>Línguas <gray>(/language <code> · Auto = sua língua Minecraft):'
+  list-line: <gray>· <white>{name}</white> <dark_gray>{code}</dark_gray> <gray>– {coverage} %{marker}
+  current-marker: ' <green>✔'
+  console-usage: '<gray>Do console: /language <player> <code|auto> · /language <player> · /language list'
+  others-no-permission: <red>Você não pode mudar a linguagem de outros jogadores.
+  player-offline: <red>{player} não está online.
+poll:
+  question: <yellow>{question} <gray>({seconds} restantes). Clique em uma resposta, você pode mudar seu voto.
+  option: <aqua>[{number}] {option}
+  voted: '<green>Seu voto: {option}'
+  unavailable: <red>Esta pesquisa não está mais aberta ou a resposta é inválida. Use /vpoll.
+  running: <yellow>Uma pesquisa já está acontecendo.
+  disabled: <red>As pesquisas estão desativadas.
+  duration: <red>A duração deve ser entre 10 e {max} segundos.
+  invalid: <red>Use a pergunta resposta resposta, com 2-{max} respostas distintas e no máximo {length} caracteres por parte.
+  started: <green>A pesquisa começou.
+  cancelled: <yellow>Enquete cancelada.
+  no-results: <gray>Nenhuma pesquisa completa ainda.
+  results: '<gold>Resultados: {question} <gray>({total} eleitores)'
+  result-option: '<yellow>{option}: <white>{votes}'
+
+setup:
+  title: "Configuração de plugins"
+  intro: "Plugins instalados com configurações editáveis: {plugins}. Nada muda antes de confirmar a prévia."
+  empty: "Nenhum modelo. Salve as configurações seguras atuais com um nome ou crie um rascunho."
+  choose: "Escolha um modelo compartilhado e depois os plugins."
+  capture: "Salvar modelo atual"
+  custom: "Rascunho personalizado"
+  name: "Nome do modelo (a-z, 0-9, _ e -)"
+  select: "Modelo {name}. Opções: {plugins}. Os outros plugins permanecem iguais."
+  plugins: "Nomes dos plugins, separados por vírgulas"
+  unchanged: "As configurações selecionadas já correspondem ao modelo."
+  sections: "Seções disponíveis: {sections}. Salve até 96 valores seguros."
+  capture-sections: "Seções a salvar, separadas por vírgulas"
+network:
+  off: "<gray>A rede está desligada (network.enabled: false)."
+  not-connected: "<red>Não conectado ao hub do proxy."
+  status-connected: "<green>Conectado</green> <gray>como <white>{server}</white> ao hub <white>{hub}</white> · chave {key} · ping {latency}"
+  status-disconnected: "<red>Não conectado</red> <gray>· servidor <white>{server}</white> · hub <white>{hub}</white> · chave {key}"
+  pair-pending: "<yellow>Pareamento aguardando confirmação, código <white>{code}</white>: /vnet pair accept {code}"
+  server-line-online: "<green>●</green> <white>{server}</white> <gray>{players} jogadores"
+  server-line-offline: "<gray>○ {server} · {players} jogadores (Core não conectado)"
+  broadcast: "<gold>[Rede]</gold> {message}"
+  broadcast-local-only: "<yellow>Não conectado: o anúncio foi mostrado apenas neste servidor."
+  paired: "<green>Pareado. Conectando ao hub…"
+  pair-wrong-code: "<red>Nenhum pareamento aberto com este código (código errado ou expirado após 10 minutos)."
+  unpaired: "<yellow>Chave de pareamento removida. A próxima oferta do proxy poderá ser confirmada."
+  selector-title: "Servidores"
+  selector-entry: "<white>{server}"
+  selector-players: "<gray>{players} jogadores"
+  selector-current: "<green>Você está aqui"
+  selector-offline: "<red>Indisponível no momento"
+  selector-click: "<yellow>Clique para entrar"
+  selector-moving: "<gray>Enviando você para {server}…"
+  selector-failed: "<red>Não foi possível enviar você para {server}."
+trace:
+  on: "<yellow>Rastreamento ligado para {player}: você vê qual plugin cancela ou permite as quebras, colocações e cliques dele e qual plugin envia mensagens a ele. Use o comando de novo para parar."
+  off: "<gray>Rastreamento desligado para {player}."
+  usage: "<gray>/vadmin trace [jogador] [break place damage interact messages | off] <dark_gray>— sem filtro: tudo, liga/desliga"
+  cancelled: "<red>[Rastreio]</red> <white>{event}</white> <gray>em {block} ({material}) <red>cancelado</red> por <gold>{plugin}</gold> <dark_gray>({listener}, {priority})"
+  allowed: "<green>[Rastreio]</green> <white>{event}</white> <gray>em {block} ({material}) <green>permitido de novo</green> por <gold>{plugin}</gold> <dark_gray>({listener}, {priority})"
+  message: "<aqua>[Rastreio]</aqua> <gray>{player} recebeu uma mensagem de <gold>{plugin}</gold> <dark_gray>({key})</dark_gray>: <white>{text}"
+  source-hover: "<gray>Enviado por <gold>{plugin}"
+  filter: "<yellow>O rastreamento de {player} agora mostra só: <white>{kinds}</white>. <gray>Sem filtro mostra tudo; <white>off</white> para."
+config-menu:
+  overview-title: "Configurações de plugins"
+  plugin-title: "Configurações: {plugin}"
+  plugin-lore: "<gray>{changed} valores alterados"
+  setup-open: "<gold>Configuração inicial pendente"
+  category-lore: "<gray>{count} opções, {changed} alteradas"
+  current: "<gray>Atual: <white>{value}"
+  default: "<gray>Padrão: <white>{value}"
+  restart: "<red>Requer reinício do servidor"
+  hint-edit: "<yellow>Clique esquerdo: alterar"
+  hint-structure: "<yellow>Clique esquerdo: editar entradas"
+  hint-file: "<gray>Só pode ser editado no arquivo"
+  hint-reset: "<yellow>Clique direito: voltar ao padrão"
+  file-only: "<gray>Edite <white>{path}</white> em <white>{file}</white>."
+  error: "<red>Não alterado: {error}"
+  prompt-title: "Alterar valor"
+  search: "Pesquisar"
+  search-title: "Pesquisa: {query}"
+  only-changed: "Somente valores alterados"
+  no-results: "<gray>Nada encontrado."
+  close: "Fechar"
+  history: "Histórico de alterações"
+  setup: "Configuração guiada"
+  back: "Voltar"
+  previous: "Página anterior"
+  next: "Próxima página"
+  add: "Adicionar entrada"
+  entry-name: "Entrada {index}"
+  entry-open: "<yellow>Clique esquerdo: editar"
+  entry-delete: "<yellow>Clique direito: excluir"
+  delete-title: "Excluir entrada"
+  delete-confirm: "Excluir esta entrada? Ela pode ser restaurada pelo histórico."
+  stale: "<yellow>O arquivo mudou nesse meio-tempo. Tente novamente."
+  invalid-value: "<red>Esse valor não serve para esta opção."
+  failed: "<red>Não funcionou. Veja os detalhes no log do servidor."
+  not-registered: "este arquivo não está disponível no editor"
+setup-flow:
+  hint-one: "<gold>{plugin} é novo aqui. <yellow><u>Clique para configurar"
+  hint-many: "<gold>{count} plugins aguardam configuração. <yellow><u>Clique para abrir"
+  hint-hover: "<gray>Nada muda até você confirmar a prévia."
+  unknown: "<red>Nenhuma configuração disponível para {plugin}."
+  none: "<gray>Nenhum plugin oferece configuração."
+  list-title: "Configuração de plugins"
+  list-text: "Escolha um plugin. Uma estrela marca as configurações pendentes."
+  list-open: "★ {plugin}"
+  list-done: "{plugin}"
+  intro-title: "Configurar {plugin}"
+  intro-note: "Você verá cada alteração antes de salvar."
+  recommended: "Usar recomendados"
+  questions: "Responder perguntas"
+  later: "Depois"
+  later-note: "<gray>Abra novamente com <white>/vadmin setup {plugin}</white>."
+  skip: "Pular"
+  skipped: "<gray>Configuração de {plugin} pulada. Os padrões permanecem."
+  question-title: "{plugin}: pergunta {index} de {total}"
+  next: "Próximo"
+  invalid: "<red>Esse valor não é permitido aqui."
+  keep: "Manter assim"
+  preview-title: "{plugin}: prévia"
+  preview-text: "Estes valores serão alterados:"
+  preview-line: "{target}: {before} → {after}"
+  preview-more: "… e mais {count}"
+  unchanged: "Tudo já está certo. Nada precisa mudar."
+  finish: "Concluir"
+  apply: "Salvar alterações"
+  back: "Voltar"
+  done: "<green>{plugin} está configurado. Tudo continua editável em <white>/vadmin config {plugin}</white>."
+
+screen:
+  inventory:
+    hint: "<gray>Clique: como no baú · clique direito: clique direito · agachar ou Fechar: sair"
+    chest: "Baú"
+    chest-hint: "<gray>Mostrar este menu como um baú normal: para colocar itens, shift-clique ou soltar."
+  settings:
+    saved: "<green>Tela salva: proporção {aspect}."
+    title: "<gold>Tela"
+    current: "<gray>Agora: {aspect} · campo de visão {fov}° · tamanho {scale} %"
+    aspect: "Proporção"
+    custom: "Outra…"
+    fov-label: "Campo de visão"
+    fov: "{fov}°"
+    scale-label: "Tamanho"
+    scale: "{scale} %"
+    hint: "<gray>Use o mesmo campo de visão das configurações de vídeo do Minecraft."
+    done: "Pronto"
+    custom-title: "Sua resolução"
+    custom-label: "Largura x altura (ex. 2560x1440)"
+    custom-ok: "Aplicar"
+    custom-bad: "<red>Digite assim: 2560x1440"
+    unavailable: "<yellow>As configurações de tela precisam de uma tela; tente de novo no chão e fora de combate."
+  classic:
+    on: "<gray>Telas clássicas ligadas: as telas flutuam à sua frente e a mira é o cursor (funciona com qualquer shader)."
+    off: "<gray>Telas clássicas desligadas: os menus ficam fixos na tela com um ponteiro."
+  none: "<gray>Você não tem nenhuma tela aberta."
+  refused:
+    disabled: "<yellow>As telas estão desligadas neste servidor; o menu clássico é usado."
+    busy: "<yellow>Já há uma tela aberta."
+    riding: "<yellow>Desça da montaria primeiro."
+    gliding: "<yellow>Pouse primeiro."
+    falling: "<yellow>Não enquanto estiver caindo."
+    liquid: "<yellow>Não na água ou na lava."
+    combat: "<yellow>Não logo depois de levar dano. Tente de novo em alguns segundos."
+    unsupported: "<yellow>Telas não estão disponíveis aqui; o menu clássico é usado."
+  demo:
+    gif:
+      title: "<gold>{name}"
+      list: "<gray>GIFs em {folder}: <white>{names}</white> – toque com /screen demo gif NOME"
+      missing: "<red>Nenhum {name}.gif em {folder}."
+      loading: "<gray>Carregando {name}.gif …"
+      broken: "<red>{name}.gif não pode ser lido: {error}"
+      info: "<gray>{frames} quadros em {grid} blocos de mapa · só você os recebe"
+    opened: "<gray>Tela aberta ({mode}). Olhe em volta para mover o ponteiro, clique com o botão esquerdo ou direito, agache para fechar."
+    title: "<gold>Vystorm Screens"
+    hello: "Dizer olá"
+    count: "Contar"
+    close: "Fechar"
+    name: "Nome: {name}"
+    counter: "<gray>Clicado {count} vezes"
+    hello-message: "<green>Olá da tela!"
+    name-title: "Seu nome"
+    name-label: "Nome"
+    name-ok: "Salvar"
+    map:
+      title: "<gold>Demo de mapa"
+      placeholder: "<gray>O mapa precisa de telas fixas (pacote do Core carregado, telas clássicas desligadas)."
+      zoom: "<gray>{scale} blocos por pixel"
+      in: "Aproximar (Shift)"
+      out: "Afastar (Pulo)"
+      hint: "<gray>Clique no mapa para ver as coordenadas."
+      clicked: "<gray>x {x}, z {z}"
+      opened: "<gray>Tela de mapa aberta ({mode}). Shift aproxima, pulo afasta, feche com o botão ou /screen close."
+
+screens-admin:
+  status-on: "<green>As telas Vystorm estão ligadas."
+  status-off: "<red>As telas Vystorm estão desligadas no servidor inteiro: cada menu mostra sua alternativa (diálogo ou baú)."
+  listed: "<gray>Desligados um a um: <white>{names}"
+  seen: "<gray>Menus vistos desde o início: <white>{names}"
+  usage: "<gray>/vadmin screens all on|off <dark_gray>·</dark_gray> /vadmin screens off NAME <dark_gray>·</dark_gray> /vadmin screens on NAME <dark_gray>(NAME: um plugin, panel, inventory ou um menu da lista)"
+  all-on: "<green>As telas estão ligadas de novo."
+  all-off: "<yellow>As telas estão desligadas no servidor inteiro. Os menus mostram sua alternativa a partir de agora."
+  switched-off: "<yellow>{name} mantém seu menu alternativo a partir de agora."
+  switched-on: "<green>{name} é uma tela de novo."
+  not-listed: "<red>{name} não está desligado."

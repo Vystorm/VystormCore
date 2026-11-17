@@ -1,0 +1,49 @@
+title: Vystorm Core
+permission: ''
+pages:
+  - title: Getting started with /vmenu
+    text: |
+      1. Type /vmenu in chat.
+      2. Choose "Tutorials".
+      3. Choose "<plugin name> · Guide" and then a topic.
+      4. "All tutorials" takes you back to the plugin list; from there "Back to /vmenu" leads to the main menu.
+
+      Core unifies how the Vystorm plugins are used. Inventories holding real items stay inventories; inputs, confirmations and guides open as Minecraft dialogs.
+  - title: Main menu and ESC menu
+    text: |
+      There are three ways to open the Vystorm main menu:
+      1. /vmenu in chat.
+      2. Press ESC and choose "Vystorm Menu".
+      3. The quick actions key (Minecraft key binding "Quick Actions").
+
+      The main menu sorts all plugins into areas: Character, Economy, Community, World & Adventure, Building & Tech, Tutorials and – for admins – Administration. An area only appears when there is something you are allowed to open.
+  - title: Settings
+    text: |
+      Main menu → "Settings" or /vsettings opens your personal settings of all plugins. Change values and press "Save"; only changed values are applied.
+
+      Here you can also pick your language ("Language"). "Automatic" follows your Minecraft language.
+
+      Admins also see "Server settings": the configuration of the plugins. Changes apply to the whole server immediately. /vsettings server opens them directly.
+  - title: Finding guides
+    text: |
+      1. Open /vmenu and choose "Tutorials".
+      2. Choose "<plugin name> · Guide".
+      3. Choose a topic. "Next" and "Back" page through the guide; "All topics" returns to the overview.
+
+      /vmenu tutorials opens the tutorial category directly; direct keys such as /vmenu deepinventory:tutorial keep working.
+
+      /vmenu list shows the available menu keys. You can put a key right after /vmenu, e.g. /vmenu deepinventory:tutorial. The Tab key helps you choose.
+  - title: Using dialogs
+    text: |
+      Inputs: fill in the labelled fields and press "Apply" or the action button shown.
+      Confirmations: read the target and the costs before you confirm. "Cancel" does not run the action.
+      Guides: the buttons only turn pages; they never buy, build or change anything.
+
+      Dialogs expire after about one minute. Open the menu again if an old answer is no longer accepted. Permissions, stock or targets that changed in the meantime can also make an action invalid.
+  - title: When something is not available
+    text: |
+      If an entry is missing, check /vmenu list first. A plugin may be disabled or you may lack the permission.
+
+      If an action is rejected, read the message in chat and the matching tutorial: often space, balance, a complete setup or access to the target is missing.
+
+      If something changed since you opened the view, open it again. If the error stays, tell the server team the plugin, your action and the exact message.

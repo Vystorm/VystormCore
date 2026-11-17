@@ -1,0 +1,50 @@
+# Vystorm Core
+
+> Vystorm Core is a shared API for Paper/Purpur plugins: localized UI, commands, items, mobs, worlds, storage, web modules and cross-plugin services. These local documents cover Core 0.64.0, all 109 capability flags, and the Screens prototype; check capabilities and runtime service availability before using optional features.
+
+## Start here
+
+- [AI guide](docs/AI-GUIDE.md): Compact integration rules, complete capability catalog and checked Java examples.
+- [Full API reference](docs/API.md): Public signatures, contracts, limits and integration examples.
+- [Changelog](CHANGELOG.md): Version history, including Screens changes in 0.57.0 through 0.59.0.
+
+## API sections
+
+- [1. Setup](docs/API.md#1-setup): Compile-only setup, dependency declaration and capability guards.
+- [2. Build a plugin in 10 minutes](docs/API.md#2-build-a-plugin-in-10-minutes): Walkthrough for a first consumer plugin.
+- [3. Ground rules: threads, lifecycle, errors](docs/API.md#3-ground-rules-threads-lifecycle-errors): Thread, owner lifecycle and failure rules.
+- [4. Localization (api.lang())](docs/API.md#4-localization-apilang): Per-viewer language bundles, placeholders and translation audits.
+- [5. Settings (api.settings())](docs/API.md#5-settings-apisettings): Personal/server settings, drafts and configuration editing.
+- [6. Menus and managed inventories (api.gui())](docs/API.md#6-menus-and-managed-inventories-apigui): Main-menu registration and managed inventories.
+- [7. Native dialogs (api.dialogs())](docs/API.md#7-native-dialogs-apidialogs): Dialog forms and input validation; see compatibility helpers for portable forms.
+- [8. Chat actions and menu buttons](docs/API.md#8-chat-actions-and-menu-buttons): Expiring clickable chat actions and menu buttons.
+- [9. Tutorials](docs/API.md#9-tutorials): Bundled guided tutorials.
+- [10. Admin dashboard modules (api.admin())](docs/API.md#10-admin-dashboard-modules-apiadmin): Provider-owned admin dashboard modules.
+- [11. Shared database](docs/API.md#11-shared-database): Asynchronous pool readiness and schema migrations.
+- [12. Player data, XP, preferences, file storage](docs/API.md#12-player-data-xp-preferences-file-storage): XP, player values, serialization and file storage.
+- [13. Debug messages](docs/API.md#13-debug-messages): Structured diagnostics and error reporting.
+- [14. Web platform](docs/API.md#14-web-platform): Authenticated routes, public assets, live state and web localization.
+- [15. Client mod: overlay and native HUD elements](docs/API.md#15-client-mod-overlay-and-native-hud-elements): Optional overlays, HUD elements and client negotiation.
+- [16. Items, regions, curves, NBT and legacy handlers](docs/API.md#16-items-regions-curves-nbt-and-legacy-handlers): Items, regions, curves, packs and legacy public handlers.
+- [17. Cross-plugin services](docs/API.md#17-cross-plugin-services): Runtime hubs, mobs, combat, parties, events and utilities.
+- [18. Native panels (Vystorm.vystorm_core.panel)](docs/API.md#18-native-panels-vystormvystorm_corepanel): Typed UI trees, action handling and fallbacks.
+- [19. Not public API](docs/API.md#19-not-public-api): Boundaries that consumer plugins must not depend on.
+- [20. Rules for AI assistants](docs/API.md#20-rules-for-ai-assistants): Condensed rules and YAML pitfalls.
+- [21. Versioning and compatibility](docs/API.md#21-versioning-and-compatibility): Binary compatibility and capability/version checks.
+- [22. Appendix: Core commands and permissions](docs/API.md#22-appendix-core-commands-and-permissions): Built-in commands and permission declarations.
+- [23. Managed worlds and visits (Vystorm.vystorm_core.worlds)](docs/API.md#23-managed-worlds-and-visits-vystormvystorm_coreworlds): Owned worlds, durable visits and recovery.
+- [24. Commands (Vystorm.vystorm_core.commands)](docs/API.md#24-commands-vystormvystorm_corecommands): Localized command trees, typed arguments and help.
+
+## Newer feature references
+
+- [The managers (0.64.0)](docs/API.md#the-managers-0640): Every service through an accessor on API; table of accessors and the static classes they replace.
+- [Event order between plugins (0.64.0)](docs/API.md#event-order-between-plugins-0640): Named stages instead of Bukkit priorities for events several plugins handle.
+- [Compatibility helpers (since 0.48.0)](docs/API.md#compatibility-helpers-since-0480): Paper 1.20.6 feature detection and portable forms.
+- [Core 0.51.0: shared Bukkit adapters](docs/API.md#core-0510-shared-bukkit-adapters): Shared Bukkit adapters and native persistence.
+- [World-event runtime (0.31.0)](docs/API.md#world-event-runtime-0310): Durable owner-bound event execution.
+- [Shared loot tables (0.34.0)](docs/API.md#shared-loot-tables-0340): Weighted tables, categories and mob loot.
+- [Guided setup (0.52.0)](docs/API.md#guided-setup-0520): Selective cross-plugin settings presets.
+- [Network (0.53.0, experimental)](docs/API.md#network-0530-experimental): Experimental proxy messaging and player transfers.
+- [Inbox (0.55.0)](docs/API.md#inbox-0550): Personal localized messages, including offline delivery.
+- [Profile cards (0.56.0)](docs/API.md#profile-cards-0560): Provider sections for online or offline players.
+- [Screens (0.57.0, prototype)](docs/API.md#screens-0570-prototype): Pinned/floating modes, automatic UI adaptation, maps and GIFs.

@@ -1,0 +1,358 @@
+# Vystorm Core – config.yml
+# New keys from later Core versions are read from the jar defaults even if they are missing here.
+
+language:
+  # Language of Core and of every plugin that uses Core's localization (files: plugins/<Plugin>/lang/<code>.yml).
+  # auto = each player's Minecraft language (de_de, de_at, ... -> de; zh_tw -> zh_cn, see fallback); a fixed code
+  # (en, de, zh_cn, or any code you added a lang/<code>.yml for) applies to everyone without an own choice.
+  # Players pick their own language with /language (or /vsettings -> Language); both store the same choice.
+  default: auto
+  # Server language: used for the console and for players whose language has no file (e.g. a French client with
+  # only en/de/zh_cn installed). Also the language everyone gets with force: true.
+  server: en
+  # true = everyone sees the server language; /language and personal choices have no effect (they are kept).
+  force: false
+  # /language only offers languages Core itself ships, plus other languages whose texts cover at least this many
+  # percent of all plugins' English texts (a plugin-only zh_tw.yml with 3 texts would otherwise show up).
+  min-coverage: 50
+  # Fallback chain per language, tried key by key before English: zh_tw -> zh_cn -> en, de_at -> de -> en.
+  # Regional codes always fall back to their language part (de_ch -> de) without an entry here. Built-in entries:
+  # zh_hk/zh_mo -> zh_tw, zh_tw/zh_sg/zh -> zh_cn, pt/pt_pt -> pt_br, nn/nb -> no. "none" removes one.
+  fallback:
+    zh_tw: zh_cn
+    zh_hk: zh_tw
+
+# Anonymous statistics through bStats (bstats.org): which Vystorm plugins run on how many servers. Only Core sends them.
+# Switch off here or for all plugins in plugins/bStats/config.yml.
+metrics: true
+
+review-reminder:
+  # After this many days with a Vystorm plugin, the next admin (vystorm_core.admin) who joins gets one short message
+  # asking for a SpigotMC review. Every plugin asks once; several at the same time come as a single message from Core.
+  enabled: true
+  after-days: 7
+
+update-check:
+  # Asks SpigotMC (public version endpoint only, no server data) every interval-hours which version of each installed
+  # Vystorm plugin is current. Admins (vystorm_core.admin) see newer versions on join and with /vadmin updates.
+  enabled: true
+  interval-hours: 6
+  notify-on-join: true
+  # More plugins to check: plugin name: SpigotMC resource id
+  extra: {}
+  # Updates not to announce: "Plugin" for every version, "Plugin 1.4.0" for just that version (newer ones are shown again).
+  # Ignored updates still appear in /vadmin updates, marked as ignored.
+  ignore: []
+
+database:
+  # Shared MySQL/MariaDB database for all Vystorm plugins. Plugins use it via api.database().shared()
+  # and keep their own tables (<prefix>_<table>). The credentials live only here, not in the plugin configs.
+  shared:
+    # false = no connection; plugins then use their local storage.
+    enabled: false
+    # mysql or mariadb. Both use MySQL Connector/J, which ships with the server.
+    type: mysql
+    host: localhost
+    port: 3306
+    database: ""
+    username: ""
+    password: ""
+    # TLS for Connector/J: DISABLED, PREFERRED (TLS if the server offers it), REQUIRED, VERIFY_CA, VERIFY_IDENTITY.
+    # VERIFY_* need the server CA in a trust store (see properties below).
+    ssl-mode: PREFERRED
+    # Needed for MySQL 8 caching_sha2_password logins without TLS. Keep false when TLS is used.
+    allow-public-key-retrieval: false
+    pool:
+      # All Vystorm plugins share these connections. Stay below the host's max_user_connections
+      # (Core logs a warning if the server reports a lower limit).
+      maximum-size: 8
+      minimum-idle: 2
+      # How long a plugin waits for a free connection before an SQLException (also the TCP connect timeout).
+      connection-timeout-ms: 10000
+      # Idle connections above minimum-idle are closed after this time.
+      idle-timeout-ms: 300000
+      # Connections are replaced after this time. Must be well below the server wait_timeout
+      # (Core logs a warning if it is not at least 30 s shorter). 0 = unlimited.
+      max-lifetime-ms: 900000
+      # Idle connections are pinged this often so the server does not drop them. 0 = off, else >= 30000.
+      keepalive-time-ms: 60000
+      # Logs a warning when a plugin holds a connection longer than this (debugging). 0 = off, else >= 2000.
+      leak-detection-threshold-ms: 0
+    # Extra Connector/J properties, they override Core's defaults, e.g.
+    #   socketTimeout: 30000
+    #   trustCertificateKeyStoreUrl: "file:/path/truststore.jks"
+    properties: {}
+
+web:
+  # Web platform for browser pages of all Vystorm plugins (e.g. the talent tree). Plugins register modules via
+  # web.WebServices; players get a one-time login link with /web. Browser and client are never authoritative:
+  # Core checks session, permissions, CSRF and rate limits and runs every change on the server.
+  # false = no HTTP server and no gateway connection.
+  enabled: false
+  # embedded: Core runs its own HTTP server (own host, or behind a reverse proxy that terminates TLS).
+  # gateway:  Core connects OUTBOUND to an external Node.js gateway (web-gateway/ in the Core repo), e.g. when the
+  #           server host (G-Portal) offers no extra inbound port. The gateway serves the browsers.
+  mode: embedded
+  # Public base URL the players open, without path, e.g. https://web.vystorm.de. Used for login links and for the
+  # Host/Origin checks. https:// enables Secure/__Host- cookies and HSTS. Empty (embedded only) = http://<bind>:<port>,
+  # which only works on the same machine. Required in gateway mode (the gateway's public URL).
+  public-url: ""
+  # Additional accepted Host headers (host[:port]), e.g. a second domain. The host of public-url is always accepted.
+  allowed-hosts: []
+  # Built web UI (vystorm-web-ui "dist" folder) relative to plugins/vystorm_core/. If it contains an index.html, Core
+  # serves it at /, /login, /app/... and /assets/... (fallback when no gateway serves the UI). Otherwise Core shows its
+  # built-in overview page. Loaded at startup.
+  ui-dir: web/ui
+  embedded:
+    # 127.0.0.1 = only reachable locally / via reverse proxy on the same machine (recommended).
+    bind: 127.0.0.1
+    port: 8190
+    # IPs or CIDR ranges of reverse proxies whose X-Forwarded-For / X-Forwarded-Proto are trusted, e.g. [127.0.0.1].
+    # Requests from other addresses never influence the client IP.
+    trusted-proxies: []
+    max-connections: 256
+    max-connections-per-ip: 32
+  gateway:
+    # Tunnel endpoint of the gateway. wss:// is required; ws:// only to localhost or with allow-insecure.
+    url: "wss://web.example.net/_vystorm/tunnel"
+    # Shared secret (>= 32 characters). Empty = Core generates a strong random secret on the next start and saves it
+    # here (it is never logged). Put the same value into the gateway (VYSTORM_GATEWAY_SECRET). Keep it private.
+    secret: ""
+    # true allows ws:// to non-local hosts, only inside an encrypted private network such as Tailscale/WireGuard.
+    allow-insecure: false
+    # Requests handled at the same time over the tunnel; more get HTTP 503.
+    max-in-flight: 64
+    # Allowed clock difference between Core and gateway for the signed handshake.
+    clock-skew-seconds: 30
+  session:
+    # Lifetime of a login link (single use).
+    login-token-seconds: 60
+    # A browser session ends after this idle time ...
+    idle-minutes: 30
+    # ... and at the latest after this time.
+    max-hours: 12
+    # Older sessions of a player are ended above this number.
+    max-per-player: 5
+  limits:
+    # Largest request body (API); routes can set a lower limit.
+    max-body-bytes: 65536
+    max-header-bytes: 16384
+    max-headers: 64
+    # The request head (and body) must arrive within this time (slowloris protection).
+    header-timeout-seconds: 10
+    # Idle keep-alive connections are closed after this time.
+    idle-timeout-seconds: 15
+    # A response write that makes no progress for this long closes the connection (slow-read protection).
+    write-timeout-seconds: 30
+    # A module handler is aborted after this time (HTTP 504).
+    handler-timeout-seconds: 10
+    # Maximum wait for the server thread inside a handler (request.sync).
+    sync-timeout-seconds: 5
+    max-concurrent-handlers: 32
+  rate-limits:
+    # Requests per minute per client IP (pages, assets and API together).
+    ip-per-minute: 600
+    # Login attempts per minute per IP.
+    login-per-minute: 10
+    # API requests per minute per browser session (routes have their own additional limit).
+    session-per-minute: 300
+  live:
+    # Server push to open browser tabs/overlays (Server-Sent Events at /core/live, plugins use WebServices.push).
+    # Events of the same module+type for one player within this window are merged (only the last value is sent).
+    coalesce-ms: 100
+    # Largest single event (serialized JSON).
+    max-event-bytes: 16384
+    # Open live connections per player (tabs + overlay) and in total.
+    max-per-player: 5
+    max-connections: 2000
+  client:
+    # Channel vystorm:web for the optional Vystorm client mod (Fabric/NeoForge, repo Vystorm/vystorm-client): shows the
+    # web pages as an in-game overlay. Plugin messages only carry the handshake, one-time login tokens (same checks as
+    # /web, audited with issuer "client") and "show module X"; they never authorize anything. Players without the mod
+    # are not affected. false = the channel is not registered.
+    enabled: true
+    # Allow the in-game overlay (otherwise the mod opens the login link in the system browser).
+    overlay: true
+    # Allow the mod to sign in its hidden browser right after joining (instant opening later).
+    preload: true
+    # Module the overlay key (K) opens; "" = overview. Ignored if the module is not registered.
+    hotkey-module: skills
+    # Token requests per minute and player (burst 3).
+    open-per-minute: 10
+    # Web sessions that end when the player quits: client = only sessions signed in by the mod (default; browser
+    # tabs opened via /web stay), all = every session of the player, none = keep them (they still expire normally).
+    end-sessions-on-quit: client
+    ui:
+      # Channel vystorm:ui: native HUD elements, toasts, world markers and tooltip lines that plugins send through
+      # web.ClientUi (only to players whose mod reported the capability). Elements are validated with the client's
+      # schema, patches are coalesced and the rate stays below the client's limits (40/s, burst 120).
+      enabled: true
+      # At most one PATCH per element every N ticks (5 = 4x per second); later changes overwrite earlier ones.
+      patch-interval-ticks: 5
+      # Messages per second and player (burst), at most per-tick per tick; more wait in a queue of queue-limit.
+      messages-per-second: 30
+      burst: 100
+      per-tick: 32
+      queue-limit: 384
+    panels:
+      # Channel vystorm:panel: native screens ("panels") of the Vystorm client mod (0.8.0+) instead of chest/dialog
+      # menus. Actions are checked by Core against what it sent; plugin handlers still check their own rules.
+      # Players without the mod get the plugin's own menu, an automatic Paper dialog or a web link.
+      enabled: true
+      # Panel the key K opens; "" = Core's main menu (vystorm_core:menu). Shift+K still opens the web page.
+      hotkey-panel: ""
+      # Re-renders per second and open panel at most (refresh() calls are coalesced per tick).
+      refresh-per-second: 10
+      # Transfer chunks (up to 30 KiB each) per player and tick.
+      chunks-per-tick: 8
+      # Actions per player: rate per second and burst (each element at most 10 per second).
+      actions-per-second: 20
+      action-burst: 40
+  audit:
+    # plugins/vystorm_core/web/audit.log: logins, logouts, revocations and every changing API call.
+    enabled: true
+    max-file-mb: 5
+    files: 5
+
+player-menu:
+  # Sneak + right-click another player with an empty hand opens a menu about that player with the actions of your
+  # Vystorm plugins (e.g. invite to party or city, view stats). It only opens if a plugin offers at least one action,
+  # otherwise the click works as before. Permission vystorm_core.playermenu (everyone by default); players can switch it
+  # off for themselves in /vsettings. /menu player <name> opens the same menu.
+  enabled: true
+  # false = a plain right-click with an empty hand is enough (sneaking no longer needed).
+  require-sneak: true
+
+news:
+  # Server news board: admins (vystorm_core.news.write) write short posts in game (/vmenu news -> Write, or /vadmin news).
+  # Players see new posts once as a clickable chat line when they join, and read them in /vmenu -> News.
+  # Players can switch the join line off for themselves in /vsettings.
+  enabled: true
+  # Clickable "new posts" line shortly after joining.
+  notify-on-join: true
+  # Online players get a clickable line as soon as a post is published.
+  announce-new-posts: true
+  # Posts older than this many days are hidden and removed (0 = keep until deleted).
+  max-age-days: 30
+  # At most this many posts are kept (1-200); the oldest go first.
+  max-posts: 20
+
+profile:
+  # Player profile cards (/vmenu profile [player], main menu, player menu): first join, last seen, play time and one
+  # section per Vystorm plugin (XP balance, plots, pets, ...). Turn off to hide the cards.
+  enabled: true
+
+inbox:
+  # Personal inbox (/vmenu inbox): plugins leave short messages for a player, e.g. "your rent ran out" or "a payment
+  # failed". Online players get a clickable line at once, everyone else when they join. Shown in each reader's language.
+  enabled: true
+  # Clickable "N new messages" line shortly after joining (players can switch it off in /vsettings).
+  notify-on-join: true
+  # At most this many messages per player (1-500); the oldest go first.
+  max-per-player: 50
+  # Messages older than this many days are removed (0 = keep until deleted).
+  max-age-days: 30
+
+config-history:
+  # Every change saved with the in-game config editor (/vadmin config) is recorded in config-history.yml: who changed
+  # which value when, before and after. /vadmin config history lists them, a click undoes a change.
+  enabled: true
+  # Entries kept (1-5000); the oldest go first.
+  max-entries: 200
+
+loot:
+  # Mob drops (all Vystorm plugins): WHAT drops is defined by the mob (its own loot table: a custom mob's table or
+  # vystorm_core:mob/<type> in loot-mobs.yml for vanilla mobs), HOW GOOD it is only by the mob's level.
+  # Player luck (Luck potion, item or pet bonuses) does not change mob drops; it still counts for chests, fishing, finds.
+  mob-level-luck:
+    # Loot luck per mob level: luck = min(max, level x per-level). One luck point makes the rarest entries up to
+    # 25 % likelier. Default: level 20 = +1, level 40 = +2, level 60 and above = +3 (the cap).
+    per-level: 0.05
+    max: 3.0
+  # Pity per mob rank: at least one drop of this tier or rarer (none, uncommon, rare, epic, legendary) when the
+  # mob's table has one. Ranks: common (normal mobs), elite (elite/champion), boss (bosses).
+  mob-pity:
+    common: none
+    elite: none
+    boss: rare
+
+commands:
+  # Commands registered through Core (Vystorm plugins) get localized subcommands, help pages and /vhelp entries.
+  # Command labels are global on a server, so localized ROOT aliases from the plugins' language files
+  # (commands.<command>.aliases, e.g. /schienen and /铁轨 for /rails) are a server-wide choice:
+  # all = aliases of every installed language, default = only the server language (language.default; with auto the
+  # console/server language), none = only the English names and the fixed aliases.
+  # A localized alias is never registered when another command already has that label (see /vadmin commands).
+  localized-aliases: all
+  # Single localized aliases to switch off, e.g. [karte] or ["vystormrails:schienen"]. /vadmin commands toggles them.
+  disabled-aliases: []
+  # Lines per page of /<command> help (3-20); /vhelp shows twice as many.
+  help-page-size: 8
+  # auto = Paper's Brigadier command API for commands registered while plugins start (Bukkit command map otherwise),
+  # bukkit = always the Bukkit command map. Needs a restart.
+  registration: auto
+
+# Order in which Vystorm plugins handle the same game event (block break, interact, damage ...) when they register
+# their handlers through Core. The stage (protect, adjust, act ...) is fixed by each plugin; this list only decides
+# who goes first inside a stage. Plugins not listed follow in alphabetical order. Empty = alphabetical for all.
+event-order:
+  plugins: []
+  # A different order for single events, e.g.
+  # events:
+  #   BlockBreakEvent: [VystormLocks, VystormEstates]
+
+# Timed server polls; changes apply to the next poll.
+polls:
+  enabled: true
+  max-duration-seconds: 600
+  max-options: 6
+  max-text-length: 120
+
+# Cross-server network behind a Velocity or BungeeCord/Waterfall proxy (Core on the proxy is the hub).
+# Normally nothing to set: the proxy announces this server's name and the hub address, and with Velocity
+# modern forwarding the key comes from paper-global.yml. Without it, confirm the pairing once with
+# /vnet pair accept <code> (the code shows in both consoles).
+network:
+  # auto = on as soon as a proxy announces itself; false = never connect.
+  enabled: auto
+  # Only needed if the automatic values do not fit (e.g. hub on another machine):
+  server-name: ''
+  hub:
+    host: ''
+    port: 0
+  # Optional fixed key (Base64, 32 bytes) used by hub and all servers instead of Velocity secret or pairing.
+  key: ''
+  # Server selector in the main menu: per-server display name, icon (material) and visibility.
+  # servers:
+  #   lobby: { display: '<gold>Lobby', icon: COMPASS, hidden: false }
+  servers: {}
+
+# Chat lines sent through Vystorm Core show on hover which plugin sent them (helps find the source of a message).
+messages:
+  show-source: true
+
+# Vystorm Screens (0.57.0+). panels: plugin panels as screens. inventories: chest menus of Vystorm plugins as screens;
+# menus where items really move open the real chest. inventories-exclude: plugins that always keep their chests.
+screens:
+  # Master switch (0.62.0). false = no Vystorm screens at all: every menu shows its fallback (dialog or chest).
+  enabled: true
+  # Single menus or whole plugins that keep their fallback while the rest stays a screen. Names: a plugin
+  # (VystormWorlds), a group (panel, inventory), one menu (panel:mobs-spawn, inventory:VystormWorlds,
+  # vystorm_core:menu, vystorm_core:tutorial, "dialog:XP banks"). /vadmin screens lists the names seen and edits this list.
+  off: []
+  panels: true
+  inventories: true
+  inventories-exclude: [DeepInventory, SkyInventory, Limitless]
+  # Tutorials as screens with build GIFs (gif: in tutorial.yml); false = the dialogs.
+  tutorials: true
+  # Plugin dialogs without input fields (menus, guides, confirmations) as screens; false = native dialogs.
+  dialogs: true
+  # Plugin dialogs with input fields as screens too (0.61.0): switches and choices change with a click, a click on a
+  # text or number box opens a one-field typing dialog. false = those dialogs stay native.
+  dialog-inputs: true
+
+# Hold sneak and left-click twice quickly: opens the Vystorm menu (/menu). false switches the shortcut off.
+menu:
+  sneak-click-shortcut: true
+  # Show /menu as a Vystorm screen (icon tiles in your view). false = the previous menu.
+  screen: true

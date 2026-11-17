@@ -1,0 +1,10 @@
+{
+  "id": "vystorm_core",
+  "name": "Vystorm Core",
+  "version": "${version}",
+  "description": "EXPERIMENTAL Vystorm network hub: cross-server player list, server selector, announcements and plugin messaging.",
+  "url": "https://vystorm.net",
+  "authors": ["Vystorm"],
+  "dependencies": [],
+  "main": "Vystorm.vystorm_core.network.velocity.VelocityEntry"
+}

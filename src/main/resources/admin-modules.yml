@@ -1,0 +1,25 @@
+# Reference inventory for operators. Catalog.java is the validated runtime source of truth;
+# this file deliberately contains no executable action definitions.
+modules:
+  - id: core
+    plugin: vystorm_core
+    command: admin
+  - id: factions
+    plugin: VystormFactions
+    command: vfactions
+  - {id: economy, plugin: XPVaultEconomy, command: economy}
+  - {id: market, plugin: VystormMarket, command: market}
+  - {id: cities, plugin: VystormCityClaim, command: cities}
+  - {id: blocks, plugin: BlockIntegrations, command: blockintegrations}
+  - {id: inventory, plugin: DeepInventory, command: inventory}
+  - {id: trees, plugin: CustomTrees, command: customtrees}
+  - {id: arena, plugin: Arena, command: arena}
+  - {id: bounty, plugin: VystormBounty, command: bounty}
+  - {id: bloodmoon, plugin: BloodMoon, command: bloodmoon}
+  - {id: insomnia, plugin: VystormInsomnia, command: insomnia}
+  - {id: director, plugin: SpawnDirector, command: director}
+  - {id: farms, plugin: VystormFarms, command: farms}
+  - {id: build, plugin: VystormBuild, command: build}
+  - {id: pets, plugin: VystormPets, command: pet}
+  - {id: worlddirector, plugin: WorldDirector, command: worlddirector}
+  - {id: worldforge, plugin: Vystorm-WorldForge, command: worldforge}

@@ -1,0 +1,463 @@
+# Vystorm Core basic loot: standard Minecraft items only (no plugin items), shared by every Vystorm plugin.
+# Edit with /vadmin config vystorm_core (file loot-vanilla.yml) or here, then /vadmin loot reload.
+# Preview: /vadmin loot show <id>, /vadmin loot roll <id>, /vadmin loot simulate <id> 10000
+#
+# weight = rarity 0..10000: 0 = commonest, 10000 = rarest. Selection tickets = 10001 - weight.
+# Tiers by weight: common 0-3999, uncommon 4000-6999, rare 7000-8999, epic 9000-9799, legendary 9800-10000.
+# amount / min-amount / max-amount: stack size per hit. rolls / min-rolls / max-rolls: draws per roll.
+# enchant-levels: 'min-max' (1..30) enchants like an enchanting table; treasure-enchants: true allows mending etc.
+# potion: potion type for potion, splash_potion, lingering_potion and tipped_arrow.
+# Conditions (ignored when the roll does not know the value): min-y, max-y, environments [normal, nether, the_end],
+# biomes [minecraft:lush_caves, ...], min-difficulty, max-difficulty (difficulty is set by the rolling plugin).
+# table: '<id>' draws from another table. Add your own (or VystormItems) entries to any list.
+#
+# Layers: vanilla/<tier> and vanilla/<theme> are building blocks (1 draw each),
+# default/<situation> mixes them for one situation (several draws), loot-categories.yml picks per situation.
+tables:
+  # ---------------------------------------------------------------- tiers
+  'vystorm_core:vanilla/common':
+    entries:
+      - {item: 'minecraft:rotten_flesh', weight: 0, min-amount: 1, max-amount: 4}
+      - {item: 'minecraft:bone', weight: 500, min-amount: 1, max-amount: 4}
+      - {item: 'minecraft:string', weight: 800, min-amount: 1, max-amount: 4}
+      - {item: 'minecraft:stick', weight: 0, min-amount: 2, max-amount: 6}
+      - {item: 'minecraft:coal', weight: 800, min-amount: 2, max-amount: 6}
+      - {item: 'minecraft:torch', weight: 1500, min-amount: 2, max-amount: 8}
+      - {item: 'minecraft:wheat', weight: 1000, min-amount: 2, max-amount: 6}
+      - {item: 'minecraft:bread', weight: 1500, min-amount: 1, max-amount: 3}
+      - {item: 'minecraft:apple', weight: 2000, min-amount: 1, max-amount: 3}
+      - {item: 'minecraft:arrow', weight: 2000, min-amount: 2, max-amount: 8}
+      - {item: 'minecraft:leather', weight: 2500, min-amount: 1, max-amount: 3}
+      - {item: 'minecraft:paper', weight: 2500, min-amount: 1, max-amount: 4}
+      - {item: 'minecraft:feather', weight: 2000, min-amount: 1, max-amount: 4}
+      - {item: 'minecraft:gunpowder', weight: 3000, min-amount: 1, max-amount: 3}
+      - {item: 'minecraft:flint', weight: 2500, min-amount: 1, max-amount: 3}
+      - {item: 'minecraft:iron_nugget', weight: 3000, min-amount: 2, max-amount: 8}
+      - {item: 'minecraft:gold_nugget', weight: 3500, min-amount: 2, max-amount: 8}
+      - {item: 'minecraft:wheat_seeds', weight: 1000, min-amount: 2, max-amount: 6}
+  'vystorm_core:vanilla/uncommon':
+    entries:
+      - {item: 'minecraft:iron_ingot', weight: 4000, min-amount: 1, max-amount: 4}
+      - {item: 'minecraft:copper_ingot', weight: 4000, min-amount: 2, max-amount: 6}
+      - {item: 'minecraft:gold_ingot', weight: 5000, min-amount: 1, max-amount: 3}
+      - {item: 'minecraft:redstone', weight: 4500, min-amount: 2, max-amount: 8}
+      - {item: 'minecraft:lapis_lazuli', weight: 5000, min-amount: 2, max-amount: 8}
+      - {item: 'minecraft:cooked_beef', weight: 4500, min-amount: 2, max-amount: 5}
+      - {item: 'minecraft:golden_carrot', weight: 6000, min-amount: 1, max-amount: 4}
+      - {item: 'minecraft:experience_bottle', weight: 6000, min-amount: 1, max-amount: 4}
+      - {item: 'minecraft:book', weight: 5000, min-amount: 1, max-amount: 3}
+      - {item: 'minecraft:bucket', weight: 5500, amount: 1}
+      - {item: 'minecraft:amethyst_shard', weight: 5500, min-amount: 1, max-amount: 4}
+      - {item: 'minecraft:iron_pickaxe', weight: 6500, amount: 1}
+      - {item: 'minecraft:iron_sword', weight: 6500, amount: 1}
+      - {item: 'minecraft:shield', weight: 6000, amount: 1}
+      - {item: 'minecraft:potion', potion: healing, weight: 6000, amount: 1}
+      - {item: 'minecraft:lead', weight: 6500, amount: 1}
+  'vystorm_core:vanilla/rare':
+    entries:
+      - {item: 'minecraft:diamond', weight: 8000, min-amount: 1, max-amount: 2}
+      - {item: 'minecraft:emerald', weight: 7000, min-amount: 1, max-amount: 4}
+      - {item: 'minecraft:golden_apple', weight: 8000, amount: 1}
+      - {item: 'minecraft:book', enchant-levels: '10-20', weight: 7500, amount: 1}
+      - {item: 'minecraft:iron_sword', enchant-levels: '8-18', weight: 7500, amount: 1}
+      - {item: 'minecraft:iron_chestplate', enchant-levels: '8-18', weight: 8000, amount: 1}
+      - {item: 'minecraft:bow', enchant-levels: '8-18', weight: 7500, amount: 1}
+      - {item: 'minecraft:ender_pearl', weight: 7000, min-amount: 1, max-amount: 3}
+      - {item: 'minecraft:saddle', weight: 7500, amount: 1}
+      - {item: 'minecraft:name_tag', weight: 8000, amount: 1}
+      - {item: 'minecraft:spyglass', weight: 7500, amount: 1}
+      - {item: 'minecraft:diamond_pickaxe', weight: 8800, amount: 1}
+      - {item: 'minecraft:music_disc_13', weight: 8500, amount: 1}
+      - {item: 'minecraft:music_disc_cat', weight: 8500, amount: 1}
+  'vystorm_core:vanilla/epic':
+    entries:
+      - {item: 'minecraft:diamond', weight: 9000, min-amount: 2, max-amount: 5}
+      - {item: 'minecraft:diamond_sword', enchant-levels: '20-30', weight: 9300, amount: 1}
+      - {item: 'minecraft:diamond_pickaxe', enchant-levels: '20-30', weight: 9300, amount: 1}
+      - {item: 'minecraft:diamond_chestplate', enchant-levels: '20-30', weight: 9400, amount: 1}
+      - {item: 'minecraft:book', enchant-levels: '25-30', treasure-enchants: true, weight: 9200, amount: 1}
+      - {item: 'minecraft:netherite_scrap', weight: 9500, amount: 1}
+      - {item: 'minecraft:totem_of_undying', weight: 9600, amount: 1}
+      - {item: 'minecraft:heart_of_the_sea', weight: 9500, amount: 1}
+      - {item: 'minecraft:trident', weight: 9600, amount: 1}
+      - {item: 'minecraft:golden_apple', weight: 9000, min-amount: 2, max-amount: 3}
+      - {item: 'minecraft:sentry_armor_trim_smithing_template', weight: 9200, amount: 1}
+      - {item: 'minecraft:wild_armor_trim_smithing_template', weight: 9200, amount: 1}
+      - {item: 'minecraft:music_disc_pigstep', weight: 9500, amount: 1}
+  'vystorm_core:vanilla/legendary':
+    entries:
+      - {item: 'minecraft:enchanted_golden_apple', weight: 9850, amount: 1}
+      - {item: 'minecraft:netherite_ingot', weight: 9950, amount: 1}
+      - {item: 'minecraft:netherite_upgrade_smithing_template', weight: 9900, amount: 1}
+      - {item: 'minecraft:netherite_scrap', weight: 9800, min-amount: 2, max-amount: 3}
+      - {item: 'minecraft:silence_armor_trim_smithing_template', weight: 9950, amount: 1}
+      - {item: 'minecraft:eye_armor_trim_smithing_template', weight: 9900, amount: 1}
+      - {item: 'minecraft:diamond_sword', enchant-levels: '30-30', treasure-enchants: true, weight: 9850, amount: 1}
+      - {item: 'minecraft:music_disc_otherside', weight: 9850, amount: 1}
+
+  # ---------------------------------------------------------------- themes
+  'vystorm_core:vanilla/food':
+    entries:
+      - {item: 'minecraft:bread', weight: 0, min-amount: 2, max-amount: 5}
+      - {item: 'minecraft:apple', weight: 1000, min-amount: 1, max-amount: 4}
+      - {item: 'minecraft:baked_potato', weight: 1500, min-amount: 2, max-amount: 5}
+      - {item: 'minecraft:carrot', weight: 1500, min-amount: 2, max-amount: 5}
+      - {item: 'minecraft:cooked_beef', weight: 3000, min-amount: 2, max-amount: 4}
+      - {item: 'minecraft:cooked_porkchop', weight: 3000, min-amount: 2, max-amount: 4}
+      - {item: 'minecraft:cooked_salmon', weight: 3500, min-amount: 1, max-amount: 4}
+      - {item: 'minecraft:pumpkin_pie', weight: 4500, min-amount: 1, max-amount: 3}
+      - {item: 'minecraft:cookie', weight: 4000, min-amount: 2, max-amount: 6}
+      - {item: 'minecraft:honey_bottle', weight: 5500, min-amount: 1, max-amount: 2}
+      - {item: 'minecraft:golden_carrot', weight: 6500, min-amount: 1, max-amount: 3}
+      - {item: 'minecraft:golden_apple', weight: 8800, amount: 1}
+      - {item: 'minecraft:enchanted_golden_apple', weight: 9950, amount: 1}
+  'vystorm_core:vanilla/ores_ingots':
+    entries:
+      - {item: 'minecraft:coal', weight: 0, min-amount: 2, max-amount: 8}
+      - {item: 'minecraft:raw_copper', weight: 1500, min-amount: 2, max-amount: 6}
+      - {item: 'minecraft:raw_iron', weight: 3000, min-amount: 1, max-amount: 4}
+      - {item: 'minecraft:iron_ingot', weight: 4000, min-amount: 1, max-amount: 4}
+      - {item: 'minecraft:raw_gold', weight: 5000, min-amount: 1, max-amount: 3}
+      - {item: 'minecraft:gold_ingot', weight: 5500, min-amount: 1, max-amount: 3}
+      - {item: 'minecraft:redstone', weight: 4000, min-amount: 2, max-amount: 8}
+      - {item: 'minecraft:lapis_lazuli', weight: 4500, min-amount: 2, max-amount: 8}
+      - {item: 'minecraft:quartz', weight: 4000, min-amount: 2, max-amount: 6, environments: [nether]}
+      - {item: 'minecraft:emerald', weight: 7500, min-amount: 1, max-amount: 2}
+      - {item: 'minecraft:diamond', weight: 8500, amount: 1}
+      - {item: 'minecraft:diamond', weight: 8000, min-amount: 1, max-amount: 2, max-y: 0}
+      - {item: 'minecraft:netherite_scrap', weight: 9700, amount: 1, environments: [nether]}
+  'vystorm_core:vanilla/tools_weapons':
+    entries:
+      - {item: 'minecraft:stone_pickaxe', weight: 0, amount: 1}
+      - {item: 'minecraft:stone_sword', weight: 0, amount: 1}
+      - {item: 'minecraft:stone_axe', weight: 500, amount: 1}
+      - {item: 'minecraft:bow', weight: 2500, amount: 1}
+      - {item: 'minecraft:arrow', weight: 1000, min-amount: 4, max-amount: 16}
+      - {item: 'minecraft:iron_pickaxe', weight: 4500, amount: 1}
+      - {item: 'minecraft:iron_sword', weight: 4500, amount: 1}
+      - {item: 'minecraft:iron_axe', weight: 4500, amount: 1}
+      - {item: 'minecraft:iron_shovel', weight: 4000, amount: 1}
+      - {item: 'minecraft:crossbow', weight: 5000, amount: 1}
+      - {item: 'minecraft:shield', weight: 5000, amount: 1}
+      - {item: 'minecraft:iron_sword', enchant-levels: '5-15', weight: 7000, amount: 1}
+      - {item: 'minecraft:iron_pickaxe', enchant-levels: '5-15', weight: 7000, amount: 1}
+      - {item: 'minecraft:bow', enchant-levels: '5-20', weight: 7000, amount: 1}
+      - {item: 'minecraft:crossbow', enchant-levels: '5-20', weight: 7500, amount: 1}
+      - {item: 'minecraft:diamond_sword', weight: 8500, amount: 1}
+      - {item: 'minecraft:diamond_pickaxe', weight: 8500, amount: 1}
+      - {item: 'minecraft:diamond_sword', enchant-levels: '15-30', weight: 9300, amount: 1}
+      - {item: 'minecraft:diamond_pickaxe', enchant-levels: '15-30', weight: 9300, amount: 1}
+      - {item: 'minecraft:diamond_axe', enchant-levels: '15-30', weight: 9300, amount: 1}
+      - {item: 'minecraft:trident', weight: 9600, amount: 1}
+      - {item: 'minecraft:mace', weight: 9900, amount: 1}
+  'vystorm_core:vanilla/armor':
+    entries:
+      - {item: 'minecraft:leather_helmet', weight: 0, amount: 1}
+      - {item: 'minecraft:leather_chestplate', weight: 0, amount: 1}
+      - {item: 'minecraft:leather_leggings', weight: 0, amount: 1}
+      - {item: 'minecraft:leather_boots', weight: 0, amount: 1}
+      - {item: 'minecraft:chainmail_helmet', weight: 3500, amount: 1}
+      - {item: 'minecraft:chainmail_chestplate', weight: 3500, amount: 1}
+      - {item: 'minecraft:golden_helmet', weight: 3000, amount: 1}
+      - {item: 'minecraft:golden_boots', weight: 3000, amount: 1}
+      - {item: 'minecraft:iron_helmet', weight: 4500, amount: 1}
+      - {item: 'minecraft:iron_chestplate', weight: 5000, amount: 1}
+      - {item: 'minecraft:iron_leggings', weight: 5000, amount: 1}
+      - {item: 'minecraft:iron_boots', weight: 4500, amount: 1}
+      - {item: 'minecraft:shield', weight: 4000, amount: 1}
+      - {item: 'minecraft:turtle_helmet', weight: 7500, amount: 1}
+      - {item: 'minecraft:iron_chestplate', enchant-levels: '5-15', weight: 7000, amount: 1}
+      - {item: 'minecraft:iron_boots', enchant-levels: '5-15', weight: 7000, amount: 1}
+      - {item: 'minecraft:diamond_helmet', weight: 8500, amount: 1}
+      - {item: 'minecraft:diamond_boots', weight: 8500, amount: 1}
+      - {item: 'minecraft:diamond_chestplate', enchant-levels: '15-30', weight: 9400, amount: 1}
+      - {item: 'minecraft:diamond_leggings', enchant-levels: '15-30', weight: 9400, amount: 1}
+      - {item: 'minecraft:netherite_helmet', weight: 9900, amount: 1}
+  'vystorm_core:vanilla/building':
+    entries:
+      - {item: 'minecraft:cobblestone', weight: 0, min-amount: 8, max-amount: 32}
+      - {item: 'minecraft:oak_log', weight: 500, min-amount: 4, max-amount: 16}
+      - {item: 'minecraft:oak_planks', weight: 500, min-amount: 8, max-amount: 32}
+      - {item: 'minecraft:stone_bricks', weight: 1500, min-amount: 8, max-amount: 24}
+      - {item: 'minecraft:bricks', weight: 2500, min-amount: 4, max-amount: 16}
+      - {item: 'minecraft:glass', weight: 2500, min-amount: 4, max-amount: 16}
+      - {item: 'minecraft:deepslate_tiles', weight: 3000, min-amount: 8, max-amount: 24}
+      - {item: 'minecraft:lantern', weight: 4000, min-amount: 1, max-amount: 4}
+      - {item: 'minecraft:terracotta', weight: 3500, min-amount: 8, max-amount: 24}
+      - {item: 'minecraft:white_wool', weight: 2500, min-amount: 4, max-amount: 12}
+      - {item: 'minecraft:quartz_block', weight: 6000, min-amount: 4, max-amount: 12}
+      - {item: 'minecraft:copper_block', weight: 6500, min-amount: 1, max-amount: 4}
+      - {item: 'minecraft:obsidian', weight: 7000, min-amount: 1, max-amount: 4}
+  'vystorm_core:vanilla/redstone':
+    entries:
+      - {item: 'minecraft:redstone', weight: 0, min-amount: 4, max-amount: 16}
+      - {item: 'minecraft:redstone_torch', weight: 1000, min-amount: 2, max-amount: 8}
+      - {item: 'minecraft:lever', weight: 1500, min-amount: 1, max-amount: 4}
+      - {item: 'minecraft:tripwire_hook', weight: 2500, min-amount: 1, max-amount: 3}
+      - {item: 'minecraft:repeater', weight: 3500, min-amount: 1, max-amount: 4}
+      - {item: 'minecraft:comparator', weight: 5000, min-amount: 1, max-amount: 2}
+      - {item: 'minecraft:piston', weight: 4500, min-amount: 1, max-amount: 3}
+      - {item: 'minecraft:sticky_piston', weight: 5500, min-amount: 1, max-amount: 2}
+      - {item: 'minecraft:observer', weight: 5500, min-amount: 1, max-amount: 2}
+      - {item: 'minecraft:hopper', weight: 6500, amount: 1}
+      - {item: 'minecraft:dispenser', weight: 5500, amount: 1}
+      - {item: 'minecraft:daylight_detector', weight: 6000, amount: 1}
+      - {item: 'minecraft:slime_ball', weight: 5000, min-amount: 1, max-amount: 4}
+      - {item: 'minecraft:target', weight: 4000, amount: 1}
+  'vystorm_core:vanilla/magic':
+    entries:
+      - {item: 'minecraft:lapis_lazuli', weight: 0, min-amount: 2, max-amount: 8}
+      - {item: 'minecraft:glass_bottle', weight: 500, min-amount: 1, max-amount: 4}
+      - {item: 'minecraft:experience_bottle', weight: 3000, min-amount: 1, max-amount: 6}
+      - {item: 'minecraft:book', weight: 2000, min-amount: 1, max-amount: 3}
+      - {item: 'minecraft:glowstone_dust', weight: 3500, min-amount: 1, max-amount: 4}
+      - {item: 'minecraft:potion', potion: healing, weight: 4000, amount: 1}
+      - {item: 'minecraft:potion', potion: swiftness, weight: 4500, amount: 1}
+      - {item: 'minecraft:potion', potion: night_vision, weight: 4500, amount: 1}
+      - {item: 'minecraft:potion', potion: fire_resistance, weight: 5500, amount: 1}
+      - {item: 'minecraft:potion', potion: regeneration, weight: 6000, amount: 1}
+      - {item: 'minecraft:splash_potion', potion: strong_healing, weight: 6500, amount: 1}
+      - {item: 'minecraft:potion', potion: strength, weight: 6500, amount: 1}
+      - {item: 'minecraft:book', enchant-levels: '5-15', weight: 6000, amount: 1}
+      - {item: 'minecraft:book', enchant-levels: '15-30', weight: 8000, amount: 1}
+      - {item: 'minecraft:ender_eye', weight: 7500, amount: 1}
+      - {item: 'minecraft:potion', potion: luck, weight: 8500, amount: 1}
+      - {item: 'minecraft:book', enchant-levels: '25-30', treasure-enchants: true, weight: 9300, amount: 1}
+      - {item: 'minecraft:totem_of_undying', weight: 9700, amount: 1}
+  'vystorm_core:vanilla/nether':
+    entries:
+      - {item: 'minecraft:gold_nugget', weight: 0, min-amount: 3, max-amount: 12}
+      - {item: 'minecraft:quartz', weight: 1000, min-amount: 2, max-amount: 8}
+      - {item: 'minecraft:nether_wart', weight: 2000, min-amount: 1, max-amount: 4}
+      - {item: 'minecraft:soul_sand', weight: 1500, min-amount: 2, max-amount: 8}
+      - {item: 'minecraft:glowstone_dust', weight: 2500, min-amount: 2, max-amount: 6}
+      - {item: 'minecraft:magma_cream', weight: 4500, min-amount: 1, max-amount: 3}
+      - {item: 'minecraft:blaze_powder', weight: 5000, min-amount: 1, max-amount: 3}
+      - {item: 'minecraft:gold_ingot', weight: 4500, min-amount: 1, max-amount: 4}
+      - {item: 'minecraft:obsidian', weight: 5500, min-amount: 1, max-amount: 3}
+      - {item: 'minecraft:crying_obsidian', weight: 6000, min-amount: 1, max-amount: 3}
+      - {item: 'minecraft:blaze_rod', weight: 6500, min-amount: 1, max-amount: 2}
+      - {item: 'minecraft:ghast_tear', weight: 7500, amount: 1}
+      - {item: 'minecraft:snout_armor_trim_smithing_template', weight: 9000, amount: 1}
+      - {item: 'minecraft:netherite_scrap', weight: 9500, amount: 1}
+      - {item: 'minecraft:wither_skeleton_skull', weight: 9700, amount: 1}
+      - {item: 'minecraft:ancient_debris', weight: 9800, amount: 1}
+  'vystorm_core:vanilla/end':
+    entries:
+      - {item: 'minecraft:end_stone', weight: 0, min-amount: 4, max-amount: 16}
+      - {item: 'minecraft:chorus_fruit', weight: 1000, min-amount: 2, max-amount: 6}
+      - {item: 'minecraft:purpur_block', weight: 2000, min-amount: 4, max-amount: 12}
+      - {item: 'minecraft:popped_chorus_fruit', weight: 3500, min-amount: 2, max-amount: 6}
+      - {item: 'minecraft:ender_pearl', weight: 5000, min-amount: 1, max-amount: 3}
+      - {item: 'minecraft:end_rod', weight: 4500, min-amount: 1, max-amount: 4}
+      - {item: 'minecraft:shulker_shell', weight: 8000, min-amount: 1, max-amount: 2}
+      - {item: 'minecraft:dragon_breath', weight: 8500, amount: 1}
+      - {item: 'minecraft:spire_armor_trim_smithing_template', weight: 9500, amount: 1}
+      - {item: 'minecraft:elytra', weight: 9950, amount: 1}
+  'vystorm_core:vanilla/ocean':
+    entries:
+      - {item: 'minecraft:kelp', weight: 0, min-amount: 2, max-amount: 8}
+      - {item: 'minecraft:cod', weight: 500, min-amount: 1, max-amount: 4}
+      - {item: 'minecraft:salmon', weight: 1500, min-amount: 1, max-amount: 3}
+      - {item: 'minecraft:prismarine_shard', weight: 3000, min-amount: 1, max-amount: 4}
+      - {item: 'minecraft:prismarine_crystals', weight: 4000, min-amount: 1, max-amount: 4}
+      - {item: 'minecraft:ink_sac', weight: 2500, min-amount: 1, max-amount: 3}
+      - {item: 'minecraft:turtle_scute', weight: 6500, amount: 1}
+      - {item: 'minecraft:nautilus_shell', weight: 7500, amount: 1}
+      - {item: 'minecraft:wet_sponge', weight: 7500, amount: 1}
+      - {item: 'minecraft:tide_armor_trim_smithing_template', weight: 9300, amount: 1}
+      - {item: 'minecraft:heart_of_the_sea', weight: 9500, amount: 1}
+      - {item: 'minecraft:trident', weight: 9700, amount: 1}
+  'vystorm_core:vanilla/treasure':
+    entries:
+      - {item: 'minecraft:gold_ingot', weight: 4000, min-amount: 2, max-amount: 5}
+      - {item: 'minecraft:emerald', weight: 5500, min-amount: 1, max-amount: 4}
+      - {item: 'minecraft:diamond', weight: 7500, min-amount: 1, max-amount: 3}
+      - {item: 'minecraft:golden_apple', weight: 7500, min-amount: 1, max-amount: 2}
+      - {item: 'minecraft:book', enchant-levels: '15-30', treasure-enchants: true, weight: 8000, amount: 1}
+      - {item: 'minecraft:name_tag', weight: 7000, amount: 1}
+      - {item: 'minecraft:music_disc_mellohi', weight: 8500, amount: 1}
+      - {item: 'minecraft:music_disc_relic', weight: 9000, amount: 1}
+      - {item: 'minecraft:music_disc_otherside', weight: 9500, amount: 1}
+      - {item: 'minecraft:archer_pottery_sherd', weight: 7500, amount: 1}
+      - {item: 'minecraft:prize_pottery_sherd', weight: 7500, amount: 1}
+      - {item: 'minecraft:skull_pottery_sherd', weight: 8000, amount: 1}
+      - {item: 'minecraft:heart_pottery_sherd', weight: 8500, amount: 1}
+      - {item: 'minecraft:coast_armor_trim_smithing_template', weight: 8500, amount: 1}
+      - {item: 'minecraft:wayfinder_armor_trim_smithing_template', weight: 9000, amount: 1}
+      - {item: 'minecraft:vex_armor_trim_smithing_template', weight: 9500, amount: 1}
+      - {item: 'minecraft:enchanted_golden_apple', weight: 9900, amount: 1}
+  'vystorm_core:vanilla/fishing':
+    # About vanilla odds per catch: fish 85 %, junk 10 %, treasure 5 % (luck shifts it towards treasure).
+    entries:
+      - {table: 'vystorm_core:vanilla/fishing_fish', weight: 0}
+      - {table: 'vystorm_core:vanilla/fishing_junk', weight: 8824}
+      - {table: 'vystorm_core:vanilla/fishing_treasure', weight: 9413}
+  'vystorm_core:vanilla/fishing_fish':
+    entries:
+      - {item: 'minecraft:cod', weight: 0, amount: 1}
+      - {item: 'minecraft:salmon', weight: 4000, amount: 1}
+      - {item: 'minecraft:pufferfish', weight: 8000, amount: 1}
+      - {item: 'minecraft:tropical_fish', weight: 9000, amount: 1}
+  'vystorm_core:vanilla/fishing_junk':
+    entries:
+      - {item: 'minecraft:lily_pad', weight: 0, amount: 1}
+      - {item: 'minecraft:bowl', weight: 0, amount: 1}
+      - {item: 'minecraft:string', weight: 1000, amount: 1}
+      - {item: 'minecraft:stick', weight: 1000, amount: 1}
+      - {item: 'minecraft:leather_boots', weight: 1000, amount: 1}
+      - {item: 'minecraft:rotten_flesh', weight: 1000, amount: 1}
+      - {item: 'minecraft:bone', weight: 1000, amount: 1}
+      - {item: 'minecraft:ink_sac', weight: 3000, amount: 1}
+      - {item: 'minecraft:tripwire_hook', weight: 3000, amount: 1}
+  'vystorm_core:vanilla/fishing_treasure':
+    entries:
+      - {item: 'minecraft:name_tag', weight: 7000, amount: 1}
+      - {item: 'minecraft:saddle', weight: 7000, amount: 1}
+      - {item: 'minecraft:nautilus_shell', weight: 7000, amount: 1}
+      - {item: 'minecraft:book', enchant-levels: '30-30', treasure-enchants: true, weight: 9000, amount: 1}
+      - {item: 'minecraft:fishing_rod', enchant-levels: '22-30', treasure-enchants: true, weight: 9000, amount: 1}
+      - {item: 'minecraft:bow', enchant-levels: '22-30', weight: 9000, amount: 1}
+
+  # ---------------------------------------------------------------- situation mixes (used by loot-categories.yml)
+  'vystorm_core:default/dungeon_chest':
+    min-rolls: 3
+    max-rolls: 6
+    entries:
+      - {table: 'vystorm_core:vanilla/common', weight: 0}
+      - {table: 'vystorm_core:vanilla/food', weight: 3000}
+      - {table: 'vystorm_core:vanilla/uncommon', weight: 3000}
+      - {table: 'vystorm_core:vanilla/tools_weapons', weight: 6000}
+      - {table: 'vystorm_core:vanilla/rare', weight: 7500}
+      - {table: 'vystorm_core:vanilla/epic', weight: 9300}
+      - {table: 'vystorm_core:vanilla/legendary', weight: 9900}
+  'vystorm_core:default/boss_chest':
+    min-rolls: 4
+    max-rolls: 7
+    entries:
+      - {table: 'vystorm_core:vanilla/uncommon', weight: 0}
+      - {table: 'vystorm_core:vanilla/rare', weight: 2000}
+      - {table: 'vystorm_core:vanilla/armor', weight: 5000}
+      - {table: 'vystorm_core:vanilla/epic', weight: 7000}
+      - {table: 'vystorm_core:vanilla/legendary', weight: 9000}
+  'vystorm_core:default/mineshaft_cart':
+    min-rolls: 2
+    max-rolls: 4
+    entries:
+      - {table: 'vystorm_core:vanilla/common', weight: 0}
+      - {table: 'vystorm_core:vanilla/ores_ingots', weight: 0}
+      - {table: 'vystorm_core:vanilla/food', weight: 4000}
+      - {table: 'vystorm_core:vanilla/uncommon', weight: 5000}
+      - {table: 'vystorm_core:vanilla/rare', weight: 9000}
+  'vystorm_core:default/treasure_vault':
+    min-rolls: 3
+    max-rolls: 6
+    entries:
+      - {table: 'vystorm_core:vanilla/treasure', weight: 0}
+      - {table: 'vystorm_core:vanilla/uncommon', weight: 2000}
+      - {table: 'vystorm_core:vanilla/rare', weight: 5000}
+      - {table: 'vystorm_core:vanilla/epic', weight: 8500}
+      - {table: 'vystorm_core:vanilla/legendary', weight: 9700}
+  'vystorm_core:default/sky_temple':
+    min-rolls: 3
+    max-rolls: 5
+    entries:
+      - {table: 'vystorm_core:vanilla/uncommon', weight: 0}
+      - {table: 'vystorm_core:vanilla/magic', weight: 2000}
+      - {table: 'vystorm_core:vanilla/end', weight: 6000}
+      - {table: 'vystorm_core:vanilla/rare', weight: 6000}
+      - {table: 'vystorm_core:vanilla/epic', weight: 9300}
+  'vystorm_core:default/sky_wreck':
+    min-rolls: 2
+    max-rolls: 4
+    entries:
+      - {table: 'vystorm_core:vanilla/common', weight: 0}
+      - {table: 'vystorm_core:vanilla/building', weight: 2000}
+      - {table: 'vystorm_core:vanilla/uncommon', weight: 3000}
+      - {table: 'vystorm_core:vanilla/rare', weight: 8500}
+  'vystorm_core:default/cave_loot_room':
+    min-rolls: 2
+    max-rolls: 5
+    entries:
+      - {table: 'vystorm_core:vanilla/common', weight: 0}
+      - {table: 'vystorm_core:vanilla/ores_ingots', weight: 0}
+      - {table: 'vystorm_core:vanilla/uncommon', weight: 3000}
+      - {table: 'vystorm_core:vanilla/magic', weight: 5000}
+      - {table: 'vystorm_core:vanilla/rare', weight: 7500}
+      - {table: 'vystorm_core:vanilla/epic', weight: 9500, max-y: 0}
+  'vystorm_core:default/fishing':
+    entries:
+      - {table: 'vystorm_core:vanilla/fishing', weight: 0}
+  'vystorm_core:default/expedition':
+    min-rolls: 1
+    max-rolls: 3
+    entries:
+      - {table: 'vystorm_core:vanilla/common', weight: 0}
+      - {table: 'vystorm_core:vanilla/food', weight: 2000}
+      - {table: 'vystorm_core:vanilla/uncommon', weight: 6000}
+      - {table: 'vystorm_core:vanilla/rare', weight: 9500}
+  'vystorm_core:default/mob_drop_common':
+    chance: 0.25
+    entries:
+      - {table: 'vystorm_core:vanilla/common', weight: 0}
+      - {table: 'vystorm_core:vanilla/uncommon', weight: 8000}
+  'vystorm_core:default/mob_drop_elite':
+    min-rolls: 1
+    max-rolls: 2
+    entries:
+      - {table: 'vystorm_core:vanilla/common', weight: 0}
+      - {table: 'vystorm_core:vanilla/uncommon', weight: 2000}
+      - {table: 'vystorm_core:vanilla/rare', weight: 8000}
+      - {table: 'vystorm_core:vanilla/epic', weight: 9800}
+  'vystorm_core:default/mob_drop_boss':
+    min-rolls: 2
+    max-rolls: 4
+    entries:
+      - {table: 'vystorm_core:vanilla/uncommon', weight: 0}
+      - {table: 'vystorm_core:vanilla/rare', weight: 3000}
+      - {table: 'vystorm_core:vanilla/epic', weight: 7500}
+      - {table: 'vystorm_core:vanilla/legendary', weight: 9300}
+  'vystorm_core:default/reward':
+    entries:
+      - {table: 'vystorm_core:vanilla/uncommon', weight: 0}
+      - {table: 'vystorm_core:vanilla/food', weight: 3000}
+      - {table: 'vystorm_core:vanilla/rare', weight: 7000}
+      - {table: 'vystorm_core:vanilla/epic', weight: 9500}
+  'vystorm_core:default/farm_rare_find':
+    entries:
+      - {item: 'minecraft:bone_meal', weight: 0, min-amount: 2, max-amount: 6}
+      - {item: 'minecraft:melon_seeds', weight: 3000, min-amount: 1, max-amount: 3}
+      - {item: 'minecraft:pumpkin_seeds', weight: 3000, min-amount: 1, max-amount: 3}
+      - {item: 'minecraft:beetroot_seeds', weight: 3000, min-amount: 1, max-amount: 3}
+      - {item: 'minecraft:sweet_berries', weight: 3500, min-amount: 1, max-amount: 4}
+      - {item: 'minecraft:glow_berries', weight: 5000, min-amount: 1, max-amount: 3}
+      - {item: 'minecraft:golden_carrot', weight: 7000, amount: 1}
+      - {item: 'minecraft:glistering_melon_slice', weight: 7500, amount: 1}
+      - {item: 'minecraft:golden_apple', weight: 9300, amount: 1}
+  'vystorm_core:default/shrine':
+    min-rolls: 1
+    max-rolls: 2
+    entries:
+      - {table: 'vystorm_core:vanilla/magic', weight: 0}
+      - {table: 'vystorm_core:vanilla/uncommon', weight: 3000}
+      - {table: 'vystorm_core:vanilla/rare', weight: 7000}
+  'vystorm_core:default/meteor':
+    min-rolls: 2
+    max-rolls: 4
+    entries:
+      - {item: 'minecraft:raw_iron', weight: 0, min-amount: 2, max-amount: 6}
+      - {item: 'minecraft:magma_block', weight: 2000, min-amount: 2, max-amount: 6}
+      - {item: 'minecraft:obsidian', weight: 4000, min-amount: 1, max-amount: 4}
+      - {table: 'vystorm_core:vanilla/ores_ingots', weight: 2000}
+      - {item: 'minecraft:netherite_scrap', weight: 9500, amount: 1}
+      - {item: 'minecraft:ancient_debris', weight: 9800, amount: 1}
+  'vystorm_core:default/gathering_find':
+    entries:
+      - {item: 'minecraft:stick', weight: 0, min-amount: 1, max-amount: 3}
+      - {item: 'minecraft:apple', weight: 2000, amount: 1}
+      - {item: 'minecraft:coal', weight: 3000, min-amount: 1, max-amount: 2}
+      - {item: 'minecraft:iron_nugget', weight: 4000, min-amount: 1, max-amount: 4}
+      - {item: 'minecraft:gold_nugget', weight: 5000, min-amount: 1, max-amount: 3}
+      - {item: 'minecraft:experience_bottle', weight: 7000, amount: 1}
+      - {item: 'minecraft:emerald', weight: 8500, amount: 1}
+      - {item: 'minecraft:golden_apple', weight: 9600, amount: 1}

@@ -1,0 +1,21 @@
+{
+  "type": "minecraft:multi_action",
+  "title": {"text": "Vystorm", "color": "gold", "bold": true},
+  "external_title": {"text": "{{pause.external-title}}"},
+  "body": [
+    {"type": "minecraft:plain_message", "contents": {"text": "{{pause.body}}"}}
+  ],
+  "can_close_with_escape": true,
+  "pause": false,
+  "after_action": "close",
+  "columns": 1,
+  "actions": [
+    {"label": {"text": "{{pause.main}}"}, "tooltip": {"text": "{{pause.main-tooltip}}"}, "width": 200,
+     "action": {"type": "minecraft:dynamic/custom", "id": "vystorm_core:pause/main"}},
+    {"label": {"text": "{{pause.settings}}"}, "tooltip": {"text": "{{pause.settings-tooltip}}"}, "width": 200,
+     "action": {"type": "minecraft:dynamic/custom", "id": "vystorm_core:pause/settings"}},
+    {"label": {"text": "{{pause.tutorials}}"}, "tooltip": {"text": "{{pause.tutorials-tooltip}}"}, "width": 200,
+     "action": {"type": "minecraft:dynamic/custom", "id": "vystorm_core:pause/tutorials"}}
+  ],
+  "exit_action": {"label": {"text": "{{pause.back}}"}, "width": 200}
+}

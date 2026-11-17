@@ -1,0 +1,5 @@
+name: vystorm_core
+version: '${version}'
+main: Vystorm.vystorm_core.network.bungee.BungeeEntry
+author: Vystorm
+description: 'EXPERIMENTAL Vystorm network hub: cross-server player list, server selector, announcements and plugin messaging.'
