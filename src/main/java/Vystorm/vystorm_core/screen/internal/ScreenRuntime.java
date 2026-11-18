@@ -225,6 +225,37 @@ public final class ScreenRuntime {
     /** Sets the rule that sends a screen to its fallback: {@code (plugin name, keys of the screen) -> switched off}. */
     public void blockWhen(java.util.function.BiPredicate<String, java.util.List<String>> rule) { blocked = rule == null ? (o, k) -> false : rule; }
 
+    /** 0.65.1: refusal key when the player's client has not applied Core's pack; the fallback runs without a chat line. */
+    public static final String REFUSED_PACK = "screen.refused.pack";
+    private volatile Predicate<Player> packUsable = p -> true;
+
+    /**
+     * Sets the rule whether a player's client has Core's pack applied (any version of it). Players without it get the
+     * fallback of every screen instead of the screen. Default: always (tests, servers without the pack manager).
+     */
+    public void requirePack(Predicate<Player> usable) { packUsable = usable == null ? p -> true : usable; }
+
+    private volatile Predicate<Player> mapsDrawable = p -> true;
+
+    /**
+     * 0.65.1: whether this player's client draws map widgets of PINNED screens on top of the panel. 26.3 clients draw
+     * maps before the see-through panel text, so the panel covers the map and the pointer; there the widget shows its
+     * placeholder text and the pointer stays see-through. Default: always.
+     */
+    /** True for a Bukkit version string of Minecraft 26.3 or newer ("26.3-R0.1-SNAPSHOT", "26.10", "27.1"); false for 1.x, 26.2 and unreadable ones. */
+    public static boolean atLeast263(String bukkitVersion) {
+        if (bukkitVersion == null) return false;
+        java.util.regex.Matcher m = java.util.regex.Pattern.compile("^(\\d+)\\.(\\d+)").matcher(bukkitVersion.trim());
+        if (!m.find()) return false;
+        int major = Integer.parseInt(m.group(1)), minor = Integer.parseInt(m.group(2));
+        return major > 26 || major == 26 && minor >= 3;
+    }
+
+    public void mapsDrawableFor(Predicate<Player> drawable) { mapsDrawable = drawable == null ? p -> true : drawable; }
+
+    /** True for refusals that already explain themselves elsewhere and need no chat line (screens off, no pack). */
+    public static boolean silentRefusal(String key) { return REFUSED_OFF.equals(key) || REFUSED_PACK.equals(key); }
+
     /** Screen keys seen since the start, mapped to the owning plugin's name. */
     public Map<String, String> seen() { synchronized (seen) { return new java.util.LinkedHashMap<>(seen); } }
 
@@ -336,6 +367,14 @@ public final class ScreenRuntime {
         if (refused != null) {
             runFallback(spec, player);
             return ScreenOpenResult.refused(refused);
+        }
+        // 0.65.1: every screen draws with the pack's font; without the pack (declined, failed, not sent) it is broken
+        // boxes in the world, so the player gets the classic menu (chest, dialog) instead
+        boolean usable;
+        try { usable = packUsable.test(player); } catch (RuntimeException failed) { usable = true; }
+        if (!usable) {
+            runFallback(spec, player);
+            return ScreenOpenResult.refused(REFUSED_PACK);
         }
         link(player.getUniqueId(), origin);
         ScreenSpec.Mode mode = spec.preferred();
@@ -762,6 +801,9 @@ public final class ScreenRuntime {
         /** Spawns the client-only frames of a PINNED map widget; false when the placeholder text must be shown instead. */
         private boolean showMap(ScreenWidget widget) {
             if (mode != ScreenSpec.Mode.PINNED || !maps.supported()) return false;
+            boolean drawable;
+            try { drawable = mapsDrawable.test(player); } catch (RuntimeException failed) { drawable = true; }
+            if (!drawable) return false;
             ScreenMapCodec.Placement at = ScreenMapCodec.placement(eye.getX(), eye.getY(), eye.getZ());
             ScreenMapFrames.Handle handle = maps.show(player, at, mapTiles(widget));
             if (handle == null) return false;

@@ -1,3 +1,7 @@
+## Core 0.65.1: real 26.3 client — 2026-11-18
+
+Purpur 26.3 #2659, vanilla 26.3 client (protocol 777, resource format 97.1), offline test client. With Core 0.65.0 the client rejected Core's pack (`FAILED_RELOAD`, client log: `Couldn't parse GLSL: minecraft:core/text:4: error: '#' : invalid directive: moj_import`): 26.3 compiles core shaders to SPIR-V, needs `#include` and explicit `layout(location = n)` on vertex inputs/outputs. 0.65.1 ships the 26.3 form of `text.vsh` in the overlay `vystorm_26_3` (formats 97–99); the pack then loads and PINNED screens work. 26.3 draws item-frame maps before see-through text, so map widgets in PINNED screens are covered by the panel there; 0.65.1 shows their text instead on 26.3+ clients. 26.3 clients use SDL3: the test client's PostMessage keys are ignored in the background, mouse clicks and window capture (`mcbot/capture.ps1`) work.
+
 ## Core 0.51.0: Bukkit/Spigot verification ? 2026-11-07
 
 Core now supplies Adventure through Bukkit's library loader and isolates Paper-only listeners. The common paths have real Bukkit/native equivalents; no replacement Bukkit or Paper API classes are bundled.

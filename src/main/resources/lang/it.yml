@@ -1318,6 +1318,7 @@ screen:
     liquid: "<yellow>Non in acqua o lava."
     combat: "<yellow>Non subito dopo aver subito danni. Riprova tra qualche secondo."
     unsupported: "<yellow>Gli schermi non sono disponibili qui; viene usato il menu classico."
+    pack: "<yellow>Gli schermi richiedono il resource pack di Vystorm, che il tuo gioco non ha caricato; viene usato il menu classico."
   demo:
     gif:
       title: "<gold>{name}"
@@ -1458,7 +1459,7 @@ switches:
   loot: "Regole del bottino: fortuna per livello del mob, bottino minimo e /vadmin loot"
   plugin-worlds: "/vworlds per i mondi dei plugin e le visite"
   regions: "/vregion e i placeholder delle regioni"
-  menu-shortcut: "Accovacciarsi e doppio clic sinistro apre il menu principale"
+  menu-shortcut: "Accovacciarsi e doppio clic sinistro nel vuoto apre il menu principale (disattivato di default)"
   show-source: "Le righe di chat mostrano il plugin mittente al passaggio del mouse"
   screen-panels: "Pannelli dei plugin come schermate"
   screen-inventories: "Menu a cassa come schermate"

@@ -52,6 +52,9 @@ public final class AssetRegistry {
 
     private static void validatePath(String path, List<String> namespaces) {
         if (!PATH.matcher(path).matches() || path.contains("..")) throw new IllegalArgumentException("Invalid pack path: " + path);
+        // 0.65.1: files of a known overlay (PackBuilder.OVERLAYS) follow the same rules below the overlay folder
+        PackBuilder.Overlay overlay = PackBuilder.overlayOf(path);
+        if (overlay != null) path = path.substring(overlay.directory().length() + 1);
         if (!path.startsWith("assets/")) throw new IllegalArgumentException("Pack files must be under assets/: " + path);
         String rest = path.substring(7);
         int slash = rest.indexOf('/');

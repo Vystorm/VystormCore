@@ -1311,6 +1311,7 @@ screen:
     liquid: "<yellow>Nicht in Wasser oder Lava."
     combat: "<yellow>Nicht direkt nach Schaden. Versuch es in ein paar Sekunden nochmal."
     unsupported: "<yellow>Bildschirme gehen hier nicht; das klassische Menü wird verwendet."
+    pack: "<yellow>Bildschirme brauchen das Vystorm-Ressourcenpaket, das dein Spiel nicht geladen hat; das klassische Menü wird verwendet."
   demo:
     gif:
       title: "<gold>{name}"
@@ -1451,7 +1452,7 @@ switches:
   loot: "Beuteregeln: Glück nach Mob-Level, Mindestbeute und /vadmin loot"
   plugin-worlds: "/vworlds für Plugin-Welten und Besuche"
   regions: "/vregion und die Regions-Platzhalter"
-  menu-shortcut: "Schleichen und zweimal Linksklick öffnet das Hauptmenü"
+  menu-shortcut: "Schleichen und zweimal schnell in die Luft linksklicken öffnet das Hauptmenü (standardmäßig aus)"
   show-source: "Chatzeilen zeigen beim Darüberfahren das sendende Plugin"
   screen-panels: "Plugin-Panels als Bildschirme"
   screen-inventories: "Kistenmenüs als Bildschirme"

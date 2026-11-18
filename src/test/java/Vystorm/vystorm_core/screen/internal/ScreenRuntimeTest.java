@@ -649,4 +649,48 @@ class ScreenRuntimeTest {
         assertTrue(ScreenRuntime.textWidth("iiii") < ScreenRuntime.textWidth("MMMM"));
         assertEquals(2 + 6 * 5, ScreenRuntime.textWidth("Hello".replace("l", "o")));
     }
+
+    @Test void givenClientWithoutCorePack_whenOpen_thenFallbackAndNothingSpawned() {
+        java.util.Set<UUID> withPack = new java.util.HashSet<>();
+        runtime.requirePack(p -> withPack.contains(p.getUniqueId()));
+        Player p = player(0, 0);
+        AtomicBoolean fallback = new AtomicBoolean();
+        ScreenOpenResult result = runtime.open(core, p, spec(fallback));
+        assertFalse(result.opened());
+        assertEquals(ScreenRuntime.REFUSED_PACK, result.refusedKey());
+        assertTrue(ScreenRuntime.silentRefusal(result.refusedKey()), "the player already got the pack message at join");
+        assertTrue(fallback.get(), "the chest or dialog shows instead");
+        assertTrue(spawned.isEmpty(), "no mount, no displays: nothing is drawn with a font the client does not have");
+        assertTrue(runtime.session(p).isEmpty());
+        withPack.add(p.getUniqueId());
+        fallback.set(false);
+        assertTrue(runtime.open(core, p, spec(fallback)).opened(), "once the pack is applied the screen opens");
+        assertFalse(fallback.get());
+    }
+
+    @Test void givenServerVersions_thenOnly26_3AndNewerCount() {
+        assertTrue(ScreenRuntime.atLeast263("26.3-R0.1-SNAPSHOT"));
+        assertTrue(ScreenRuntime.atLeast263("26.10"));
+        assertTrue(ScreenRuntime.atLeast263("27.1-R0.1-SNAPSHOT"));
+        assertFalse(ScreenRuntime.atLeast263("26.2-R0.1-SNAPSHOT"));
+        assertFalse(ScreenRuntime.atLeast263("1.20.6-R0.1-SNAPSHOT"));
+        assertFalse(ScreenRuntime.atLeast263(null));
+        assertFalse(ScreenRuntime.atLeast263("unknown"));
+    }
+
+    @Test void givenClientThatCannotDrawScreenMaps_whenMapScreenOpens_thenPlaceholderAndSeeThroughPointer() {
+        List<Player> asked = new ArrayList<>();
+        runtime.useMaps(new ScreenMapFrames() {
+            @Override public boolean supported() { return true; }
+            @Override public Handle show(Player viewer, ScreenMapCodec.Placement at, List<byte[]> tiles) { fail("no map frames for this client"); return null; }
+        });
+        runtime.mapsDrawableFor(p -> { asked.add(p); return false; });
+        Player p = player(0, 0);
+        ScreenWidget map = ScreenWidget.map("map", 0.1, 0.1, 0.3, 0.3, new ScreenWidget.MapGrid(1, 1), "no map here");
+        ScreenOpenResult result = runtime.open(core, p, ScreenSpec.builder("test:map", new ScreenLayout(0.9, 0.55, List.of(map))).build());
+        assertTrue(result.opened());
+        assertEquals(List.of(p), asked);
+        TextDisplay pointer = (TextDisplay) spawned.get(spawned.size() - 1);
+        verify(pointer).setSeeThrough(true);
+    }
 }

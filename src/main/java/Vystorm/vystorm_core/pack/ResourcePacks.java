@@ -201,7 +201,8 @@ public final class ResourcePacks {
         Logger log = logger();
         for (String conflict : conflicts) log.warning("[ResourcePacks] Asset conflict " + conflict);
         if (changed) log.info("[ResourcePacks] Pack " + built.sha1().substring(0, 10) + " with " + built.files() + " files from "
-                + ASSETS.modules().size() + " modules" + url().map(u -> " at " + u).orElse(" (no URL configured)"));
+                + ASSETS.modules().size() + " modules" + url().map(u -> " at " + u).orElse(" (no URL configured)")
+                + (servesItself(settings) && http == null ? "; the built-in HTTP server is not running, so clients cannot download it from there" : ""));
         if (!changed) return true;
         Settings s = settings;
         for (Player player : Bukkit.getOnlinePlayers()) {
@@ -210,6 +211,9 @@ public final class ResourcePacks {
         }
         return true;
     }
+
+    /** True when the pack URL points at Core's own HTTP server. */
+    private static boolean servesItself(Settings s) { return s != null && s.enabled() && s.httpEnabled() && s.publicUrl().isBlank(); }
 
     private static Logger logger() {
         Plugin core = main.getPlugin();
@@ -377,14 +381,30 @@ public final class ResourcePacks {
         if (!ASSETS.modules().isEmpty()) rebuildSoon();
     }
 
+    /**
+     * The admin's log line when a player's client did not apply the pack (0.65.1): who, which status, which URL, what
+     * that player gets instead and the likely reason.
+     */
+    static String problemLine(String player, String status, String url) {
+        String why = switch (status) {
+            case "DECLINED" -> "the player declined it";
+            case "FAILED_RELOAD" -> "the client downloaded it but could not load it (usually a client version this Core does not support yet; the client log names the file)";
+            case "FAILED_DOWNLOAD", "INVALID_URL" -> "the client could not download it; check that this URL is reachable from outside the server"
+                    + " (open http.port, or set http.public-host or public-url in resource-pack.yml)";
+            default -> "the client did not apply it";
+        };
+        return "[ResourcePacks] " + player + ": " + status + " for " + (url == null || url.isBlank() ? "(no URL)" : url) + ": " + why
+                + ". This player gets chest menus instead of screens and no HUD window until the pack loads.";
+    }
+
     private static void notifyProblem(Player player, PlayerResourcePackStatusEvent.Status status) {
+        logger().warning(problemLine(player.getName(), status.name(), url().orElse("")));
         Settings s = settings;
         if (s == null || s.required()) return; // required: der Client wird ohnehin getrennt
         var lang = Vystorm.vystorm_core.lang.Localization.get().core();
         String reason = status == PlayerResourcePackStatusEvent.Status.DECLINED ? lang.plain(player, "pack.declined")
                 : lang.plain(player, "pack.failed", "status", status.name().toLowerCase(Locale.ROOT));
         lang.send(player, "pack.problem", "reason", reason);
-        logger().info("[ResourcePacks] " + player.getName() + ": " + status);
     }
 
     /**

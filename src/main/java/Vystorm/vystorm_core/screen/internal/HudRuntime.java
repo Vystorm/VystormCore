@@ -30,10 +30,15 @@ public final class HudRuntime implements Listener {
         BukkitTask hide;
     }
 
-    private HudRuntime(Plugin core) { this.core = core; }
+    private final java.util.function.Predicate<Player> packApplied;
 
-    public static void install(Plugin core) {
-        instance = new HudRuntime(core);
+    private HudRuntime(Plugin core, java.util.function.Predicate<Player> packApplied) { this.core = core; this.packApplied = packApplied; }
+
+    public static void install(Plugin core) { install(core, p -> true); }
+
+    /** 0.65.1: the window needs the pack's shader and font; a player whose client has not applied the pack gets none. */
+    public static void install(Plugin core, java.util.function.Predicate<Player> packApplied) {
+        instance = new HudRuntime(core, packApplied == null ? p -> true : packApplied);
         Bukkit.getPluginManager().registerEvents(instance, core);
     }
 
@@ -43,6 +48,7 @@ public final class HudRuntime implements Listener {
     }
 
     public void show(Plugin owner, Player player, HudCard card, int ticks) {
+        if (!packApplied.test(player)) { hide(owner, player); return; }
         Window window = windows.computeIfAbsent(player.getUniqueId(), id -> new Window());
         window.owner = owner;
         List<Component> rows = HudGlyphs.window(icon(card.icon()), card.title(), card.value(), card.progress(), barColour(card.accent()),

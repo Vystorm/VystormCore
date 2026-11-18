@@ -1314,6 +1314,7 @@ screen:
     liquid: "<yellow>Não na água ou na lava."
     combat: "<yellow>Não logo depois de levar dano. Tente de novo em alguns segundos."
     unsupported: "<yellow>Telas não estão disponíveis aqui; o menu clássico é usado."
+    pack: "<yellow>As telas precisam do pacote de recursos do Vystorm, que seu jogo não carregou; o menu clássico é usado."
   demo:
     gif:
       title: "<gold>{name}"
@@ -1454,7 +1455,7 @@ switches:
   loot: "Regras de saque: sorte por nível do mob, saque mínimo e /vadmin loot"
   plugin-worlds: "/vworlds para mundos de plugins e visitas"
   regions: "/vregion e os placeholders de região"
-  menu-shortcut: "Agachar e clicar duas vezes com o esquerdo abre o menu principal"
+  menu-shortcut: "Agachar e clicar duas vezes com o esquerdo no ar abre o menu principal (desligado por padrão)"
   show-source: "Linhas do chat mostram o plugin de origem ao passar o mouse"
   screen-panels: "Painéis dos plugins como telas"
   screen-inventories: "Menus de baú como telas"

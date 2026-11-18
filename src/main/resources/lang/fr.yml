@@ -1323,6 +1323,7 @@ screen:
     liquid: "<yellow>Pas dans l'eau ni la lave."
     combat: "<yellow>Pas juste après avoir subi des dégâts. Réessaie dans quelques secondes."
     unsupported: "<yellow>Les écrans ne sont pas disponibles ici ; le menu classique est utilisé."
+    pack: "<yellow>Les écrans ont besoin du pack de ressources Vystorm, que votre jeu n'a pas chargé ; le menu classique est utilisé."
   demo:
     gif:
       title: "<gold>{name}"
@@ -1463,7 +1464,7 @@ switches:
   loot: "Règles de butin : chance selon le niveau du monstre, butin minimum et /vadmin loot"
   plugin-worlds: "/vworlds pour les mondes de plugins et les visites"
   regions: "/vregion et les placeholders de région"
-  menu-shortcut: "S'accroupir et double clic gauche ouvre le menu principal"
+  menu-shortcut: "S'accroupir et double clic gauche dans le vide ouvre le menu principal (désactivé par défaut)"
   show-source: "Les lignes de chat montrent le plugin émetteur au survol"
   screen-panels: "Panneaux des plugins en écrans"
   screen-inventories: "Menus de coffre en écrans"

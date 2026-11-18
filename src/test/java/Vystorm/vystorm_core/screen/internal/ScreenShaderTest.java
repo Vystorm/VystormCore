@@ -46,4 +46,44 @@ class ScreenShaderTest {
         assertDoesNotThrow(() -> registry.register(core, ScreenShader.MODULE, ScreenShader.NAMESPACES, ScreenShader.packFiles(), 0));
         assertTrue(registry.hasModule(ScreenShader.MODULE));
     }
+
+    private String shader263() { return new String(files.get(ScreenShader.OVERLAY_26_3 + "/assets/minecraft/shaders/core/text.vsh"), StandardCharsets.UTF_8); }
+
+    /** Declarations of the vanilla 26.3 core/text.vsh (client 26.3, resource format 97.1); its text.fsh reads these locations. */
+    private static final String[] VANILLA_263 = {
+            "#version 330\n#extension GL_ARB_separate_shader_objects : require\n",
+            "#include <minecraft:fog.glsl>", "#include <minecraft:sample_lightmap.glsl>",
+            "#include <minecraft:dynamictransforms.glsl>", "#include <minecraft:projection.glsl>",
+            "layout(location = 0) in vec3 Position;", "layout(location = 1) in vec4 Color;", "layout(location = 2) in vec2 UV0;",
+            "layout(location = 3) in ivec2 UV2;",
+            "layout(location = 0) out float sphericalVertexDistance;", "layout(location = 1) out float cylindricalVertexDistance;",
+            "layout(location = 2) out vec4 vertexColor;", "layout(location = 3) out vec2 texCoord0;",
+    };
+
+    @Test void given26_3Overlay_thenShaderUsesTheVanilla26_3Declarations() {
+        String s = shader263();
+        assertTrue(s.startsWith(VANILLA_263[0]), "version and extension line first");
+        for (String line : VANILLA_263) assertTrue(s.contains(line), "missing: " + line);
+        assertFalse(s.contains("#moj_import"), "26.3 rejects #moj_import (invalid directive) and the whole pack fails");
+        assertFalse(s.matches("(?s).*\n(in|out) .*"), "every vertex input and output has a location");
+    }
+
+    @Test void given26_3Overlay_thenCoreBranchesAreTheSameAsIn26_2() {
+        String base = shader(), s = shader263();
+        for (String part : new String[] { "ivec3(254, 254, 254)", "vystormWord(0) == 46499", "vystormHudColor(vystormHud.b)",
+                "gl_Position = ProjMat * ModelViewMat * vec4(Position, 1.0);" }) {
+            assertTrue(base.contains(part), part);
+            assertTrue(s.contains(part), part);
+        }
+        assertEquals(base.substring(base.indexOf("void main()")).replace("\r\n", "\n"), s.substring(s.indexOf("void main()")));
+    }
+
+    @Test void given26_2Base_thenUnchanged() {
+        assertTrue(shader().contains("#moj_import <minecraft:fog.glsl>"));
+        assertFalse(shader().contains("layout(location"));
+    }
+
+    @Test void givenShaderWithoutAConvertedLine_thenConversionFailsLoudly() {
+        assertThrows(IllegalStateException.class, () -> ScreenShader.textFor263("#version 330\nvoid main() {}\n"));
+    }
 }

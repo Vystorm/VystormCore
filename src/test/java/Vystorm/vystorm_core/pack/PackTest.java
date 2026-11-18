@@ -84,4 +84,50 @@ class PackTest {
         assertTrue(mcmeta.contains("\"pack_format\":46"), mcmeta);
         assertFalse(mcmeta.contains("min_format"), mcmeta);
     }
+
+    @Test
+    void givenOverlayFile_whenBuilt_thenMcmetaNamesOverlayFrom26_3AndZipKeepsBoth() throws Exception {
+        AssetRegistry registry = new AssetRegistry();
+        registry.register(items, "screens", List.of("vystorm_screens"), Map.of(
+                "assets/minecraft/shaders/core/text.vsh", b("base"),
+                "vystorm_26_3/assets/minecraft/shaders/core/text.vsh", b("new")), 0);
+        PackBuilder.Built built = PackBuilder.build(registry.modules(), 88, "Vystorm");
+        java.util.Map<String, String> zip = new java.util.TreeMap<>();
+        try (java.util.zip.ZipInputStream in = new java.util.zip.ZipInputStream(new java.io.ByteArrayInputStream(built.zip()))) {
+            for (java.util.zip.ZipEntry e; (e = in.getNextEntry()) != null; ) zip.put(e.getName(), new String(in.readAllBytes(), StandardCharsets.UTF_8));
+        }
+        assertEquals("base", zip.get("assets/minecraft/shaders/core/text.vsh"));
+        assertEquals("new", zip.get("vystorm_26_3/assets/minecraft/shaders/core/text.vsh"));
+        assertEquals("{\"pack\":{\"min_format\":88,\"max_format\":" + PackBuilder.MAX_FORMAT + ",\"description\":\"Vystorm\"},"
+                + "\"overlays\":{\"entries\":[{\"min_format\":97,\"max_format\":" + PackBuilder.MAX_FORMAT + ",\"directory\":\"vystorm_26_3\"}]}}",
+                zip.get("pack.mcmeta"));
+    }
+
+    @Test
+    void givenNoOverlayFiles_thenMcmetaHasNoOverlays() {
+        assertFalse(PackBuilder.mcmeta(88, "x").contains("overlays"));
+        assertFalse(PackBuilder.mcmeta(46, "x", java.util.Set.of("vystorm_26_3")).contains("overlays"), "old formats have no min_format overlays");
+    }
+
+    @Test
+    void givenOverlayPaths_thenSameNamespaceRulesApply() {
+        AssetRegistry registry = new AssetRegistry();
+        assertThrows(IllegalArgumentException.class, () -> registry.register(items, "a", List.of("vystorm_a"),
+                Map.of("vystorm_26_3/assets/other/x.json", b("{}")), 0), "foreign namespace inside the overlay");
+        assertThrows(IllegalArgumentException.class, () -> registry.register(items, "b", List.of("vystorm_b"),
+                Map.of("unknown_overlay/assets/vystorm_b/x.json", b("{}")), 0), "only Core's overlays");
+        assertDoesNotThrow(() -> registry.register(items, "c", List.of("vystorm_c"),
+                Map.of("vystorm_26_3/assets/vystorm_c/x.json", b("{}")), 0));
+    }
+
+    @Test
+    void givenFailedStatus_thenAdminLineNamesUrlFallbackAndReason() {
+        String line = ResourcePacks.problemLine("Esoren", "FAILED_RELOAD", "http://example.org:8165/p.zip");
+        assertTrue(line.contains("Esoren: FAILED_RELOAD for http://example.org:8165/p.zip"), line);
+        assertTrue(line.contains("could not load it"), line);
+        assertTrue(line.contains("chest menus instead of screens"), line);
+        assertTrue(ResourcePacks.problemLine("a", "FAILED_DOWNLOAD", "").contains("(no URL)"));
+        assertTrue(ResourcePacks.problemLine("a", "FAILED_DOWNLOAD", "u").contains("reachable from outside"));
+        assertTrue(ResourcePacks.problemLine("a", "DECLINED", "u").contains("declined"));
+    }
 }

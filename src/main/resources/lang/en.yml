@@ -1312,6 +1312,7 @@ screen:
     liquid: "<yellow>Not in water or lava."
     combat: "<yellow>Not right after taking damage. Try again in a few seconds."
     unsupported: "<yellow>Screens are not available here; the classic menu is used."
+    pack: "<yellow>Screens need the Vystorm resource pack, which your game has not loaded; the classic menu is used."
   demo:
     gif:
       title: "<gold>{name}"
@@ -1452,7 +1453,7 @@ switches:
   loot: "Loot rules: mob-level luck, pity and /vadmin loot"
   plugin-worlds: "/vworlds for plugin worlds and visits"
   regions: "/vregion and the region placeholders"
-  menu-shortcut: "Sneak and left-click twice opens the main menu"
+  menu-shortcut: "Sneak and left-click twice quickly into the air opens the main menu (off by default)"
   show-source: "Chat lines show the sending plugin on hover"
   screen-panels: "Plugin panels as screens"
   screen-inventories: "Chest menus as screens"

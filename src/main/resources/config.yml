@@ -377,9 +377,10 @@ screens:
   # text or number box opens a one-field typing dialog. false = those dialogs stay native.
   dialog-inputs: true
 
-# Hold sneak and left-click twice quickly: opens the Vystorm menu (/menu). false switches the shortcut off.
+# Hold sneak and left-click twice quickly into the air: opens the Vystorm menu (/menu). Off by default since 0.65.1
+# (it got in the way of building and mining while sneaking); true switches it on. /menu and /vmenu always work.
 menu:
-  sneak-click-shortcut: true
+  sneak-click-shortcut: false
   # Show /menu as a Vystorm screen (icon tiles in your view). false = the previous menu.
   screen: true
 

@@ -15,7 +15,7 @@ public final class Menu implements TabExecutor {
             var result = new Vystorm.vystorm_core.screen.internal.MenuScreen(main.getPlugin(), gui).open(player, p -> openClassic(p, gui));
             // 0.60.0: say why the classic menu opened instead of the screen (riding, falling, water, just hit …).
             if (!result.opened() && result.refusedKey() != null
-                    && !Vystorm.vystorm_core.screen.internal.ScreenRuntime.REFUSED_OFF.equals(result.refusedKey())) lang.send(player, result.refusedKey());
+                    && !Vystorm.vystorm_core.screen.internal.ScreenRuntime.silentRefusal(result.refusedKey())) lang.send(player, result.refusedKey());
         }
         else if (args.length == 0) {
             // Natives Panel (ohne Mod: dessen fallback = openDirectory(player, 0)); nicht registriert → wie bisher.

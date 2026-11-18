@@ -1310,6 +1310,7 @@ screen:
     liquid: "<yellow>在水或岩浆中不能打开。"
     combat: "<yellow>刚受到伤害后不能打开，请几秒后再试。"
     unsupported: "<yellow>这里不支持屏幕，将使用经典菜单。"
+    pack: "<yellow>屏幕需要 Vystorm 资源包，但你的游戏没有加载它，将使用经典菜单。"
   demo:
     gif:
       title: "<gold>{name}"
@@ -1450,7 +1451,7 @@ switches:
   loot: "战利品规则：按怪物等级的幸运、保底和 /vadmin loot"
   plugin-worlds: "插件世界和访问的 /vworlds"
   regions: "/vregion 和区域占位符"
-  menu-shortcut: "潜行并双击左键打开主菜单"
+  menu-shortcut: "潜行并对空中快速双击左键打开主菜单（默认关闭）"
   show-source: "悬停时聊天行显示发送插件"
   screen-panels: "插件面板显示为屏幕"
   screen-inventories: "箱子菜单显示为屏幕"

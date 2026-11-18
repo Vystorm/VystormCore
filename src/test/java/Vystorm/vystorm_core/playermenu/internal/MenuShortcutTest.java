@@ -37,4 +37,19 @@ class MenuShortcutTest {
         now += 100;
         assertFalse(shortcut.leftClick(player));
     }
+
+    @Test void givenOneClickArrivingTwice_thenNothing() {
+        assertFalse(shortcut.leftClick(player));
+        now += 30;
+        assertFalse(shortcut.leftClick(player), "two signals of one click are one click");
+        now += 150;
+        assertTrue(shortcut.leftClick(player), "a real second click still opens");
+    }
+
+    @Test void givenBlockClicks_thenTheyNeverCount() {
+        assertTrue(MenuShortcut.counts(org.bukkit.event.block.Action.LEFT_CLICK_AIR));
+        assertFalse(MenuShortcut.counts(org.bukkit.event.block.Action.LEFT_CLICK_BLOCK), "mining or breaking while sneaking");
+        assertFalse(MenuShortcut.counts(org.bukkit.event.block.Action.RIGHT_CLICK_AIR));
+        assertFalse(MenuShortcut.counts(org.bukkit.event.block.Action.PHYSICAL));
+    }
 }

@@ -164,6 +164,29 @@ private static void start(String name, Runnable step) {
         catch (RuntimeException | LinkageError failure) { DebugMessages.high("[main] " + name + " not started", failure); }
 }
 
+/** True when the player's client has Core's pack applied (also an older version of it while a new one is on its way). */
+static boolean packApplied(org.bukkit.entity.Player player) {
+    Vystorm.vystorm_core.pack.PackState state = ResourcePacks.state(player);
+    return state == Vystorm.vystorm_core.pack.PackState.LOADED || state == Vystorm.vystorm_core.pack.PackState.OUTDATED;
+}
+
+/** Protocol of Minecraft 26.3, the first client that draws maps before see-through text. */
+static final int PROTOCOL_26_3 = 777;
+
+/** The player's client protocol (Paper's {@code Player#getProtocolVersion}); -1 where the server cannot tell (Spigot). */
+static int clientProtocol(org.bukkit.entity.Player player) {
+    try { return (int) player.getClass().getMethod("getProtocolVersion").invoke(player); }
+    catch (ReflectiveOperationException | RuntimeException | LinkageError unknown) { return -1; }
+}
+
+/** Map widgets of PINNED screens show on this client (0.65.1: not on 26.3 and newer, see ScreenRuntime#mapsDrawableFor). */
+static boolean mapWidgetsDrawable(org.bukkit.entity.Player player) {
+    int protocol = clientProtocol(player);
+    if (protocol >= 0) return protocol < PROTOCOL_26_3;
+    try { return !Vystorm.vystorm_core.screen.internal.ScreenRuntime.atLeast263(org.bukkit.Bukkit.getBukkitVersion()); }
+    catch (RuntimeException | LinkageError unknown) { return true; }
+}
+
 /** Vystorm Screens runtime (0.57.0): sessions, listeners, leftover cleanup. */
 private void startScreens() {
     ScreenRuntime runtime = new ScreenRuntime(this,
@@ -172,6 +195,9 @@ private void startScreens() {
             p -> PlayerPrefs.bool(this, p, "screen.classic", false),
             task -> getServer().getScheduler().runTaskLater(this, task, 2L));
     runtime.useMaps(new ScreenMapFrames.Packets());
+    // 0.65.1: without Core's pack applied (declined, failed download or reload, not sent) screens fall back to the classic menu
+    runtime.requirePack(main::packApplied);
+    runtime.mapsDrawableFor(main::mapWidgetsDrawable);
     // 0.62.0: screens.enabled false = no screens at all, screens.off = single menus or plugins; both show the fallback
     runtime.blockWhen((owner, keys) -> !getConfig().getBoolean("screens.enabled", true)
             || ScreenRuntime.listed(getConfig().getStringList("screens.off"), owner, keys));
@@ -185,9 +211,9 @@ private void startScreens() {
     for (World world : getServer().getWorlds()) runtime.sweep(world.getEntities());
     ScreenDemo.register(this);
     getServer().getPluginManager().registerEvents(new InventoryScreens(this), this);
-    HudRuntime.install(this);
+    HudRuntime.install(this, main::packApplied);
     getServer().getPluginManager().registerEvents(new MenuShortcut(System::currentTimeMillis,
-            () -> getConfig().getBoolean("menu.sneak-click-shortcut", true),
+            () -> getConfig().getBoolean("menu.sneak-click-shortcut", false),
             p -> ScreenRuntime.get().session(p).isPresent()), this);
 }
 
