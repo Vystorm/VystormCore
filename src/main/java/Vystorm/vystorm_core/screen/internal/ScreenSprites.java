@@ -42,6 +42,15 @@ public final class ScreenSprites {
         return of(material, known());
     }
 
+    /**
+     * True when the client has a flat texture for the material. Items that are drawn from a model (chests, beds,
+     * banners, heads, shulker boxes) and blocks that borrow another block's texture (carpets) have none; for them
+     * {@link #of} gives the paper icon. @since 0.65.0
+     */
+    public static boolean has(String material) {
+        return "PAPER".equalsIgnoreCase(material) || !FALLBACK.equals(of(material));
+    }
+
     static Sprite of(String material, Set<String> names) {
         String n = material == null ? "" : material.toLowerCase(Locale.ROOT);
         for (String item : List.of("item/" + n, "item/" + n + "_00")) if (names.contains(item)) return new Sprite("minecraft:items", item);

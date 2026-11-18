@@ -44,6 +44,10 @@ public final class ChatActions {
     /** Converts a legacy {@code §}-formatted text so actions can be appended. */
     public static TextComponent text(String legacy) { return LEGACY.deserialize(legacy == null ? "" : legacy); }
 
+    private static boolean coordinatesOn() {
+        return Vystorm.vystorm_core.lifecycle.CoreSwitches.on(Vystorm.vystorm_core.lifecycle.CoreSwitches.Switch.COORDINATES);
+    }
+
     /** Coordinates "[welt x y z]"; click teleports (with {@link #TELEPORT_PERMISSION}). */
     public static Component location(Location location) { return location(location, TELEPORT_PERMISSION); }
 
@@ -57,12 +61,15 @@ public final class ChatActions {
         World world = Objects.requireNonNull(location.getWorld(), "location world");
         String coords = location.getBlockX() + " " + location.getBlockY() + " " + location.getBlockZ();
         String label = "[" + world.getName() + " " + coords + "]";
+        // clickable-coordinates.enabled off (0.65.0): the coordinates are plain text
+        if (!coordinatesOn()) return Component.text(label, NamedTextColor.AQUA);
         Location target = location.clone();
         String node = permission == null ? "" : permission;
         return Component.text(label, NamedTextColor.AQUA)
                 .hoverEvent(HoverEvent.showText(hover("chat.teleport-hover")
                         .append(Component.newline()).append(Component.text(world.getName() + " " + coords, NamedTextColor.DARK_GRAY))))
                 .clickEvent(callback(player -> {
+                    if (!coordinatesOn()) { lang().send(player, "feature-off"); return; } // switched off after it was sent
                     if (!node.isEmpty() && !player.hasPermission(node)) {
                         Vystorm.vystorm_core.compat.PlatformCompat.sendMessage(player, lang().component(player, "chat.coordinates", "world", world.getName(), "coords", coords)
                                 .hoverEvent(HoverEvent.showText(lang().component(player, "chat.copy-clipboard-hover")))

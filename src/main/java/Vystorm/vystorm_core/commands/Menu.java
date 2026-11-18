@@ -27,6 +27,7 @@ public final class Menu implements TabExecutor {
         else if (args.length == 1 && args[0].equalsIgnoreCase("search")) Vystorm.vystorm_core._uiMethods.menu.MenuExplorer.open(player, gui);
         else if (args.length == 2 && args[0].equalsIgnoreCase("access")) {
             if (!player.hasPermission("vystorm_core.admin")) { lang.send(player, "menu.access.no-permission"); return true; }
+            if (!Vystorm.vystorm_core.lifecycle.CoreSwitches.on(Vystorm.vystorm_core.lifecycle.CoreSwitches.Switch.DIAGNOSTICS)) { lang.send(player, "feature-off"); return true; }
             Player target = org.bukkit.Bukkit.getPlayerExact(args[1]);
             if (target == null) { lang.send(player, "menu.access.online-only"); return true; }
             for (var access : gui.inspectMenus(target)) lang.send(player, "menu.access.line", "menu", access.key(),
@@ -43,6 +44,10 @@ public final class Menu implements TabExecutor {
         else if (args.length == 1 && args[0].equalsIgnoreCase("list")) sender.sendMessage(String.join(", ", gui.menuKeys(player)));
         else if (args.length == 1 && (args[0].equalsIgnoreCase("einstellungen") || args[0].equalsIgnoreCase("settings"))) main.getApi().settings().openOverview(player);
         else if (args.length != 1 || !gui.openMenu(player, args[0])) {
+            // 0.65.0: menus from files answer to menus:<id> and to their bare id; registered keys keep the first say
+            var files = Vystorm.vystorm_core.menus.internal.FileMenuService.shared();
+            String fileMenu = args.length == 1 && files != null ? files.idOf(args[0]) : null;
+            if (fileMenu != null) { files.openOrTell(player, fileMenu); return true; }
             var legacy = args.length == 1 ? gui.getInventory(args[0], player) : null;
             if (legacy != null) player.openInventory(legacy);
             else lang.send(sender, "menu.unavailable");
@@ -77,12 +82,14 @@ public final class Menu implements TabExecutor {
         java.util.List<String> out = new java.util.ArrayList<>();
         if (args.length == 1) {
             out.addAll(SUBCOMMANDS);
-            if (admin) out.add("access");
+            if (admin && Vystorm.vystorm_core.lifecycle.CoreSwitches.on(Vystorm.vystorm_core.lifecycle.CoreSwitches.Switch.DIAGNOSTICS)) out.add("access");
             if (player.hasPermission(Vystorm.vystorm_core.playermenu.PlayerMenu.PERMISSION)) out.add("player");
             if (player.hasPermission(Vystorm.vystorm_core.news.News.PERMISSION)) out.add("news");
             if (player.hasPermission(Vystorm.vystorm_core.inbox.Inbox.PERMISSION)) out.add("inbox");
             if (player.hasPermission(Vystorm.vystorm_core.profile.Profiles.PERMISSION)) out.add("profile");
             out.addAll(main.getApi().gui().menuKeys(player));
+            var files = Vystorm.vystorm_core.menus.internal.FileMenuService.shared();
+            if (files != null) out.addAll(files.idsFor(player));
         } else if (args.length == 2 && admin && args[0].equalsIgnoreCase("access")) {
             player.getServer().getOnlinePlayers().forEach(p -> out.add(p.getName()));
         } else if (args.length == 2 && args[0].equalsIgnoreCase("profile")) {

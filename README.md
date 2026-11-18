@@ -110,6 +110,8 @@ Commands and tab completion only show what the sender may use.
 - `database.shared`: the shared database, off by default. See below.
 - `web`: the web platform, off by default (`web.enabled: false`). `web.client` controls the client-mod features (overlay, HUD, panels) and is on by default. Setup for both modes is in [docs/TECHNICAL.md](docs/TECHNICAL.md#web-platform), the security model in [WEB_SECURITY.md](WEB_SECURITY.md).
 
+- Feature switches (0.65.0): `trade-chat.enabled` (`/vtrade`), `clickable-coordinates.enabled`, `tutorials.enabled` (all tutorials and the first-steps guide), `setup.enabled` (setup wizard and first-run setups), `diagnostics.enabled` (`/vadmin diagnostics`, `/vmenu access`, `/vadmin migration`, `/vadmin trace`), `loot.enabled` (mob-level luck, pity and `/vadmin loot`; the loot tables stay for the plugins), `plugin-worlds.enabled` (`/vworlds`; visits keep protecting the players' state), `region-register.enabled` (`/vregion` and the region placeholders; the register stays for the plugins). All on by default and listed in `/vadmin features` together with the older switches; `menu.sneak-click-shortcut`, `messages.show-source`, the `screens.*` parts, `metrics`, `update-check.enabled` and `review-reminder.enabled` are listed there now too. A switched-off feature answers "This feature is switched off on this server.". Everything applies at once except `web`, `database` and `metrics` (restart). The main menu, settings, config editor, language system, `/vhelp`, event order and the placeholder manager have no switch: the other plugins are built on them.
+
 ### Configuration in game
 
 Any Vystorm plugin that registers with the config editor can be edited from the game: `/vadmin config <plugin>`, or `/vsettings` → server settings → Plugin configuration, or the plugin's page in `/vadmin`. Each top-level key becomes a section. Comments from the default file become descriptions, numbers with a known range become sliders, everything else is a checked text field.
@@ -145,6 +147,7 @@ The JAR ends up in `build/libs/Vystorm_Core-<version>-Vystorm-Core-26.2.jar`. Ch
 
 - [docs/API.md](docs/API.md): the full plugin API with setup, an example plugin, threading rules, localization, settings, the config editor, menus, dialogs, web modules, client-mod elements, panels and plugin worlds. Written so it also works as context for AI coding assistants.
 - [docs/TECHNICAL.md](docs/TECHNICAL.md): how Core runs on a server: package layout, debug logger, shared database pool, web platform modes, client protocol sync and the history of plugin integrations.
+- [docs/MENUS.md](docs/MENUS.md): your own screen menus as files in `plugins/vystorm_core/menus` (0.65.0): where the file goes, how it opens, every field of the format.
 - [WEB_SECURITY.md](WEB_SECURITY.md): security model of the web platform and the gateway tunnel protocol.
 
 ## Server polls

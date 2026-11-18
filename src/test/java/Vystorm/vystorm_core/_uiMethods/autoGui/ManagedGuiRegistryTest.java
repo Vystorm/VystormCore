@@ -257,4 +257,101 @@ class ManagedGuiRegistryTest {
         gui.clear();
         assertTrue(gui.inspect(player).isEmpty());
     }
+
+    // ---- 0.65.0: a personal menu that Core shows as a real chest after all (screens off, refused, "Chest") stays managed ----
+
+    /** Tasks the registry schedules, and a player for whom opening a menu closes the open one first, like the server. */
+    private final List<Runnable> tasks = new ArrayList<>();
+    private Inventory shown;
+
+    private void liveServer() {
+        var scheduler = mock(org.bukkit.scheduler.BukkitScheduler.class);
+        bukkit.when(Bukkit::getScheduler).thenReturn(scheduler);
+        when(scheduler.runTask(eq(owner), any(Runnable.class))).thenAnswer(a -> { tasks.add(a.getArgument(1)); return null; });
+        when(scheduler.runTaskLater(eq(owner), any(Runnable.class), anyLong())).thenAnswer(a -> { tasks.add(a.getArgument(1)); return null; });
+        when(player.isOnline()).thenReturn(true);
+        InventoryView open = mock(InventoryView.class);
+        when(open.getTopInventory()).thenAnswer(a -> shown);
+        when(player.getOpenInventory()).thenReturn(open);
+        when(player.openInventory(any(Inventory.class))).thenAnswer(a -> {
+            Inventory menu = a.getArgument(0);
+            if (shown != null) serverCloses();
+            var e = mock(InventoryOpenEvent.class); when(e.getInventory()).thenReturn(menu); when(e.getPlayer()).thenReturn(player);
+            gui.open(e);
+            shown = menu;
+            gui.openResult(e);
+            return open;
+        });
+    }
+
+    private void serverCloses() {
+        var e = mock(InventoryCloseEvent.class); when(e.getInventory()).thenReturn(shown); when(e.getPlayer()).thenReturn(player);
+        shown = null;
+        gui.close(e);
+    }
+
+    private void runTasks() { for (Runnable task : List.copyOf(tasks)) task.run(); tasks.clear(); }
+
+    @Test void givenPersonalMenuWithScreensOff_whenHandedBackAsChest_thenEveryWayToMoveAnItemIsCancelled() {
+        int[] closed = { 0 };
+        create(new GuiCallbacks() { @Override public void close(InventoryCloseEvent event) { closed[0]++; } });
+        liveServer();
+        player.openInventory(inventory);            // the plugin opens its menu; Core hides it and tries the screen
+        runTasks();
+        // screens.enabled: false -> the screen is refused and Core shows the menu as a real chest (InventoryScreens.reopenReal)
+        Vystorm.vystorm_core.screen.internal.ChestHandOver.begin(inventory);
+        Vystorm.vystorm_core.screen.internal.ChestHandOver.show(player, inventory);
+        runTasks();
+        assertTrue(gui.managed(inventory), "the menu is still Core's");
+        assertEquals(0, closed[0], "for the plugin the menu never closed");
+        assertFalse(Vystorm.vystorm_core.screen.internal.ChestHandOver.active(inventory));
+        for (ClickType type : new ClickType[] { ClickType.LEFT, ClickType.RIGHT, ClickType.SHIFT_LEFT, ClickType.SHIFT_RIGHT, ClickType.NUMBER_KEY,
+                ClickType.DROP, ClickType.CONTROL_DROP, ClickType.DOUBLE_CLICK, ClickType.MIDDLE, ClickType.SWAP_OFFHAND }) {
+            var e = click(); when(e.getClick()).thenReturn(type); gui.click(e);
+            verify(e, description(type + " must be cancelled")).setCancelled(true);
+        }
+        var drag = mock(InventoryDragEvent.class); when(drag.getWhoClicked()).thenReturn(player); when(drag.getView()).thenReturn(view);
+        when(drag.getRawSlots()).thenReturn(Set.of(4, 56)); gui.drag(drag); verify(drag).setCancelled(true);
+        // and a real close afterwards still ends the menu
+        serverCloses();
+        assertFalse(gui.managed(inventory)); assertEquals(1, closed[0]);
+    }
+
+    @Test void givenScreenLeftForTheChest_whenTheServerClosedTheMenuOnTheWay_thenTheSessionSurvives() {
+        var callback = mock(GuiCallbacks.class); create(callback);
+        liveServer();
+        player.openInventory(inventory);
+        runTasks();
+        // the "Chest" button: the mark is set, closing the screen teleports the player (the server closes the menu), a tick later it opens again
+        Vystorm.vystorm_core.screen.internal.ChestHandOver.begin(inventory);
+        serverCloses();
+        assertTrue(gui.managed(inventory));
+        Vystorm.vystorm_core.screen.internal.ChestHandOver.show(player, inventory);
+        runTasks();
+        assertTrue(gui.managed(inventory)); verify(callback, never()).close(any()); verify(callback, never()).discarded(any());
+        var e = click(); gui.click(e); verify(callback).click(e);
+    }
+
+    @Test void givenHandOverThatNeverShowsTheChest_whenTwoTicksPassed_thenTheMenuIsClosedForReal() {
+        var callback = mock(GuiCallbacks.class); create(callback);
+        liveServer();
+        player.openInventory(inventory);
+        runTasks();
+        Vystorm.vystorm_core.screen.internal.ChestHandOver.begin(inventory);
+        serverCloses();
+        when(player.isOnline()).thenReturn(false);   // left the server before the chest could open
+        Vystorm.vystorm_core.screen.internal.ChestHandOver.show(player, inventory);
+        runTasks();
+        assertFalse(gui.managed(inventory)); verify(callback).close(any());
+    }
+
+    @Test void givenNoHandOver_whenTheMenuIsClosedAndOpenedAgain_thenItIsNoLongerManaged() {
+        var callback = mock(GuiCallbacks.class); create(callback);
+        liveServer();
+        player.openInventory(inventory);
+        runTasks();
+        player.openInventory(inventory);   // what 0.64.0 did when it handed the menu back: close and open, nothing marked
+        runTasks();
+        assertFalse(gui.managed(inventory), "a menu its viewer really closed is over; only a hand-over keeps it");
+    }
 }

@@ -248,6 +248,18 @@ public final class Localization {
         bundles.values().forEach(Lang::clearCache);
     }
 
+    private volatile boolean placeholdersInTexts;
+
+    /**
+     * {@code placeholders.in-messages} in Core's config (default false): whether the texts of every bundle resolve the
+     * placeholders of {@code api.placeholders()} when they are built for a viewer. A single bundle switches it on
+     * with {@link Lang#placeholders(boolean)}. @since 0.65.0
+     */
+    public boolean placeholdersInTexts() { return placeholdersInTexts; }
+
+    /** Sets {@code placeholders.in-messages}. Managed by Core. @since 0.65.0 */
+    public void placeholdersInTexts(boolean resolve) { placeholdersInTexts = resolve; }
+
     /** {@code language.force}: whether everyone sees {@link #serverLanguage()} (no personal choice). @since 0.45.0 */
     public boolean forced() { return force; }
 

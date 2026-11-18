@@ -250,9 +250,198 @@ class ScreenRuntimeTest {
         runtime.open(core, p, spec(new AtomicBoolean()));   // what the first half of the click did
         runtime.onSwing(p);                                  // the same click, counted again by the client
         assertEquals(before, clicks(), "the new screen must not be clicked by the click that opened it");
-        now += 200;
+        // 0.65.0: while the click guard is up, a bare arm swing is the held button on the block behind, not a click
+        // (was: + 200 ms); a new press is an attack on the click box and counts at once, see the guard tests below
+        now += ScreenRuntime.GUARD_MILLIS + 1;
         runtime.onSwing(p);
         assertEquals(before + 1, clicks());
+    }
+
+    // ---- click guard (0.65.0): a click that closes or replaces a screen must not reach the world ----
+
+    /** A screen that closes when it is clicked, like a Close button or a tile that leads to a chest menu. */
+    private ScreenSpec closingSpec() {
+        ScreenLayout layout = new ScreenLayout(0.9, 0.55, List.of(ScreenWidget.button("centre", 0.35, 0.235, 0.2, 0.08, "Close")));
+        return ScreenSpec.builder("test:closing", layout).onInput((s, i) -> {
+            inputs.add(i);
+            if (i instanceof ScreenInput.Click) s.close();
+        }).build();
+    }
+
+    /** The click box of the player's newest screen. */
+    private Entity box() {
+        Entity last = null;
+        for (Entity e : spawned) if (e instanceof Interaction) last = e;
+        return last;
+    }
+
+    @Test void givenClickThatClosesTheScreen_whenTheHeldButtonReachesTheWorld_thenStoppedForAShortTimeOnly() {
+        Player p = player(0, 0);
+        assertFalse(runtime.stopsWorldAction(p, true), "normal play is never touched");
+        runtime.open(core, p, closingSpec());
+        assertTrue(runtime.stopsWorldAction(p, true), "an open screen takes every click");
+        runtime.onClick(p, box(), false);
+        assertFalse(runtime.hasSession(p));
+        now += 60;   // the client now aims at the block behind the screen and the button is still down
+        assertTrue(runtime.stopsWorldAction(p, true), "break, mining, use and hit are cancelled");
+        now += ScreenRuntime.GUARD_MILLIS;
+        assertFalse(runtime.stopsWorldAction(p, true), "half a second later the player breaks blocks again");
+        assertFalse(runtime.guarded(p.getUniqueId()));
+    }
+
+    @Test void givenButtonHeldDown_whenActionsKeepComing_thenGuardedUntilTheCapAndNotLonger() {
+        Player p = player(0, 0);
+        runtime.open(core, p, closingSpec());
+        runtime.onClick(p, box(), true);
+        long click = now;
+        // creative breaks again every 6 ticks (300 ms) while the button is down, a held right button uses every 5 ticks
+        for (now = click + 300; now <= click + ScreenRuntime.GUARD_MAX_MILLIS; now += 300)
+            assertTrue(runtime.stopsWorldAction(p, true), "still held at +" + (now - click) + " ms");
+        now = click + ScreenRuntime.GUARD_MAX_MILLIS + 1;
+        assertFalse(runtime.stopsWorldAction(p, true), "the guard never blocks play for longer than its cap");
+    }
+
+    @Test void givenGuard_whenOnlyArmSwingsFollow_thenItEndsOnTime() {
+        Player p = player(0, 0);
+        runtime.open(core, p, closingSpec());
+        runtime.onClick(p, box(), false);
+        now += ScreenRuntime.GUARD_MILLIS - 50;
+        assertTrue(runtime.stopsWorldAction(p, false));
+        now += 51;
+        assertFalse(runtime.stopsWorldAction(p, true), "a swing is no sign of a held button and does not prolong the guard");
+    }
+
+    @Test void givenGuard_whenTheClientReportsTheButtonReleased_thenItEndsAtOnce() {
+        Player p = player(0, 0);
+        runtime.open(core, p, closingSpec());
+        runtime.onClick(p, box(), false);
+        now += 100;
+        assertTrue(runtime.stopsWorldAction(p, true));
+        runtime.onButtonReleased(p);
+        assertTrue(runtime.stopsWorldAction(p, false), "the same tick is still covered (another block aimed at)");
+        now += ScreenRuntime.GUARD_RELEASE_MILLIS + 1;
+        assertFalse(runtime.stopsWorldAction(p, true));
+    }
+
+    @Test void givenScreenClosedWithoutAClick_whenThePlayerActs_thenNoGuard() {
+        Player p = player(0, 0);
+        runtime.open(core, p, spec(new AtomicBoolean()));
+        runtime.onClick(p, box(), false);                  // a click that changes nothing
+        now += ScreenRuntime.CLICK_CLOSES_MILLIS + 1;
+        runtime.onSneak(p, true);                          // closed with the sneak key
+        assertFalse(runtime.stopsWorldAction(p, true));
+        runtime.open(core, p, spec(new AtomicBoolean()));
+        now += 1_000;
+        runtime.close(p, ScreenInput.Reason.COMMAND);      // /screen close
+        assertFalse(runtime.stopsWorldAction(p, true));
+    }
+
+    @Test void givenHandlerThatClosesOneTickAfterTheClick_whenClosed_thenGuardedToo() {
+        Player p = player(0, 0);
+        runtime.open(core, p, spec(new AtomicBoolean()));
+        runtime.onClick(p, box(), false);
+        now += 50;
+        runtime.close(p, ScreenInput.Reason.PLUGIN);       // e.g. a chest screen whose plugin closed the menu on that click
+        assertTrue(runtime.stopsWorldAction(p, true));
+    }
+
+    @Test void givenSlowClickHandlerThatCloses_whenClosed_thenTheGuardStartsAtTheClose() {
+        Player p = player(0, 0);
+        ScreenLayout layout = new ScreenLayout(0.9, 0.55, List.of(ScreenWidget.button("centre", 0.35, 0.235, 0.2, 0.08, "Save")));
+        runtime.open(core, p, ScreenSpec.builder("test:slow-close", layout).onInput((s, i) -> {
+            if (i instanceof ScreenInput.Click) { now += 3_000; s.close(); }
+        }).build());
+        runtime.onClick(p, box(), false);
+        now += 100;
+        assertTrue(runtime.stopsWorldAction(p, true), "3 s of saving must not use up the guard");
+    }
+
+    @Test void givenClickThatOpensAnotherScreen_whenTheNewOneIsStillBeingBuilt_thenItsClickBoxIsThereAndNothingLeaks() {
+        List<Runnable> queue = new ArrayList<>();
+        runtime = new ScreenRuntime(core, fake, () -> now, p -> pack, p -> false, queue::add);
+        Player p = player(0, 0);
+        ScreenLayout layout = new ScreenLayout(0.9, 0.55, List.of(ScreenWidget.button("centre", 0.35, 0.235, 0.2, 0.08, "Next")));
+        ScreenSpec second = spec(new AtomicBoolean());
+        runtime.open(core, p, ScreenSpec.builder("test:first", layout).onInput((s, i) -> {
+            if (i instanceof ScreenInput.Click) runtime.open(core, p, second);
+        }).build());
+        Entity firstBox = box();
+        assertNotNull(firstBox, "the click box exists before the screen is drawn");
+        queue.remove(0).run();                              // two ticks later: the first screen is drawn
+        runtime.onClick(p, firstBox, false);                // the click that opens the second screen
+        Entity secondBox = box();
+        assertNotSame(firstBox, secondBox, "the new click box is spawned in the same tick, not two ticks later");
+        assertTrue(removed.contains(firstBox));
+        assertTrue(runtime.stopsWorldAction(p, true));
+        long before = clicks();
+        now += 60;
+        runtime.onSwing(p);                                 // the held button swings at the block behind
+        assertTrue(runtime.onClick(p, secondBox, false), "the event is the screen's (cancelled) …");
+        assertEquals(before, clicks(), "… but a screen that is not drawn yet cannot be clicked");
+        queue.remove(0).run();                              // the second screen is drawn
+        now += 140;                                         // 200 ms after the click: the old 150 ms window is over
+        runtime.onSwing(p);
+        assertEquals(before, clicks(), "a bare swing during the guard is the held button, not a click");
+        runtime.onClick(p, secondBox, false);               // a new press on the new screen
+        assertEquals(before + 1, clicks(), "a real click on the new screen counts at once");
+    }
+
+    @Test void givenRightClickThatOpensAnotherScreen_whenTheButtonStaysDown_thenItsRepeatsDoNotClickTheNewScreen() {
+        Player p = player(0, 0);
+        ScreenLayout layout = new ScreenLayout(0.9, 0.55, List.of(ScreenWidget.button("centre", 0.35, 0.235, 0.2, 0.08, "Next")));
+        ScreenSpec second = spec(new AtomicBoolean());
+        runtime.open(core, p, ScreenSpec.builder("test:first", layout).onInput((s, i) -> {
+            if (i instanceof ScreenInput.Click) runtime.open(core, p, second);
+        }).build());
+        runtime.onClick(p, box(), true);
+        long click = now, before = clicks();
+        for (now = click + 200; now <= click + 1_000; now += 200)    // the client repeats "use" every 4 ticks while held
+            assertTrue(runtime.onClick(p, box(), true));
+        assertEquals(before, clicks(), "one press is one click");
+        now = click + ScreenRuntime.GUARD_MAX_MILLIS + 1;
+        runtime.onClick(p, box(), true);
+        assertEquals(before + 1, clicks(), "after the guard the right button works again");
+    }
+
+    @Test void givenGuardedPlayer_whenQuit_thenNothingIsKept() {
+        Player p = player(0, 0);
+        runtime.open(core, p, closingSpec());
+        runtime.onClick(p, box(), false);
+        assertTrue(runtime.guarded(p.getUniqueId()));
+        runtime.close(p, ScreenInput.Reason.QUIT);
+        assertFalse(runtime.guarded(p.getUniqueId()));
+    }
+
+    // ---- 0.65.0: one click is one click, however long its handler takes ----
+
+    /** A screen whose click handler blocks the server for {@code millis} (a config save with a reload) and rebuilds itself. */
+    private ScreenSpec slowSpec(long millis) {
+        ScreenLayout layout = new ScreenLayout(0.9, 0.55, List.of(ScreenWidget.button("centre", 0.35, 0.235, 0.2, 0.08, "Switch")));
+        return ScreenSpec.builder("test:slow", layout).onInput((s, i) -> {
+            inputs.add(i);
+            if (i instanceof ScreenInput.Click) { now += millis; s.setLayout(layout); }
+        }).build();
+    }
+
+    @Test void givenClickHandlerThatTakesSeconds_whenTheSecondHalfOfTheClickArrives_thenTheSwitchIsClickedOnce() {
+        Player p = player(0, 0);
+        runtime.open(core, p, slowSpec(3_000));
+        Entity interaction = spawned.stream().filter(e -> e instanceof Interaction).findFirst().orElseThrow();
+        runtime.onClick(p, interaction, false);   // the attack on the click box: handled for 3 s
+        runtime.onSwing(p);                       // the arm swing of the same click, read from the queue afterwards
+        assertEquals(1, clicks(), "one physical click");
+        now += 200;
+        runtime.onSwing(p);                       // the next real click
+        assertEquals(2, clicks());
+    }
+
+    @Test void givenSlowHandler_whenTheSwingComesFirstAndTheAttackSecond_thenAlsoOnce() {
+        Player p = player(0, 0);
+        runtime.open(core, p, slowSpec(400));
+        Entity interaction = spawned.stream().filter(e -> e instanceof Interaction).findFirst().orElseThrow();
+        runtime.onSwing(p);
+        runtime.onClick(p, interaction, false);
+        assertEquals(1, clicks());
     }
 
     @Test void givenRecentDamage_whenOpen_thenRefusedCombat() {

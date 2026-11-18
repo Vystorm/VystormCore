@@ -28,6 +28,15 @@ public class PriorityHandler implements PriorityInterface{
         nbt = main.getApi().nbt();
     }
 
+    /**
+     * Core's own NBT manager has no action registered: the events have nothing to dispatch, so skip reading every
+     * tag. A replaced manager keeps the full path, because only Core's own one is known to find its actions
+     * through this map.
+     */
+    private boolean idle() {
+        return nbt instanceof NBTHandler own && own.getEntityNBTHashMap().isEmpty();
+    }
+
     private ArrayList<NBTEntity> sorter(HashMap<String, String> first, HashMap<String, String> second) {
         LinkedHashSet<String> keys = new LinkedHashSet<>();
         if (first != null) keys.addAll(first.keySet());
@@ -49,6 +58,7 @@ public class PriorityHandler implements PriorityInterface{
     @Override
     public void blockBreakEvent(BlockBreakEvent event) {
         loadNbt();
+        if (idle()) return;
         HashMap<String, String> keys = nbt.getAllNBT(event.getPlayer());
         HashMap<String, String> keys2 = nbt.getAllNBT(event.getBlock());
         ArrayList<NBTEntity> nbts = sorter(keys, keys2);
@@ -73,6 +83,7 @@ public class PriorityHandler implements PriorityInterface{
     @Override
     public void blockPlaceEvent(BlockPlaceEvent event) {
         loadNbt();
+        if (idle()) return;
         HashMap<String, String> keys = nbt.getAllNBT(event.getPlayer());
         HashMap<String, String> keys2 = nbt.getAllNBT(event.getBlock());
         ArrayList<NBTEntity> nbts = sorter(keys, keys2);
@@ -96,6 +107,7 @@ public class PriorityHandler implements PriorityInterface{
     @Override
     public void entityDamageListener(EntityDamageEvent event) {
         loadNbt();
+        if (idle()) return;
         HashMap<String, String> keys = nbt.getAllNBT(event.getEntity());
         HashMap<String, String> keys2 = nbt.getAllNBT(event.getDamageSource().getCausingEntity());
         ArrayList<NBTEntity> nbts = sorter(keys, keys2);
@@ -118,6 +130,7 @@ public class PriorityHandler implements PriorityInterface{
     @Override
     public void entityDeathListener(EntityDeathEvent event) {
         loadNbt();
+        if (idle()) return;
         HashMap<String, String> keys = nbt.getAllNBT(event.getEntity());
         HashMap<String, String> keys2 = nbt.getAllNBT(event.getDamageSource().getCausingEntity());
         ArrayList<NBTEntity> nbts = sorter(keys, keys2);
@@ -140,6 +153,7 @@ public class PriorityHandler implements PriorityInterface{
     @Override
     public void itemUseEvent(PlayerInteractEvent event) {
         loadNbt();
+        if (idle()) return;
         HashMap<String, String> keys = nbt.getAllNBT(event.getPlayer());
         HashMap<String, String> keys2 = nbt.getAllNBT(event.getItem());
         ArrayList<NBTEntity> nbts = sorter(keys, keys2);
@@ -163,6 +177,7 @@ public class PriorityHandler implements PriorityInterface{
     @Override
     public void changeItemEvent(PlayerItemHeldEvent event) {
         loadNbt();
+        if (idle()) return;
         HashMap<String, String> keys = nbt.getAllNBT(event.getPlayer());
         HashMap<String, String> keys2 = nbt.getAllNBT(event.getPlayer().getInventory().getItem(event.getNewSlot()));
         ArrayList<NBTEntity> nbts = sorter(keys, keys2);
@@ -183,6 +198,7 @@ public class PriorityHandler implements PriorityInterface{
     @Override
     public void itemDamageEvent(PlayerItemDamageEvent event) {
         loadNbt();
+        if (idle()) return;
         HashMap<String, String> keys = nbt.getAllNBT(event.getPlayer());
         HashMap<String, String> keys2 = nbt.getAllNBT(event.getItem());
         ArrayList<NBTEntity> nbts = sorter(keys, keys2);
@@ -206,6 +222,7 @@ public class PriorityHandler implements PriorityInterface{
     @Override
     public void interactAtEntityEvent(PlayerInteractAtEntityEvent event) {
         loadNbt();
+        if (idle()) return;
         HashMap<String, String> keys = nbt.getAllNBT(event.getPlayer());
         HashMap<String, String> keys2 = nbt.getAllNBT(event.getRightClicked());
         ArrayList<NBTEntity> nbts = sorter(keys, keys2);
@@ -226,6 +243,7 @@ public class PriorityHandler implements PriorityInterface{
     @Override
     public void playerHarvestBlockEvent(PlayerHarvestBlockEvent event) {
         loadNbt();
+        if (idle()) return;
         HashMap<String, String> keys = nbt.getAllNBT(event.getPlayer());
         HashMap<String, String> keys2 = nbt.getAllNBT(event.getHarvestedBlock());
         ArrayList<NBTEntity> nbts = sorter(keys, keys2);

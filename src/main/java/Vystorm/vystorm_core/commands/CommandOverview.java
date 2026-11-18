@@ -114,7 +114,7 @@ public final class CommandOverview {
             for (CommandRegistration r : CoreCommands.registrations(p)) {
                 done.add(r.label());
                 if (!Engine.allowed(sender, r.spec()) || r.entries(sender).isEmpty() && !(r.spec().children().isEmpty())) continue;
-                if (r.spec().hidden()) continue;
+                if (!r.spec().visibleTo(sender)) continue;
                 String language = r.lang().language(sender);
                 List<String> aliases = new ArrayList<>();
                 for (CommandRegistration.Alias a : r.localizedAliases())
@@ -129,6 +129,8 @@ public final class CommandOverview {
                 if (done.contains(name.toLowerCase(java.util.Locale.ROOT))) continue;
                 PluginCommand command = p instanceof JavaPlugin jp ? jp.getCommand(name) : null;
                 if (command == null || command.getPlugin() != p) continue;
+                // 0.65.0: Core's switched plugin.yml commands leave the list while their switch is off
+                if ("vystorm_core".equals(p.getName()) && Vystorm.vystorm_core.lifecycle.CoreSwitches.commandOff(name)) continue;
                 if (!command.testPermissionSilent(sender)) continue;
                 String description = command.getDescription();
                 var bundle = Localization.get().bundle(p);

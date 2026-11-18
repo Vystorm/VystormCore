@@ -76,7 +76,8 @@ public final class TutorialGuide {
             }
             TutorialGuide guide = new TutorialGuide(api, owner, base, Map.copyOf(translations));
             api.gui().registerMenu(owner, "tutorial", p -> guide.contentTitle(p, guide.content(p)), Material.BOOK,
-                    p -> guide.allowed(p) && !guide.visible(p).isEmpty(), p -> guide.index(p, 0), "Tutorials", p -> "");
+                    p -> Vystorm.vystorm_core.lifecycle.CoreSwitches.on(Vystorm.vystorm_core.lifecycle.CoreSwitches.Switch.TUTORIALS)
+                            && guide.allowed(p) && !guide.visible(p).isEmpty(), p -> guide.index(p, 0), "Tutorials", p -> "");
             DebugMessages.mid("[TutorialGuide] Guide registered: " + owner.getName()
                     + "; topics=" + guide.content.pages().size() + "; translations=" + translations.keySet());
         } catch (Exception failure) {

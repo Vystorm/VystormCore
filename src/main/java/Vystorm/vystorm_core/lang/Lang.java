@@ -499,7 +499,66 @@ public final class Lang {
 
     /** Formatted text for the viewer. */
     public Component component(CommandSender viewer, String key, Object... placeholders) {
-        return component(language(viewer), key, placeholders);
+        String language = language(viewer);
+        if (resolving || service.placeholdersInTexts()) {
+            String template = raw(language, key);
+            var registered = registered(viewer, template);
+            if (registered != null) {
+                try { return LangFormat.format(template, placeholders, registered); }
+                catch (RuntimeException failure) { DebugMessages.high("[Localization] " + namespace + ":" + key + " failed: " + failure); }
+            }
+        }
+        return component(language, key, placeholders);
+    }
+
+    // ------------------------------------------------------------------ registered placeholders
+
+    /** Where the texts find the placeholder manager: the hub's {@code api.placeholders()}; none without a running Core. */
+    static volatile java.util.function.Supplier<Vystorm.vystorm_core._advancedMethods.placeholderHandler.PlaceholderInterface> placeholderSource = Lang::hubPlaceholders;
+
+    private volatile boolean resolving;
+
+    private static Vystorm.vystorm_core._advancedMethods.placeholderHandler.PlaceholderInterface hubPlaceholders() {
+        try { return Vystorm.vystorm_core.CoreApi.api().map(Vystorm.vystorm_core.API::placeholders).orElse(null); }
+        catch (RuntimeException | LinkageError noHub) { return null; }
+    }
+
+    /**
+     * Lets the texts of this bundle show the placeholders registered with {@code api.placeholders()}
+     * ({@code %vystorm_<namespace>_<key>%}, <code>{namespace:key}</code>, and through PlaceholderAPI the
+     * placeholders of other plugins). Off by default; Core's {@code placeholders.in-messages} switches it on for
+     * every bundle.
+     * <p>
+     * It applies to the methods that take a viewer ({@code component}, {@code text}, {@code plain}, {@code lines},
+     * {@code send}, {@code actionBar}, {@code name}, {@code lore}); a player is the viewer of the placeholders, the
+     * console has none. The methods that take a language code have no viewer and resolve nothing. Values are
+     * inserted literally, like the named placeholders, and what a named placeholder inserts is never read as a
+     * placeholder. A text without {@code %} and <code>{</code> only costs the lookup of the manager and still comes
+     * from the component cache; any other text is scanned once per call. Placeholders inside the arguments of a
+     * MiniMessage tag ({@code <click:...>}) are not resolved.
+     *
+     * @return this bundle
+     * @since 0.65.0
+     */
+    public Lang placeholders(boolean resolve) {
+        resolving = resolve;
+        return this;
+    }
+
+    /** Whether the texts of this bundle resolve registered placeholders (own switch or Core's setting). @since 0.65.0 */
+    public boolean placeholders() { return resolving || service.placeholdersInTexts(); }
+
+    /** The resolving step for a template, or null if the template cannot hold a registered placeholder. */
+    private static java.util.function.Function<String, Vystorm.vystorm_core._advancedMethods.placeholderHandler.PlaceholderInterface.Prepared> registered(CommandSender viewer, String template) {
+        Vystorm.vystorm_core._advancedMethods.placeholderHandler.PlaceholderInterface manager;
+        try { manager = placeholderSource.get(); }
+        catch (RuntimeException | LinkageError noHub) { return null; }
+        if (manager == null) return null;
+        // The shortcut knows Core's syntax only: a manager that replaced Core's may read other texts as well.
+        if (manager instanceof Vystorm.vystorm_core._advancedMethods.placeholderHandler.PlaceholderHandler
+                && !Vystorm.vystorm_core._advancedMethods.placeholderHandler.PlaceholderHandler.mayContain(template)) return null;
+        org.bukkit.OfflinePlayer who = viewer instanceof org.bukkit.OfflinePlayer player ? player : null;
+        return text -> manager.miniMessage(who, null, text);
     }
 
     /** Formatted text in a given language code. */
@@ -538,7 +597,17 @@ public final class Lang {
 
     /** One component per line (a YAML list, or a string split at line breaks), e.g. for item lore or dialog bodies. */
     public List<Component> lines(CommandSender viewer, String key, Object... placeholders) {
-        return lines(language(viewer), key, placeholders);
+        String language = language(viewer);
+        if (resolving || service.placeholdersInTexts()) {
+            List<Component> out = new ArrayList<>();
+            try {
+                for (String line : rawLines(language, key)) out.add(LangFormat.format(line, placeholders, registered(viewer, line)));
+                return out;
+            } catch (RuntimeException failure) {
+                DebugMessages.high("[Localization] " + namespace + ":" + key + " failed: " + failure);
+            }
+        }
+        return lines(language, key, placeholders);
     }
 
     public List<Component> lines(String language, String key, Object... placeholders) {

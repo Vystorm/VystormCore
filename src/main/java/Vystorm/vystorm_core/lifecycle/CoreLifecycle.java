@@ -32,6 +32,8 @@ public final class CoreLifecycle implements Listener {
     @SuppressWarnings("deprecation")
     private static final List<Step> STEPS = List.of(
             new Step("EventStages", owner -> Vystorm.vystorm_core._coreMethods.eventRegulator.EventStages.shared().removeAll(owner)),
+            // Core's registry; a manager that replaced api.placeholders() is released by API.releaseAdvancedResources.
+            new Step("Placeholders", owner -> Vystorm.vystorm_core._advancedMethods.placeholderHandler.PlaceholderHandler.shared().unregisterAll(owner)),
             new Step("ChatCallbacks", Vystorm.vystorm_core.compat.ClickActions::release),
             new Step("ClientBiomes", Vystorm.vystorm_core.packet.ClientBiomes::release),
             new Step("Visuals", Vystorm.vystorm_core.visual.Visuals::release),

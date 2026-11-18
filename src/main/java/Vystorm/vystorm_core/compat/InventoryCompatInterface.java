@@ -22,4 +22,7 @@ public interface InventoryCompatInterface {
 
     /** See {@link InventoryCompat#bottom}. */
     default Inventory bottom(InventoryView view) { return InventoryCompat.bottom(view); }
+
+    /** See {@link InventoryCompat#menuHolder}. @since 0.64.1 */
+    default org.bukkit.inventory.InventoryHolder menuHolder(Inventory inventory) { return InventoryCompat.menuHolder(inventory); }
 }

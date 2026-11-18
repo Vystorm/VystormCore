@@ -55,7 +55,15 @@ final class LangFormat {
     }
 
     /** @param placeholders name/value pairs; an odd trailing element is ignored */
-    static Component format(String template, Object[] placeholders) {
+    static Component format(String template, Object[] placeholders) { return format(template, placeholders, null); }
+
+    /**
+     * @param registered resolves the placeholders of {@code api.placeholders()} that are left in the text after the
+     *                   named ones, as private tags with their values (inserted literally); null for none. The values
+     *                   of named placeholders are tags by then, so they are never read as placeholders.
+     */
+    static Component format(String template, Object[] placeholders,
+                            java.util.function.Function<String, Vystorm.vystorm_core._advancedMethods.placeholderHandler.PlaceholderInterface.Prepared> registered) {
         String text = legacyToMini(template == null ? "" : template);
         List<TagResolver> resolvers = new ArrayList<>();
         if (placeholders != null && placeholders.length >= 2) {
@@ -77,6 +85,17 @@ final class LangFormat {
             }
             m.appendTail(out);
             text = out.toString();
+        }
+        if (registered != null) {
+            try {
+                var prepared = registered.apply(text);
+                if (prepared != null) {
+                    text = prepared.text();
+                    if (prepared.replaced() > 0) resolvers.add(prepared.resolver());
+                }
+            } catch (RuntimeException | LinkageError failure) {
+                // a broken placeholder manager must not take the message with it: the text goes out unresolved
+            }
         }
         try {
             return resolvers.isEmpty() ? MINI.deserialize(text) : MINI.deserialize(text, TagResolver.resolver(resolvers));

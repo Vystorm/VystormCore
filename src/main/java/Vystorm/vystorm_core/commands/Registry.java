@@ -42,6 +42,10 @@ final class Registry {
     Supplier<Lang> core = () -> Localization.get().core();
     /** Language of {@link AliasPolicy#DEFAULT}. */
     Supplier<String> serverLanguage = Registry::configuredServerLanguage;
+    /** The players who get the changed command list. */
+    Supplier<java.util.Collection<? extends Player>> online = Bukkit::getOnlinePlayers;
+    private int batchDepth;
+    private boolean syncPending;
 
     List<CommandRegistration> all() { return List.copyOf(all); }
 
@@ -55,6 +59,14 @@ final class Registry {
         Objects.requireNonNull(plugin, "plugin");
         Objects.requireNonNull(spec, "spec");
         Lang bundle = lang != null ? lang : Localization.get().bundle(plugin).orElseGet(() -> Localization.get().register(plugin));
+        CommandRegistration mounted = paperMounted(plugin, spec.name());
+        if (mounted != null) {
+            // 0.65.0: after startup Paper keeps its node; a new root would only reach /<plugin>:<label>. Swap the tree.
+            mounted.replace(bundle, spec);
+            DebugMessages.low("[Commands] /" + spec.name() + " of " + plugin.getName() + ": new tree inside the Paper registration");
+            aliasesChanged(mounted);
+            return mounted;
+        }
         replaceExisting(plugin, spec.name());
         CommandRegistration registration = new CommandRegistration(plugin, bundle, spec, null, core.get());
         all.add(registration);
@@ -87,6 +99,14 @@ final class Registry {
         all.add(registration);
         aliasesChanged(registration);
         return registration;
+    }
+
+    /** The plugin's own Paper-mounted registration of {@code label} once the server has loaded, else {@code null}. */
+    private CommandRegistration paperMounted(Plugin plugin, String label) {
+        if (!serverLoaded) return null;
+        for (CommandRegistration r : all)
+            if (r.plugin() == plugin && r.label().equals(label) && r.legacy() == null && r.mount == CommandRegistration.Mount.PAPER) return r;
+        return null;
     }
 
     private void replaceExisting(Plugin plugin, String label) {
@@ -294,9 +314,50 @@ final class Registry {
         try { return commandMap.get(); } catch (RuntimeException | LinkageError e) { return null; }
     }
 
+    /**
+     * Runs several registrations and removals and sends the players their command list once at the end (0.65.0).
+     * The server builds that list on another thread; a second change of the command map while it is being built makes
+     * the build fail with a ConcurrentModificationException in the console, so changes that belong together are
+     * sent together.
+     */
+    synchronized void batch(Runnable changes) {
+        batchDepth++;
+        try {
+            changes.run();
+        } finally {
+            if (--batchDepth == 0 && syncPending) {
+                syncPending = false;
+                sync();
+            }
+        }
+    }
+
+    /** Whether the caller is on the server thread (true without a server, e.g. in tests). */
+    java.util.function.BooleanSupplier primaryThread = () -> {
+        try { return Bukkit.getServer() == null || Bukkit.isPrimaryThread(); }
+        catch (RuntimeException | LinkageError noServer) { return true; }
+    };
+
+    /**
+     * Sends the online players their command list again (0.65.0, {@code api.command().refresh()}), e.g. after a
+     * reload that changed a feature switch. Inside {@link #batch} it is sent once at the end; off the server thread
+     * it moves to the server thread.
+     */
+    void refresh() {
+        if (!primaryThread.getAsBoolean()) {
+            try {
+                Plugin core = Bukkit.getPluginManager().getPlugin("vystorm_core");
+                if (core != null && core.isEnabled()) { Bukkit.getScheduler().runTask(core, this::refresh); return; }
+            } catch (RuntimeException | LinkageError ignored) { }
+            return;
+        }
+        synchronized (this) { sync(); }
+    }
+
     private void sync() {
         if (!serverLoaded) return;
-        try { for (Player p : Bukkit.getOnlinePlayers()) p.updateCommands(); }
+        if (batchDepth > 0) { syncPending = true; return; }
+        try { for (Player p : online.get()) p.updateCommands(); }
         catch (RuntimeException | LinkageError ignored) { }
     }
 
@@ -324,6 +385,13 @@ final class Registry {
         commandMap = Vystorm.vystorm_core.compat.PlatformCompat::getCommandMap;
         core = () -> Localization.get().core();
         serverLanguage = Registry::configuredServerLanguage;
+        online = Bukkit::getOnlinePlayers;
+        primaryThread = () -> {
+            try { return Bukkit.getServer() == null || Bukkit.isPrimaryThread(); }
+            catch (RuntimeException | LinkageError noServer) { return true; }
+        };
+        batchDepth = 0;
+        syncPending = false;
     }
 
     void serverLoadedForTests(boolean loaded) { serverLoaded = loaded; }

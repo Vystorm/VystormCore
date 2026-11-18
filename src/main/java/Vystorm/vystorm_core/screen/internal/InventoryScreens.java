@@ -87,8 +87,7 @@ public final class InventoryScreens implements Listener {
         if (passThrough.remove(player.getUniqueId())) return;
         Inventory top = event.getView().getTopInventory();
         Mirror current = mirrors.get(player.getUniqueId());
-        boolean menu = TYPES.contains(top.getType()) && !(top.getHolder() instanceof org.bukkit.block.BlockState)
-                && !(top.getHolder() instanceof org.bukkit.entity.Entity);   // real containers in the world stay chests
+        boolean menu = TYPES.contains(top.getType()) && !inWorld(top.getHolder());   // asked once: a chest copies its block state per call
         if (menu && keptAsChest(top)) menu = false;   // the plugin asked for the real chest (items are moved in it)
         Plugin owner = menu ? opener() : null;
         if (owner == null || !mirrorable(owner)) {
@@ -108,6 +107,11 @@ public final class InventoryScreens implements Listener {
         mirrors.put(player.getUniqueId(), mirror);
         // the screen opens one tick later, after the server finished opening the menu
         Bukkit.getScheduler().runTask(core, () -> start(mirror));
+    }
+
+    /** Real containers in the world (blocks, minecarts, donkeys) stay chests. */
+    private static boolean inWorld(org.bukkit.inventory.InventoryHolder holder) {
+        return holder instanceof org.bukkit.block.BlockState || holder instanceof org.bukkit.entity.Entity;
     }
 
     private void start(Mirror mirror) {
@@ -201,17 +205,24 @@ public final class InventoryScreens implements Listener {
         mirror.leaving = true;
         packets.show(mirror.player);
         Inventory top = mirror.top;
+        // closing the screen teleports the player back, and that closes the menu on the server: it comes back as a chest
+        if (realChest) ChestHandOver.begin(top);
         if (mirror.screen != null && mirror.screen.isOpen()) mirror.screen.close();
         forget(mirror);
         if (realChest) reopenReal(mirror.player, top);
     }
 
+    /**
+     * Shows the menu as the real chest one tick later. Until then, and while the server closes the hidden menu to open
+     * it again, the menu is in {@link ChestHandOver}: a managed menu keeps its session through that close.
+     */
     private void reopenReal(Player player, Inventory top) {
         packets.show(player);
         passThrough.add(player.getUniqueId());
+        ChestHandOver.begin(top);
         Bukkit.getScheduler().runTask(core, () -> {
-            if (player.isOnline()) player.openInventory(top);
-            passThrough.remove(player.getUniqueId());
+            try { ChestHandOver.show(player, top); }
+            finally { passThrough.remove(player.getUniqueId()); }
         });
     }
 

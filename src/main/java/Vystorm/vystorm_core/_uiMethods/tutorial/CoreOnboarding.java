@@ -72,7 +72,8 @@ public final class CoreOnboarding {
         activeCore = core;
         api.gui().registerMenu(core, GUIDE_MENU,
                 player -> lang().text(player, "onboarding.menu-title"), Material.COMPASS,
-                Player::isOnline, player -> open(core, api, player), "",
+                player -> player.isOnline() && Vystorm.vystorm_core.lifecycle.CoreSwitches.on(Vystorm.vystorm_core.lifecycle.CoreSwitches.Switch.TUTORIALS),
+                player -> open(core, api, player), "",
                 player -> lang().text(player, "onboarding.menu-description"));
 
         LinkedHashMap<String, String> choices = new LinkedHashMap<>();

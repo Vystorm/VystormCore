@@ -133,6 +133,9 @@ ArrayList<String> getMenuNames();
     /** Sections on the player profile card ({@code profile.Profiles}). @since 0.64.0 */
     default Vystorm.vystorm_core.profile.ProfilesInterface profiles() { return Vystorm.vystorm_core.profile.ProfilesInterface.DEFAULT; }
 
+    /** Screen menus from files in {@code plugins/vystorm_core/menus} ({@code menus.FileMenus}). @since 0.65.0 */
+    default Vystorm.vystorm_core.menus.FileMenusInterface fileMenus() { return Vystorm.vystorm_core.menus.FileMenusInterface.DEFAULT; }
+
     /** Recent menus and the menu explorer ({@code _uiMethods.menu.MenuExplorer}). @since 0.64.0 */
     default Vystorm.vystorm_core._uiMethods.menu.MenuExplorerInterface menuExplorer() { return Vystorm.vystorm_core._uiMethods.menu.MenuExplorerInterface.DEFAULT; }
 

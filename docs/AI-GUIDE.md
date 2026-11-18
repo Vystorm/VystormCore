@@ -1,6 +1,6 @@
 # Vystorm Core: guide for AI assistants
 
-This guide covers all 109 capabilities in Core 0.64.0, including the Screens prototype.
+This guide covers all 110 capabilities in Core 0.65.0, including the Screens prototype.
 Use [API.md](API.md) for signatures and full contracts, [CHANGELOG.md](../CHANGELOG.md) for changes,
 and [llms.txt](../llms.txt) to navigate. The capability registry in CoreApi is authoritative for flag versions.
 Package names start with `Vystorm.vystorm_core` (capital V); names such as `GuiInteface` are intentional.
@@ -87,6 +87,10 @@ Some older features received flags later. A flag's absence on an old Core need n
 - **`EVENT_STAGES`** (`event-stages`, since 0.64.0).
   Entry points: `api.priority().stages()`, `_coreMethods.eventRegulator.EventStages.handle`, `_coreMethods.eventRegulator.EventStage`.
   Register handlers of events that several plugins handle with a stage (`PROTECT`, `ADJUST`, `ACT`, `OBSERVE` ...) instead of a Bukkit priority; Core calls them in one configured order. Remove the `@EventHandler` of a moved handler. `OBSERVE` handlers cannot change the cancelled state. Read: [API — Event order between plugins (0.64.0)](API.md#event-order-between-plugins-0640).
+
+- **`PLACEHOLDERS`** (`placeholders`, since 0.65.0).
+  Entry points: `api.placeholders()`, `_advancedMethods.placeholderHandler.PlaceholderInterface.register`, `resolve`, `component`, `PlaceholderValue`, `PlaceholderBridge`, `PlaceholderTesting`, `Lang.placeholders`.
+  Register a namespace and declare values in `onEnable` (`core.placeholders().register(this, "xpvault").value("balance", "description", player -> ...)`); they then work as `%vystorm_xpvault_balance%` in every plugin that uses PlaceholderAPI and as `{xpvault:balance}` in Vystorm texts. Return null for "unknown" (the placeholder stays as written) and an empty string for "empty". Resolvers run on the server thread unless the value is declared `asyncSafe()`; off the server thread other values stay as written. Use `component(viewer, miniMessage)` for MiniMessage texts: values are inserted literally unless declared `formatted()`, which must never be used for player input. Do not register `lang`, `data`, `rel`, `vystorm`, `countdown`, `votes`, `vote` or `guestbook` as a namespace. Read: [API — Placeholders (0.65.0)](API.md#placeholders-0650).
 
 - **`SERVER_COMPAT`** (`server-compat`, since 0.48.0).
   Entry points: `compat.ServerCompat`, `compat.dialog.DialogInterface`.

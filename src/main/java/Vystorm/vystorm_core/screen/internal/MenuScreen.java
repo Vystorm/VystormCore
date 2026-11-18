@@ -28,8 +28,8 @@ import org.bukkit.plugin.Plugin;
  * description; a tile closes the screen and opens its menu.
  */
 public final class MenuScreen {
-    static final double MARGIN = 0.05;
-    static final int LABEL_CHARS = 18;
+    public static final double MARGIN = 0.05;
+    public static final int LABEL_CHARS = 18;
 
     /** Panel size and grid for one display profile; every length scales with the UI size. */
     record Metrics(double width, double height, int columns, double scale) {
@@ -122,13 +122,47 @@ public final class MenuScreen {
         return 0;
     }
 
+    /** Fill of a tile box. */
+    public static final int TILE_FILL = 0x50252A33;
+    /** Widget ids of the frame: title label, footer label and the three header buttons. */
+    public static final String TITLE = "title", FOOTER = "footer", DISPLAY = "display", SEARCH = "search", CLOSE = "close";
+
+    /**
+     * The header of a menu-style panel of width {@code w} at UI size {@code s} (0.65.0, shared with file menus): the
+     * title label and the header buttons, right-aligned at the margin. The main menu has three buttons; the same
+     * numbers hold for any count. {@code ids} and {@code labels} run from left to right.
+     */
+    public static List<ScreenWidget> header(double w, double s, Object title, List<String> ids, List<?> labels) {
+        double button = 0.22 * s, gap = 0.02 * s, head = 0.07 * s;
+        int n = ids.size();
+        List<ScreenWidget> out = new ArrayList<>();
+        out.add(ScreenWidget.label(TITLE, MARGIN, 0.03 * s, w - 2 * MARGIN - n * (button + gap), 0.08 * s, title));
+        for (int i = 0; i < n; i++)
+            out.add(ScreenWidget.button(ids.get(i), w - MARGIN - (n - i) * button - (n - i - 1) * gap, 0.03 * s, button, head, labels.get(i)));
+        return out;
+    }
+
+    /** The footer label of a menu-style panel of {@code w} x {@code h} at UI size {@code s} (0.65.0, shared with file menus). */
+    public static ScreenWidget footer(double w, double h, double s, Object text) {
+        return ScreenWidget.label(FOOTER, MARGIN, h - 0.09 * s + 0.02 * s, w - 2 * MARGIN, 0.045 * s, text);
+    }
+
+    /**
+     * One tile (0.65.0, shared with file menus): the box {@code (u, v, width, height)} with the caption cut to
+     * {@link #LABEL_CHARS} characters at its bottom edge, and on top of it the icon, {@code iconSize} square, centred
+     * in the box and starting at {@code iconV}. Returns the box, then the icon.
+     */
+    public static List<ScreenWidget> tile(String id, String iconId, double u, double v, double width, double height, double iconSize, double iconV,
+                                          String caption, Object icon, double labelHeight) {
+        return List.of(
+                ScreenWidget.button(id, u, v, width, height, Component.text(shorten(caption))).withTextHeight(labelHeight).withFill(TILE_FILL),
+                ScreenWidget.icon(iconId, u + (width - iconSize) / 2, iconV, iconSize, iconSize, icon));
+    }
+
     ScreenLayout layout(Player player, List<Row> rows, Metrics m, int offset, Component footer) {
-        double s = m.scale(), w = m.width(), button = 0.22 * s, gap = 0.02 * s, head = 0.07 * s;
-        List<ScreenWidget> widgets = new ArrayList<>();
-        widgets.add(ScreenWidget.label("title", MARGIN, 0.03 * s, w - 2 * MARGIN - 3 * (button + gap), 0.08 * s, lang.component(player, "menu.directory.title")));
-        widgets.add(ScreenWidget.button("display", w - MARGIN - 3 * button - 2 * gap, 0.03 * s, button, head, lang.component(player, "menu.screen.display")));
-        widgets.add(ScreenWidget.button("search", w - MARGIN - 2 * button - gap, 0.03 * s, button, head, lang.component(player, "menu.screen.search")));
-        widgets.add(ScreenWidget.button("close", w - MARGIN - button, 0.03 * s, button, head, lang.component(player, "menu.screen.close")));
+        double s = m.scale(), w = m.width();
+        List<ScreenWidget> widgets = new ArrayList<>(header(w, s, lang.component(player, "menu.directory.title"), List.of(DISPLAY, SEARCH, CLOSE),
+                List.of(lang.component(player, "menu.screen.display"), lang.component(player, "menu.screen.search"), lang.component(player, "menu.screen.close"))));
         double v = m.top(), tileWidth = m.tileWidth(), icon = m.tileIcon();
         int shown = visibleRows(rows, offset, m);
         int index = rows.stream().limit(offset).mapToInt(r -> r.entries().size()).sum();
@@ -141,17 +175,15 @@ public final class MenuScreen {
                     MenuEntryView entry = row.entries().get(c);
                     double u = (w - row.entries().size() * tileWidth) / 2 + c * tileWidth;
                     // tile box first, icon on top of it
-                    widgets.add(ScreenWidget.button("t" + index, u + 0.005, v + 0.005, tileWidth - 0.01, m.tileRow() - 0.01,
-                            Component.text(shorten(entry.title()))).withTextHeight(m.tileLabel()).withFill(0x50252A33));
-                    widgets.add(ScreenWidget.icon("i" + index, u + (tileWidth - icon) / 2, v + 0.01 * s, icon, icon,
-                            entry.icon() == null || entry.icon().isAir() ? Material.PAPER : entry.icon()));
+                    widgets.addAll(tile("t" + index, "i" + index, u + 0.005, v + 0.005, tileWidth - 0.01, m.tileRow() - 0.01, icon, v + 0.01 * s,
+                            entry.title(), entry.icon() == null || entry.icon().isAir() ? Material.PAPER : entry.icon(), m.tileLabel()));
                     index++;
                 }
             }
             v += row.height(m);
         }
         Component hint = footer != null ? footer : rows.isEmpty() ? lang.component(player, "menu.directory.empty") : hint(player, rows, m, offset);
-        widgets.add(ScreenWidget.label("footer", MARGIN, m.height() - m.footer() + 0.02 * s, w - 2 * MARGIN, 0.045 * s, hint));
+        widgets.add(footer(w, m.height(), s, hint));
         return new ScreenLayout(w, m.height(), widgets);
     }
 
@@ -159,7 +191,7 @@ public final class MenuScreen {
         return lang.component(player, "menu.screen.hint", "page", offset + 1, "pages", Math.max(1, maxOffset(rows, m) + 1));
     }
 
-    static String shorten(String title) {
+    public static String shorten(String title) {
         String plain = title == null ? "" : title.replaceAll("§.", "");
         return plain.length() <= LABEL_CHARS ? plain : plain.substring(0, LABEL_CHARS - 1) + "…";
     }

@@ -1,5 +1,10 @@
 # Vystorm Core – config.yml
 # New keys from later Core versions are read from the jar defaults even if they are missing here.
+#
+# Feature switches: every key below that switches a feature on or off is listed in /vadmin features vystorm_core and
+# applies at once, except those under web and database and metrics (restart). A switched-off feature answers "This
+# feature is switched off on this server.". The base the plugins need (main menu, settings, config editor, language
+# system, /vhelp, event order, placeholders, and the loot, world and region services) has no switch.
 
 language:
   # Language of Core and of every plugin that uses Core's localization (files: plugins/<Plugin>/lang/<code>.yml).
@@ -23,18 +28,20 @@ language:
     zh_hk: zh_tw
 
 # Anonymous statistics through bStats (bstats.org): which Vystorm plugins run on how many servers. Only Core sends them.
-# Switch off here or for all plugins in plugins/bStats/config.yml.
+# Switch off here or for all plugins in plugins/bStats/config.yml. Needs a restart.
 metrics: true
 
 review-reminder:
   # After this many days with a Vystorm plugin, the next admin (vystorm_core.admin) who joins gets one short message
   # asking for a SpigotMC review. Every plugin asks once; several at the same time come as a single message from Core.
+  # The switch applies at once (since 0.65.0).
   enabled: true
   after-days: 7
 
 update-check:
   # Asks SpigotMC (public version endpoint only, no server data) every interval-hours which version of each installed
   # Vystorm plugin is current. Admins (vystorm_core.admin) see newer versions on join and with /vadmin updates.
+  # The switch applies at once (since 0.65.0).
   enabled: true
   interval-hours: 6
   notify-on-join: true
@@ -261,6 +268,9 @@ config-history:
   max-entries: 200
 
 loot:
+  # Core's loot rules below (mob-level luck and pity) and /vadmin loot. Off: mob drops of all plugins ignore the mob's
+  # level and /vadmin loot is switched off; the loot tables themselves stay, because the plugins roll their drops from them.
+  enabled: true
   # Mob drops (all Vystorm plugins): WHAT drops is defined by the mob (its own loot table: a custom mob's table or
   # vystorm_core:mob/<type> in loot-mobs.yml for vanilla mobs), HOW GOOD it is only by the mob's level.
   # Player luck (Luck potion, item or pet bonuses) does not change mob drops; it still counts for chests, fishing, finds.
@@ -328,8 +338,24 @@ network:
   servers: {}
 
 # Chat lines sent through Vystorm Core show on hover which plugin sent them (helps find the source of a message).
+# Applies at once (since 0.65.0).
 messages:
   show-source: true
+
+# Placeholders (0.65.0). Every Vystorm plugin can offer values such as %vystorm_core_online%; /vadmin placeholders
+# lists them. Short form inside Vystorm texts: {core:online}.
+placeholders:
+  # true = the language files (lang/*.yml) of all Vystorm plugins may contain placeholders: %vystorm_...%, {core:online}
+  # and, with PlaceholderAPI, those of other plugins. false = texts are shown as written (as before 0.65.0).
+  in-messages: false
+  placeholderapi:
+    # Offer every Vystorm value to PlaceholderAPI, so %vystorm_...% works in scoreboards, tab lists, holograms.
+    provide: true
+    # Let Vystorm texts show placeholders of other plugins through PlaceholderAPI, e.g. %player_name%.
+    consume: true
+    # Also ask PlaceholderAPI from other threads (asynchronous chat). Only switch this on if every expansion you
+    # use is safe to call that way; otherwise such placeholders stay as written there.
+    consume-async: false
 
 # Vystorm Screens (0.57.0+). panels: plugin panels as screens. inventories: chest menus of Vystorm plugins as screens;
 # menus where items really move open the real chest. inventories-exclude: plugins that always keep their chests.
@@ -356,3 +382,47 @@ menu:
   sneak-click-shortcut: true
   # Show /menu as a Vystorm screen (icon tiles in your view). false = the previous menu.
   screen: true
+
+# Menus from files (0.65.0): every <id>.json in plugins/vystorm_core/menus, saved from the Vystorm menu editor, becomes
+# a screen menu. It opens with /vmenu <id>, with the command the file names and from its tile in the main menu.
+# /vadmin menus lists the files and what is wrong with a skipped one; /vadmin menus reload reads the folder again.
+menus:
+  # false = no file is read, no menu, tile or command is registered.
+  enabled: true
+  # Texts with placeholders (%vystorm_...%) are looked up again this often while a menu is open. 0 = only when it opens.
+  refresh-seconds: 2
+
+# Trade chat (/vtrade): one channel for trade offers, 240 characters, two seconds between messages. Off: /vtrade
+# answers that the feature is off.
+trade-chat:
+  enabled: true
+
+# Coordinates that plugins put into chat lines can be clicked (staff with vystorm_core.chat.teleport teleport there,
+# others copy them). Off: the coordinates are plain text.
+clickable-coordinates:
+  enabled: true
+
+# The tutorials of all Vystorm plugins (/vmenu -> Tutorials) and the first-steps guide. Off: neither shows; a plugin's
+# own tutorial.enabled only switches that plugin's tutorial.
+tutorials:
+  enabled: true
+
+# Setup wizard and first-run setups (/vadmin setup, the join hint for admins, the button in the config menu). Off: none
+# of them; the settings stay as they are.
+setup:
+  enabled: true
+
+# Admin diagnostics: /vadmin diagnostics, /vmenu access, /vadmin migration and /vadmin trace. Off: these commands are
+# switched off and a running trace stops.
+diagnostics:
+  enabled: true
+
+# /vworlds (plugin worlds and visits). Off: the command is switched off. Visits of plugin worlds keep saving and giving
+# back the players' inventory and state, so nobody loses items.
+plugin-worlds:
+  enabled: true
+
+# /vregion and the region placeholders (%vystorm_region_...%). Off: the command is switched off and the placeholders
+# are empty. The register itself keeps working, because protection plugins rely on it.
+region-register:
+  enabled: true

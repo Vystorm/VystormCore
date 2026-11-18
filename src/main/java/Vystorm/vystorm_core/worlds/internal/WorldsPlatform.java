@@ -43,7 +43,20 @@ public final class WorldsPlatform {
         if (spawnListener != null) core.getServer().getPluginManager().registerEvents(spawnListener, core);
         PluginCommand command = core.getCommand("vworlds");
         if (command != null) {
-            WorldsCommand executor = new WorldsCommand(registry, visits, env);
+            WorldsCommand worlds = new WorldsCommand(registry, visits, env);
+            // plugin-worlds.enabled off (0.65.0): /vworlds is off; visits keep saving and restoring the players' state
+            org.bukkit.command.TabExecutor executor = new org.bukkit.command.TabExecutor() {
+                @Override public boolean onCommand(org.bukkit.command.CommandSender sender, org.bukkit.command.Command cmd, String label, String[] args) {
+                    if (!Vystorm.vystorm_core.lifecycle.CoreSwitches.on(Vystorm.vystorm_core.lifecycle.CoreSwitches.Switch.PLUGIN_WORLDS)) {
+                        Vystorm.vystorm_core.lang.Localization.get().core().send(sender, "feature-off");
+                        return true;
+                    }
+                    return worlds.onCommand(sender, cmd, label, args);
+                }
+                @Override public java.util.List<String> onTabComplete(org.bukkit.command.CommandSender sender, org.bukkit.command.Command cmd, String label, String[] args) {
+                    return Vystorm.vystorm_core.lifecycle.CoreSwitches.on(Vystorm.vystorm_core.lifecycle.CoreSwitches.Switch.PLUGIN_WORLDS) ? worlds.onTabComplete(sender, cmd, label, args) : java.util.List.of();
+                }
+            };
             command.setExecutor(executor);
             command.setTabCompleter(executor);
         }

@@ -244,8 +244,30 @@ final class ManagedGuiRegistry {
         Session s = sessions.get(e.getInventory());
         if (s == null) return;
         if (s.viewer != null && !s.viewer.equals(e.getPlayer().getUniqueId())) return;
+        // 0.65.0: Core is only changing how the menu is shown (screen -> real chest). The server closes it for a moment
+        // on the way; for its owner it stays open, so the session stays (clicks cancelled, callbacks bound) and the
+        // close callback waits. If the chest does not come back, the menu is closed for real two ticks later.
+        if (s.viewer != null && Vystorm.vystorm_core.screen.internal.ChestHandOver.active(e.getInventory())) {
+            Inventory inventory = e.getInventory();
+            try {
+                Bukkit.getScheduler().runTaskLater(s.owner, () -> {
+                    if (sessions.get(inventory) != s || shownTo(e.getPlayer(), inventory)) return;
+                    closed(s, e);
+                }, 2L);
+                return;
+            } catch (RuntimeException noTask) { /* the owner is being disabled: close now */ }
+        }
+        closed(s, e);
+    }
+    private void closed(Session s, InventoryCloseEvent e) {
         if (s.viewer != null) sessions.remove(e.getInventory());
         try { s.callbacks.close(e); } catch (RuntimeException ex) { failure(s, ex); }
+    }
+    private static boolean shownTo(org.bukkit.entity.HumanEntity player, Inventory inventory) {
+        try {
+            return (!(player instanceof Player online) || online.isOnline())
+                    && Vystorm.vystorm_core.compat.InventoryCompat.top(player.getOpenInventory()) == inventory;
+        } catch (RuntimeException failure) { return false; }
     }
     private static void failure(Session s, RuntimeException ex) {
         DebugMessages.high("[ManagedGuiRegistry] GUI callback failed; owner=" + s.owner.getName() + "; error=" + ex);

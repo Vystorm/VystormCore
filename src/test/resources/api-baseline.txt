@@ -39,6 +39,7 @@ Vystorm.vystorm_core.API method instance overrideNBT(Vystorm.vystorm_core._coreM
 Vystorm.vystorm_core.API method instance overridePackageHandler(Vystorm.vystorm_core._advancedMethods.packageHandler.PackageInterface)void
 Vystorm.vystorm_core.API method instance overrideParticleHandler(Vystorm.vystorm_core._advancedMethods.particleHandler.ParticleInterface)void
 Vystorm.vystorm_core.API method instance overridePartyHandler(Vystorm.vystorm_core.party.PartyServicesInterface)void
+Vystorm.vystorm_core.API method instance overridePlaceholderHandler(Vystorm.vystorm_core._advancedMethods.placeholderHandler.PlaceholderInterface)void
 Vystorm.vystorm_core.API method instance overridePlayerHandler(Vystorm.vystorm_core._coreMethods.playerHandler.PlayerHandlerInterface)void
 Vystorm.vystorm_core.API method instance overrideRessourceHandler(Vystorm.vystorm_core._coreMethods.ressourceLoader.RessourceInterface)void
 Vystorm.vystorm_core.API method instance overrideRuntimeHandler(Vystorm.vystorm_core.runtime.RuntimeInterface)void
@@ -51,6 +52,7 @@ Vystorm.vystorm_core.API method instance overrideWorldGeneratorHandler(Vystorm.v
 Vystorm.vystorm_core.API method instance packages()Vystorm.vystorm_core._advancedMethods.packageHandler.PackageInterface
 Vystorm.vystorm_core.API method instance particle()Vystorm.vystorm_core._advancedMethods.particleHandler.ParticleInterface
 Vystorm.vystorm_core.API method instance parties()Vystorm.vystorm_core.party.PartyServicesInterface
+Vystorm.vystorm_core.API method instance placeholders()Vystorm.vystorm_core._advancedMethods.placeholderHandler.PlaceholderInterface
 Vystorm.vystorm_core.API method instance player()Vystorm.vystorm_core._coreMethods.playerHandler.PlayerHandlerInterface
 Vystorm.vystorm_core.API method instance priority()Vystorm.vystorm_core._coreMethods.eventRegulator.PriorityInterface
 Vystorm.vystorm_core.API method instance registerTutorial(org.bukkit.plugin.Plugin)void
@@ -93,6 +95,7 @@ Vystorm.vystorm_core.CoreApi$Capability field static CLIENT_UI_TESTING:java.lang
 Vystorm.vystorm_core.CoreApi$Capability field static COMBAT_KINDS:java.lang.String
 Vystorm.vystorm_core.CoreApi$Capability field static COMBAT_REGISTRY:java.lang.String
 Vystorm.vystorm_core.CoreApi$Capability field static COMMANDS:java.lang.String
+Vystorm.vystorm_core.CoreApi$Capability field static COMMAND_VISIBILITY:java.lang.String
 Vystorm.vystorm_core.CoreApi$Capability field static CONFIG_EDITOR:java.lang.String
 Vystorm.vystorm_core.CoreApi$Capability field static CONFIG_EDITOR_MERGE_OPTION:java.lang.String
 Vystorm.vystorm_core.CoreApi$Capability field static CONFIG_HISTORY:java.lang.String
@@ -104,6 +107,7 @@ Vystorm.vystorm_core.CoreApi$Capability field static DISCIPLINES:java.lang.Strin
 Vystorm.vystorm_core.CoreApi$Capability field static EVENT_STAGES:java.lang.String
 Vystorm.vystorm_core.CoreApi$Capability field static FEATURE_DIAGNOSTICS:java.lang.String
 Vystorm.vystorm_core.CoreApi$Capability field static FEATURE_SWITCHES:java.lang.String
+Vystorm.vystorm_core.CoreApi$Capability field static FILE_MENUS:java.lang.String
 Vystorm.vystorm_core.CoreApi$Capability field static FUNGUS_GROWTH_PLANS:java.lang.String
 Vystorm.vystorm_core.CoreApi$Capability field static GIANT_WORLD_TREES:java.lang.String
 Vystorm.vystorm_core.CoreApi$Capability field static HORIZONTAL_VISUALS:java.lang.String
@@ -143,6 +147,7 @@ Vystorm.vystorm_core.CoreApi$Capability field static PANEL_EXTRAS:java.lang.Stri
 Vystorm.vystorm_core.CoreApi$Capability field static PARTY:java.lang.String
 Vystorm.vystorm_core.CoreApi$Capability field static PARTY_ACTIVITIES:java.lang.String
 Vystorm.vystorm_core.CoreApi$Capability field static PERMISSION_LIST:java.lang.String
+Vystorm.vystorm_core.CoreApi$Capability field static PLACEHOLDERS:java.lang.String
 Vystorm.vystorm_core.CoreApi$Capability field static PLAYER_MENU:java.lang.String
 Vystorm.vystorm_core.CoreApi$Capability field static PROFILES:java.lang.String
 Vystorm.vystorm_core.CoreApi$Capability field static PROJECTED_BIOMES:java.lang.String
@@ -362,6 +367,132 @@ Vystorm.vystorm_core._advancedMethods.particleHandler.ParticleInterface interfac
 Vystorm.vystorm_core._advancedMethods.particleHandler.ParticleInterface interface-method default spawn(org.bukkit.Particle,org.bukkit.Location,int,double,double,double,double,java.lang.Object)void
 Vystorm.vystorm_core._advancedMethods.particleHandler.ParticleInterface interface-method default visuals()Vystorm.vystorm_core.visual.VisualsInterface
 Vystorm.vystorm_core._advancedMethods.particleHandler.ParticleInterface type interface
+Vystorm.vystorm_core._advancedMethods.placeholderHandler.PlaceholderBridge interface-method abstract available()boolean
+Vystorm.vystorm_core._advancedMethods.placeholderHandler.PlaceholderBridge interface-method abstract consume(org.bukkit.OfflinePlayer,org.bukkit.entity.Player,java.lang.String)java.lang.String
+Vystorm.vystorm_core._advancedMethods.placeholderHandler.PlaceholderBridge interface-method abstract name()java.lang.String
+Vystorm.vystorm_core._advancedMethods.placeholderHandler.PlaceholderBridge interface-method abstract provide(Vystorm.vystorm_core._advancedMethods.placeholderHandler.PlaceholderBridge$Source)boolean
+Vystorm.vystorm_core._advancedMethods.placeholderHandler.PlaceholderBridge interface-method abstract providing()boolean
+Vystorm.vystorm_core._advancedMethods.placeholderHandler.PlaceholderBridge interface-method default asyncSafe()boolean
+Vystorm.vystorm_core._advancedMethods.placeholderHandler.PlaceholderBridge interface-method default withdraw()void
+Vystorm.vystorm_core._advancedMethods.placeholderHandler.PlaceholderBridge type interface
+Vystorm.vystorm_core._advancedMethods.placeholderHandler.PlaceholderBridge$Source interface-method abstract request(org.bukkit.OfflinePlayer,org.bukkit.entity.Player,java.lang.String)java.lang.String
+Vystorm.vystorm_core._advancedMethods.placeholderHandler.PlaceholderBridge$Source interface-method default known()java.util.List
+Vystorm.vystorm_core._advancedMethods.placeholderHandler.PlaceholderBridge$Source type interface
+Vystorm.vystorm_core._advancedMethods.placeholderHandler.PlaceholderContext method instance argument(int)java.lang.String
+Vystorm.vystorm_core._advancedMethods.placeholderHandler.PlaceholderContext method instance argument(int,java.lang.String)java.lang.String
+Vystorm.vystorm_core._advancedMethods.placeholderHandler.PlaceholderContext method instance arguments()java.util.List
+Vystorm.vystorm_core._advancedMethods.placeholderHandler.PlaceholderContext method instance intArgument(int,int)int
+Vystorm.vystorm_core._advancedMethods.placeholderHandler.PlaceholderContext method instance key()java.lang.String
+Vystorm.vystorm_core._advancedMethods.placeholderHandler.PlaceholderContext method instance namespace()java.lang.String
+Vystorm.vystorm_core._advancedMethods.placeholderHandler.PlaceholderContext method instance numberArgument(int,double)double
+Vystorm.vystorm_core._advancedMethods.placeholderHandler.PlaceholderContext method instance onServerThread()boolean
+Vystorm.vystorm_core._advancedMethods.placeholderHandler.PlaceholderContext method instance other()org.bukkit.entity.Player
+Vystorm.vystorm_core._advancedMethods.placeholderHandler.PlaceholderContext method instance player()org.bukkit.entity.Player
+Vystorm.vystorm_core._advancedMethods.placeholderHandler.PlaceholderContext method instance raw()java.lang.String
+Vystorm.vystorm_core._advancedMethods.placeholderHandler.PlaceholderContext method instance relational()boolean
+Vystorm.vystorm_core._advancedMethods.placeholderHandler.PlaceholderContext method instance rest(int)java.lang.String
+Vystorm.vystorm_core._advancedMethods.placeholderHandler.PlaceholderContext method instance toString()java.lang.String
+Vystorm.vystorm_core._advancedMethods.placeholderHandler.PlaceholderContext method instance viewer()org.bukkit.OfflinePlayer
+Vystorm.vystorm_core._advancedMethods.placeholderHandler.PlaceholderContext method instance viewerId()java.util.UUID
+Vystorm.vystorm_core._advancedMethods.placeholderHandler.PlaceholderContext type class final
+Vystorm.vystorm_core._advancedMethods.placeholderHandler.PlaceholderHandler method instance bridge(org.bukkit.plugin.Plugin,Vystorm.vystorm_core._advancedMethods.placeholderHandler.PlaceholderBridge)void
+Vystorm.vystorm_core._advancedMethods.placeholderHandler.PlaceholderHandler method instance bridges()java.util.List
+Vystorm.vystorm_core._advancedMethods.placeholderHandler.PlaceholderHandler method instance clear()void
+Vystorm.vystorm_core._advancedMethods.placeholderHandler.PlaceholderHandler method instance miniMessage(org.bukkit.OfflinePlayer,org.bukkit.entity.Player,java.lang.String)Vystorm.vystorm_core._advancedMethods.placeholderHandler.PlaceholderInterface$Prepared
+Vystorm.vystorm_core._advancedMethods.placeholderHandler.PlaceholderHandler method instance namespace(java.lang.String)java.util.Optional
+Vystorm.vystorm_core._advancedMethods.placeholderHandler.PlaceholderHandler method instance namespaces()java.util.List
+Vystorm.vystorm_core._advancedMethods.placeholderHandler.PlaceholderHandler method instance refreshBridges()void
+Vystorm.vystorm_core._advancedMethods.placeholderHandler.PlaceholderHandler method instance register(org.bukkit.plugin.Plugin,java.lang.String)Vystorm.vystorm_core._advancedMethods.placeholderHandler.PlaceholderNamespace
+Vystorm.vystorm_core._advancedMethods.placeholderHandler.PlaceholderHandler method instance removeBridge(Vystorm.vystorm_core._advancedMethods.placeholderHandler.PlaceholderBridge)boolean
+Vystorm.vystorm_core._advancedMethods.placeholderHandler.PlaceholderHandler method instance request(org.bukkit.OfflinePlayer,org.bukkit.entity.Player,java.lang.String)java.lang.String
+Vystorm.vystorm_core._advancedMethods.placeholderHandler.PlaceholderHandler method instance resolve(org.bukkit.OfflinePlayer,org.bukkit.entity.Player,java.lang.String)java.lang.String
+Vystorm.vystorm_core._advancedMethods.placeholderHandler.PlaceholderHandler method instance route(java.util.function.Supplier)void
+Vystorm.vystorm_core._advancedMethods.placeholderHandler.PlaceholderHandler method instance unregister(org.bukkit.plugin.Plugin,java.lang.String)boolean
+Vystorm.vystorm_core._advancedMethods.placeholderHandler.PlaceholderHandler method instance unregisterAll(org.bukkit.plugin.Plugin)int
+Vystorm.vystorm_core._advancedMethods.placeholderHandler.PlaceholderHandler method instance value(org.bukkit.OfflinePlayer,java.lang.String,java.lang.String,java.lang.String[])java.lang.String
+Vystorm.vystorm_core._advancedMethods.placeholderHandler.PlaceholderHandler method static mayContain(java.lang.String)boolean
+Vystorm.vystorm_core._advancedMethods.placeholderHandler.PlaceholderHandler method static parse(Vystorm.vystorm_core._advancedMethods.placeholderHandler.PlaceholderInterface$Prepared)net.kyori.adventure.text.Component
+Vystorm.vystorm_core._advancedMethods.placeholderHandler.PlaceholderHandler method static shared()Vystorm.vystorm_core._advancedMethods.placeholderHandler.PlaceholderHandler
+Vystorm.vystorm_core._advancedMethods.placeholderHandler.PlaceholderHandler type class final
+Vystorm.vystorm_core._advancedMethods.placeholderHandler.PlaceholderInterface field static IDENTIFIER:java.lang.String
+Vystorm.vystorm_core._advancedMethods.placeholderHandler.PlaceholderInterface interface-method default bridge(org.bukkit.plugin.Plugin,Vystorm.vystorm_core._advancedMethods.placeholderHandler.PlaceholderBridge)void
+Vystorm.vystorm_core._advancedMethods.placeholderHandler.PlaceholderInterface interface-method default bridges()java.util.List
+Vystorm.vystorm_core._advancedMethods.placeholderHandler.PlaceholderInterface interface-method default component(org.bukkit.OfflinePlayer,java.lang.String)net.kyori.adventure.text.Component
+Vystorm.vystorm_core._advancedMethods.placeholderHandler.PlaceholderInterface interface-method default component(org.bukkit.OfflinePlayer,org.bukkit.entity.Player,java.lang.String)net.kyori.adventure.text.Component
+Vystorm.vystorm_core._advancedMethods.placeholderHandler.PlaceholderInterface interface-method default miniMessage(org.bukkit.OfflinePlayer,org.bukkit.entity.Player,java.lang.String)Vystorm.vystorm_core._advancedMethods.placeholderHandler.PlaceholderInterface$Prepared
+Vystorm.vystorm_core._advancedMethods.placeholderHandler.PlaceholderInterface interface-method default namespace(java.lang.String)java.util.Optional
+Vystorm.vystorm_core._advancedMethods.placeholderHandler.PlaceholderInterface interface-method default namespaces()java.util.List
+Vystorm.vystorm_core._advancedMethods.placeholderHandler.PlaceholderInterface interface-method default refreshBridges()void
+Vystorm.vystorm_core._advancedMethods.placeholderHandler.PlaceholderInterface interface-method default register(org.bukkit.plugin.Plugin,java.lang.String)Vystorm.vystorm_core._advancedMethods.placeholderHandler.PlaceholderNamespace
+Vystorm.vystorm_core._advancedMethods.placeholderHandler.PlaceholderInterface interface-method default register(org.bukkit.plugin.Plugin,java.lang.String,Vystorm.vystorm_core._advancedMethods.placeholderHandler.PlaceholderResolver)Vystorm.vystorm_core._advancedMethods.placeholderHandler.PlaceholderNamespace
+Vystorm.vystorm_core._advancedMethods.placeholderHandler.PlaceholderInterface interface-method default removeBridge(Vystorm.vystorm_core._advancedMethods.placeholderHandler.PlaceholderBridge)boolean
+Vystorm.vystorm_core._advancedMethods.placeholderHandler.PlaceholderInterface interface-method default request(org.bukkit.OfflinePlayer,org.bukkit.entity.Player,java.lang.String)java.lang.String
+Vystorm.vystorm_core._advancedMethods.placeholderHandler.PlaceholderInterface interface-method default resolve(org.bukkit.OfflinePlayer,java.lang.String)java.lang.String
+Vystorm.vystorm_core._advancedMethods.placeholderHandler.PlaceholderInterface interface-method default resolve(org.bukkit.OfflinePlayer,org.bukkit.entity.Player,java.lang.String)java.lang.String
+Vystorm.vystorm_core._advancedMethods.placeholderHandler.PlaceholderInterface interface-method default resolveFor(org.bukkit.command.CommandSender,java.lang.String)java.lang.String
+Vystorm.vystorm_core._advancedMethods.placeholderHandler.PlaceholderInterface interface-method default unregister(org.bukkit.plugin.Plugin,java.lang.String)boolean
+Vystorm.vystorm_core._advancedMethods.placeholderHandler.PlaceholderInterface interface-method default unregisterAll(org.bukkit.plugin.Plugin)int
+Vystorm.vystorm_core._advancedMethods.placeholderHandler.PlaceholderInterface interface-method default value(org.bukkit.OfflinePlayer,java.lang.String,java.lang.String,java.lang.String[])java.lang.String
+Vystorm.vystorm_core._advancedMethods.placeholderHandler.PlaceholderInterface interface-method default value(org.bukkit.plugin.Plugin,java.lang.String,java.lang.String,java.util.function.Function)Vystorm.vystorm_core._advancedMethods.placeholderHandler.PlaceholderNamespace
+Vystorm.vystorm_core._advancedMethods.placeholderHandler.PlaceholderInterface type interface
+Vystorm.vystorm_core._advancedMethods.placeholderHandler.PlaceholderInterface$Prepared constructor (java.lang.String,net.kyori.adventure.text.minimessage.tag.resolver.TagResolver,int)
+Vystorm.vystorm_core._advancedMethods.placeholderHandler.PlaceholderInterface$Prepared method instance equals(java.lang.Object)boolean
+Vystorm.vystorm_core._advancedMethods.placeholderHandler.PlaceholderInterface$Prepared method instance hashCode()int
+Vystorm.vystorm_core._advancedMethods.placeholderHandler.PlaceholderInterface$Prepared method instance replaced()int
+Vystorm.vystorm_core._advancedMethods.placeholderHandler.PlaceholderInterface$Prepared method instance resolver()net.kyori.adventure.text.minimessage.tag.resolver.TagResolver
+Vystorm.vystorm_core._advancedMethods.placeholderHandler.PlaceholderInterface$Prepared method instance text()java.lang.String
+Vystorm.vystorm_core._advancedMethods.placeholderHandler.PlaceholderInterface$Prepared method instance toString()java.lang.String
+Vystorm.vystorm_core._advancedMethods.placeholderHandler.PlaceholderInterface$Prepared type record final
+Vystorm.vystorm_core._advancedMethods.placeholderHandler.PlaceholderNamespace interface-method abstract add(Vystorm.vystorm_core._advancedMethods.placeholderHandler.PlaceholderValue)Vystorm.vystorm_core._advancedMethods.placeholderHandler.PlaceholderNamespace
+Vystorm.vystorm_core._advancedMethods.placeholderHandler.PlaceholderNamespace interface-method abstract fallback(Vystorm.vystorm_core._advancedMethods.placeholderHandler.PlaceholderResolver)Vystorm.vystorm_core._advancedMethods.placeholderHandler.PlaceholderNamespace
+Vystorm.vystorm_core._advancedMethods.placeholderHandler.PlaceholderNamespace interface-method abstract fallback(Vystorm.vystorm_core._advancedMethods.placeholderHandler.PlaceholderResolver,boolean)Vystorm.vystorm_core._advancedMethods.placeholderHandler.PlaceholderNamespace
+Vystorm.vystorm_core._advancedMethods.placeholderHandler.PlaceholderNamespace interface-method abstract hasFallback()boolean
+Vystorm.vystorm_core._advancedMethods.placeholderHandler.PlaceholderNamespace interface-method abstract name()java.lang.String
+Vystorm.vystorm_core._advancedMethods.placeholderHandler.PlaceholderNamespace interface-method abstract owner()org.bukkit.plugin.Plugin
+Vystorm.vystorm_core._advancedMethods.placeholderHandler.PlaceholderNamespace interface-method abstract registered()boolean
+Vystorm.vystorm_core._advancedMethods.placeholderHandler.PlaceholderNamespace interface-method abstract remove(java.lang.String)boolean
+Vystorm.vystorm_core._advancedMethods.placeholderHandler.PlaceholderNamespace interface-method abstract value(java.lang.String)java.util.Optional
+Vystorm.vystorm_core._advancedMethods.placeholderHandler.PlaceholderNamespace interface-method abstract values()java.util.List
+Vystorm.vystorm_core._advancedMethods.placeholderHandler.PlaceholderNamespace interface-method default global(java.lang.String,java.lang.String,java.util.function.Supplier)Vystorm.vystorm_core._advancedMethods.placeholderHandler.PlaceholderNamespace
+Vystorm.vystorm_core._advancedMethods.placeholderHandler.PlaceholderNamespace interface-method default player(java.lang.String,java.lang.String,java.util.function.Function)Vystorm.vystorm_core._advancedMethods.placeholderHandler.PlaceholderNamespace
+Vystorm.vystorm_core._advancedMethods.placeholderHandler.PlaceholderNamespace interface-method default relational(java.lang.String,java.lang.String,java.util.function.BiFunction)Vystorm.vystorm_core._advancedMethods.placeholderHandler.PlaceholderNamespace
+Vystorm.vystorm_core._advancedMethods.placeholderHandler.PlaceholderNamespace interface-method default resolver(java.lang.String,java.lang.String,java.lang.String,Vystorm.vystorm_core._advancedMethods.placeholderHandler.PlaceholderResolver)Vystorm.vystorm_core._advancedMethods.placeholderHandler.PlaceholderNamespace
+Vystorm.vystorm_core._advancedMethods.placeholderHandler.PlaceholderNamespace interface-method default value(java.lang.String,java.lang.String,java.util.function.Function)Vystorm.vystorm_core._advancedMethods.placeholderHandler.PlaceholderNamespace
+Vystorm.vystorm_core._advancedMethods.placeholderHandler.PlaceholderNamespace interface-method default value(java.lang.String,java.util.function.Function)Vystorm.vystorm_core._advancedMethods.placeholderHandler.PlaceholderNamespace
+Vystorm.vystorm_core._advancedMethods.placeholderHandler.PlaceholderNamespace type interface
+Vystorm.vystorm_core._advancedMethods.placeholderHandler.PlaceholderResolver interface-method abstract resolve(Vystorm.vystorm_core._advancedMethods.placeholderHandler.PlaceholderContext)java.lang.Object
+Vystorm.vystorm_core._advancedMethods.placeholderHandler.PlaceholderResolver type interface
+Vystorm.vystorm_core._advancedMethods.placeholderHandler.PlaceholderTesting method instance advanceTicks(long)Vystorm.vystorm_core._advancedMethods.placeholderHandler.PlaceholderTesting
+Vystorm.vystorm_core._advancedMethods.placeholderHandler.PlaceholderTesting method instance bridge(Vystorm.vystorm_core._advancedMethods.placeholderHandler.PlaceholderBridge)Vystorm.vystorm_core._advancedMethods.placeholderHandler.PlaceholderTesting
+Vystorm.vystorm_core._advancedMethods.placeholderHandler.PlaceholderTesting method instance component(org.bukkit.OfflinePlayer,java.lang.String)net.kyori.adventure.text.Component
+Vystorm.vystorm_core._advancedMethods.placeholderHandler.PlaceholderTesting method instance disable(org.bukkit.plugin.Plugin)int
+Vystorm.vystorm_core._advancedMethods.placeholderHandler.PlaceholderTesting method instance placeholders()Vystorm.vystorm_core._advancedMethods.placeholderHandler.PlaceholderInterface
+Vystorm.vystorm_core._advancedMethods.placeholderHandler.PlaceholderTesting method instance register(org.bukkit.plugin.Plugin,java.lang.String)Vystorm.vystorm_core._advancedMethods.placeholderHandler.PlaceholderNamespace
+Vystorm.vystorm_core._advancedMethods.placeholderHandler.PlaceholderTesting method instance resolve(org.bukkit.OfflinePlayer,java.lang.String)java.lang.String
+Vystorm.vystorm_core._advancedMethods.placeholderHandler.PlaceholderTesting method instance resolveOffThread(org.bukkit.OfflinePlayer,java.lang.String)java.lang.String
+Vystorm.vystorm_core._advancedMethods.placeholderHandler.PlaceholderTesting method static detached()Vystorm.vystorm_core._advancedMethods.placeholderHandler.PlaceholderTesting
+Vystorm.vystorm_core._advancedMethods.placeholderHandler.PlaceholderTesting method static plugin(java.lang.String)org.bukkit.plugin.Plugin
+Vystorm.vystorm_core._advancedMethods.placeholderHandler.PlaceholderTesting method static viewer(java.lang.String)org.bukkit.OfflinePlayer
+Vystorm.vystorm_core._advancedMethods.placeholderHandler.PlaceholderTesting type class final
+Vystorm.vystorm_core._advancedMethods.placeholderHandler.PlaceholderValue method instance arguments()java.lang.String
+Vystorm.vystorm_core._advancedMethods.placeholderHandler.PlaceholderValue method instance arguments(java.lang.String)Vystorm.vystorm_core._advancedMethods.placeholderHandler.PlaceholderValue
+Vystorm.vystorm_core._advancedMethods.placeholderHandler.PlaceholderValue method instance asyncSafe()Vystorm.vystorm_core._advancedMethods.placeholderHandler.PlaceholderValue
+Vystorm.vystorm_core._advancedMethods.placeholderHandler.PlaceholderValue method instance cacheTicks()int
+Vystorm.vystorm_core._advancedMethods.placeholderHandler.PlaceholderValue method instance cacheTicks(int)Vystorm.vystorm_core._advancedMethods.placeholderHandler.PlaceholderValue
+Vystorm.vystorm_core._advancedMethods.placeholderHandler.PlaceholderValue method instance description()java.lang.String
+Vystorm.vystorm_core._advancedMethods.placeholderHandler.PlaceholderValue method instance description(java.lang.String)Vystorm.vystorm_core._advancedMethods.placeholderHandler.PlaceholderValue
+Vystorm.vystorm_core._advancedMethods.placeholderHandler.PlaceholderValue method instance formatted()Vystorm.vystorm_core._advancedMethods.placeholderHandler.PlaceholderValue
+Vystorm.vystorm_core._advancedMethods.placeholderHandler.PlaceholderValue method instance isAsyncSafe()boolean
+Vystorm.vystorm_core._advancedMethods.placeholderHandler.PlaceholderValue method instance isFormatted()boolean
+Vystorm.vystorm_core._advancedMethods.placeholderHandler.PlaceholderValue method instance key()java.lang.String
+Vystorm.vystorm_core._advancedMethods.placeholderHandler.PlaceholderValue method instance resolver()Vystorm.vystorm_core._advancedMethods.placeholderHandler.PlaceholderResolver
+Vystorm.vystorm_core._advancedMethods.placeholderHandler.PlaceholderValue method instance toString()java.lang.String
+Vystorm.vystorm_core._advancedMethods.placeholderHandler.PlaceholderValue method static global(java.lang.String,java.util.function.Supplier)Vystorm.vystorm_core._advancedMethods.placeholderHandler.PlaceholderValue
+Vystorm.vystorm_core._advancedMethods.placeholderHandler.PlaceholderValue method static of(java.lang.String,Vystorm.vystorm_core._advancedMethods.placeholderHandler.PlaceholderResolver)Vystorm.vystorm_core._advancedMethods.placeholderHandler.PlaceholderValue
+Vystorm.vystorm_core._advancedMethods.placeholderHandler.PlaceholderValue method static player(java.lang.String,java.util.function.Function)Vystorm.vystorm_core._advancedMethods.placeholderHandler.PlaceholderValue
+Vystorm.vystorm_core._advancedMethods.placeholderHandler.PlaceholderValue method static relational(java.lang.String,java.util.function.BiFunction)Vystorm.vystorm_core._advancedMethods.placeholderHandler.PlaceholderValue
+Vystorm.vystorm_core._advancedMethods.placeholderHandler.PlaceholderValue method static viewer(java.lang.String,java.util.function.Function)Vystorm.vystorm_core._advancedMethods.placeholderHandler.PlaceholderValue
+Vystorm.vystorm_core._advancedMethods.placeholderHandler.PlaceholderValue type class final
 Vystorm.vystorm_core._advancedMethods.structureGeneratorHandler.FungusPlan method static generate(org.bukkit.Material,Vystorm.vystorm_core._advancedMethods.structureGeneratorHandler.StructurePos,long,int,int,int)java.util.Map
 Vystorm.vystorm_core._advancedMethods.structureGeneratorHandler.FungusPlan method static supports(org.bukkit.Material)boolean
 Vystorm.vystorm_core._advancedMethods.structureGeneratorHandler.FungusPlan type class final
@@ -1364,6 +1495,7 @@ Vystorm.vystorm_core._uiMethods.autoGui.GuiInteface interface-method abstract re
 Vystorm.vystorm_core._uiMethods.autoGui.GuiInteface interface-method abstract setSpecificItem(java.lang.String,java.lang.Integer,org.bukkit.inventory.ItemStack)boolean
 Vystorm.vystorm_core._uiMethods.autoGui.GuiInteface interface-method default clearManaged()void
 Vystorm.vystorm_core._uiMethods.autoGui.GuiInteface interface-method default createInventory(org.bukkit.plugin.Plugin,org.bukkit.inventory.InventoryHolder,java.util.UUID,int,java.lang.String,Vystorm.vystorm_core._uiMethods.autoGui.GuiCallbacks)org.bukkit.inventory.Inventory
+Vystorm.vystorm_core._uiMethods.autoGui.GuiInteface interface-method default fileMenus()Vystorm.vystorm_core.menus.FileMenusInterface
 Vystorm.vystorm_core._uiMethods.autoGui.GuiInteface interface-method default handleClick(org.bukkit.event.inventory.InventoryClickEvent)void
 Vystorm.vystorm_core._uiMethods.autoGui.GuiInteface interface-method default handleClose(org.bukkit.event.inventory.InventoryCloseEvent)void
 Vystorm.vystorm_core._uiMethods.autoGui.GuiInteface interface-method default handleDrag(org.bukkit.event.inventory.InventoryDragEvent)void
@@ -2323,6 +2455,7 @@ Vystorm.vystorm_core.commands.CommandSpec method instance root()Vystorm.vystorm_
 Vystorm.vystorm_core.commands.CommandSpec method instance runnable()boolean
 Vystorm.vystorm_core.commands.CommandSpec method instance toString()java.lang.String
 Vystorm.vystorm_core.commands.CommandSpec method instance usage()java.lang.String
+Vystorm.vystorm_core.commands.CommandSpec method instance visibleTo(org.bukkit.command.CommandSender)boolean
 Vystorm.vystorm_core.commands.CommandSpec method static command(java.lang.String)Vystorm.vystorm_core.commands.CommandSpec$Builder
 Vystorm.vystorm_core.commands.CommandSpec type class final
 Vystorm.vystorm_core.commands.CommandSpec$Builder method instance aliases(java.lang.String[])Vystorm.vystorm_core.commands.CommandSpec$Builder
@@ -2339,6 +2472,8 @@ Vystorm.vystorm_core.commands.CommandSpec$Builder method instance permission(jav
 Vystorm.vystorm_core.commands.CommandSpec$Builder method instance playerOnly()Vystorm.vystorm_core.commands.CommandSpec$Builder
 Vystorm.vystorm_core.commands.CommandSpec$Builder method instance sub(java.lang.String,java.util.function.Consumer)Vystorm.vystorm_core.commands.CommandSpec$Builder
 Vystorm.vystorm_core.commands.CommandSpec$Builder method instance usage(java.lang.String)Vystorm.vystorm_core.commands.CommandSpec$Builder
+Vystorm.vystorm_core.commands.CommandSpec$Builder method instance visibleWhen(java.util.function.BooleanSupplier)Vystorm.vystorm_core.commands.CommandSpec$Builder
+Vystorm.vystorm_core.commands.CommandSpec$Builder method instance visibleWhen(java.util.function.Predicate)Vystorm.vystorm_core.commands.CommandSpec$Builder
 Vystorm.vystorm_core.commands.CommandSpec$Builder type class final
 Vystorm.vystorm_core.commands.CommandTesting method static detached(org.bukkit.plugin.Plugin,Vystorm.vystorm_core.lang.Lang,Vystorm.vystorm_core.commands.CommandSpec)Vystorm.vystorm_core.commands.CommandRegistration
 Vystorm.vystorm_core.commands.CommandTesting type class final
@@ -2346,6 +2481,7 @@ Vystorm.vystorm_core.commands.CoreCommands method static adopt(org.bukkit.plugin
 Vystorm.vystorm_core.commands.CoreCommands method static aliasPolicy()Vystorm.vystorm_core.commands.AliasPolicy
 Vystorm.vystorm_core.commands.CoreCommands method static configure(org.bukkit.configuration.ConfigurationSection)void
 Vystorm.vystorm_core.commands.CoreCommands method static find(java.lang.String)java.util.Optional
+Vystorm.vystorm_core.commands.CoreCommands method static refresh()void
 Vystorm.vystorm_core.commands.CoreCommands method static refreshAliases()void
 Vystorm.vystorm_core.commands.CoreCommands method static register(org.bukkit.plugin.Plugin,Vystorm.vystorm_core.lang.Lang,Vystorm.vystorm_core.commands.CommandSpec)Vystorm.vystorm_core.commands.CommandRegistration
 Vystorm.vystorm_core.commands.CoreCommands method static registrations()java.util.List
@@ -2359,6 +2495,7 @@ Vystorm.vystorm_core.commands.CoreCommandsInterface field static DEFAULT:Vystorm
 Vystorm.vystorm_core.commands.CoreCommandsInterface interface-method default adopt(org.bukkit.plugin.java.JavaPlugin,Vystorm.vystorm_core.lang.Lang,Vystorm.vystorm_core.commands.CommandSpec)Vystorm.vystorm_core.commands.CommandRegistration
 Vystorm.vystorm_core.commands.CoreCommandsInterface interface-method default aliasPolicy()Vystorm.vystorm_core.commands.AliasPolicy
 Vystorm.vystorm_core.commands.CoreCommandsInterface interface-method default find(java.lang.String)java.util.Optional
+Vystorm.vystorm_core.commands.CoreCommandsInterface interface-method default refresh()void
 Vystorm.vystorm_core.commands.CoreCommandsInterface interface-method default refreshAliases()void
 Vystorm.vystorm_core.commands.CoreCommandsInterface interface-method default register(org.bukkit.plugin.Plugin,Vystorm.vystorm_core.lang.Lang,Vystorm.vystorm_core.commands.CommandSpec)Vystorm.vystorm_core.commands.CommandRegistration
 Vystorm.vystorm_core.commands.CoreCommandsInterface interface-method default registrations()java.util.List
@@ -2524,6 +2661,7 @@ Vystorm.vystorm_core.compat.GameplayCompatInterface interface-method default set
 Vystorm.vystorm_core.compat.GameplayCompatInterface interface-method default setShouldBurnInDay(org.bukkit.entity.LivingEntity,boolean)void
 Vystorm.vystorm_core.compat.GameplayCompatInterface type interface
 Vystorm.vystorm_core.compat.InventoryCompat method static bottom(org.bukkit.inventory.InventoryView)org.bukkit.inventory.Inventory
+Vystorm.vystorm_core.compat.InventoryCompat method static menuHolder(org.bukkit.inventory.Inventory)org.bukkit.inventory.InventoryHolder
 Vystorm.vystorm_core.compat.InventoryCompat method static top(org.bukkit.inventory.InventoryView)org.bukkit.inventory.Inventory
 Vystorm.vystorm_core.compat.InventoryCompat type class final
 Vystorm.vystorm_core.compat.InventoryCompat$Access interface-method abstract bottom(org.bukkit.inventory.InventoryView)org.bukkit.inventory.Inventory
@@ -2531,6 +2669,7 @@ Vystorm.vystorm_core.compat.InventoryCompat$Access interface-method abstract top
 Vystorm.vystorm_core.compat.InventoryCompat$Access type interface
 Vystorm.vystorm_core.compat.InventoryCompatInterface field static DEFAULT:Vystorm.vystorm_core.compat.InventoryCompatInterface
 Vystorm.vystorm_core.compat.InventoryCompatInterface interface-method default bottom(org.bukkit.inventory.InventoryView)org.bukkit.inventory.Inventory
+Vystorm.vystorm_core.compat.InventoryCompatInterface interface-method default menuHolder(org.bukkit.inventory.Inventory)org.bukkit.inventory.InventoryHolder
 Vystorm.vystorm_core.compat.InventoryCompatInterface interface-method default top(org.bukkit.inventory.InventoryView)org.bukkit.inventory.Inventory
 Vystorm.vystorm_core.compat.InventoryCompatInterface type interface
 Vystorm.vystorm_core.compat.ItemCompat method static deserialize(byte[])org.bukkit.inventory.ItemStack[]
@@ -3445,6 +3584,8 @@ Vystorm.vystorm_core.lang.Lang method instance lines(org.bukkit.command.CommandS
 Vystorm.vystorm_core.lang.Lang method instance lore(org.bukkit.inventory.ItemStack,org.bukkit.command.CommandSender,java.lang.String,java.lang.Object[])org.bukkit.inventory.ItemStack
 Vystorm.vystorm_core.lang.Lang method instance name(org.bukkit.inventory.ItemStack,org.bukkit.command.CommandSender,java.lang.String,java.lang.Object[])org.bukkit.inventory.ItemStack
 Vystorm.vystorm_core.lang.Lang method instance namespace()java.lang.String
+Vystorm.vystorm_core.lang.Lang method instance placeholders()boolean
+Vystorm.vystorm_core.lang.Lang method instance placeholders(boolean)Vystorm.vystorm_core.lang.Lang
 Vystorm.vystorm_core.lang.Lang method instance plain(java.lang.String,java.lang.String,java.lang.Object[])java.lang.String
 Vystorm.vystorm_core.lang.Lang method instance plain(org.bukkit.command.CommandSender,java.lang.String,java.lang.Object[])java.lang.String
 Vystorm.vystorm_core.lang.Lang method instance raw(java.lang.String,java.lang.String)java.lang.String
@@ -3512,6 +3653,8 @@ Vystorm.vystorm_core.lang.Localization method instance language(org.bukkit.comma
 Vystorm.vystorm_core.lang.Localization method instance languages()java.util.Set
 Vystorm.vystorm_core.lang.Localization method instance minCoverage()double
 Vystorm.vystorm_core.lang.Localization method instance personalLanguage(java.util.UUID)java.util.Optional
+Vystorm.vystorm_core.lang.Localization method instance placeholdersInTexts()boolean
+Vystorm.vystorm_core.lang.Localization method instance placeholdersInTexts(boolean)void
 Vystorm.vystorm_core.lang.Localization method instance register(org.bukkit.plugin.Plugin)Vystorm.vystorm_core.lang.Lang
 Vystorm.vystorm_core.lang.Localization method instance reloadAll()void
 Vystorm.vystorm_core.lang.Localization method instance rememberClientLocale(java.util.UUID,java.lang.String)void
@@ -3955,6 +4098,21 @@ Vystorm.vystorm_core.main method instance playerActivity()Vystorm.vystorm_core.p
 Vystorm.vystorm_core.main method static getApi()Vystorm.vystorm_core.API
 Vystorm.vystorm_core.main method static getPlugin()org.bukkit.plugin.Plugin
 Vystorm.vystorm_core.main type class final
+Vystorm.vystorm_core.menus.FileMenus method static enabled()boolean
+Vystorm.vystorm_core.menus.FileMenus method static errors()java.util.Map
+Vystorm.vystorm_core.menus.FileMenus method static ids()java.util.List
+Vystorm.vystorm_core.menus.FileMenus method static open(org.bukkit.entity.Player,java.lang.String)boolean
+Vystorm.vystorm_core.menus.FileMenus method static reload()int
+Vystorm.vystorm_core.menus.FileMenus method static warnings()java.util.Map
+Vystorm.vystorm_core.menus.FileMenus type class final
+Vystorm.vystorm_core.menus.FileMenusInterface field static DEFAULT:Vystorm.vystorm_core.menus.FileMenusInterface
+Vystorm.vystorm_core.menus.FileMenusInterface interface-method default enabled()boolean
+Vystorm.vystorm_core.menus.FileMenusInterface interface-method default errors()java.util.Map
+Vystorm.vystorm_core.menus.FileMenusInterface interface-method default ids()java.util.List
+Vystorm.vystorm_core.menus.FileMenusInterface interface-method default open(org.bukkit.entity.Player,java.lang.String)boolean
+Vystorm.vystorm_core.menus.FileMenusInterface interface-method default reload()int
+Vystorm.vystorm_core.menus.FileMenusInterface interface-method default warnings()java.util.Map
+Vystorm.vystorm_core.menus.FileMenusInterface type interface
 Vystorm.vystorm_core.metrics.Metrics constructor (org.bukkit.plugin.Plugin,int)
 Vystorm.vystorm_core.metrics.Metrics method instance addCustomChart(Vystorm.vystorm_core.metrics.Metrics$CustomChart)void
 Vystorm.vystorm_core.metrics.Metrics method instance shutdown()void

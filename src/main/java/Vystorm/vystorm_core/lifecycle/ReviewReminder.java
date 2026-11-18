@@ -65,6 +65,9 @@ public final class ReviewReminder implements Listener {
         instance = reminder;
     }
 
+    /** Whether the reminder is running (review-reminder.enabled at the last start or reload). @since 0.65.0 */
+    public static boolean running() { return instance != null; }
+
     public static void stop() {
         if (instance != null) HandlerList.unregisterAll(instance);
         instance = null;

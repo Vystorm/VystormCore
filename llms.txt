@@ -1,6 +1,6 @@
 # Vystorm Core
 
-> Vystorm Core is a shared API for Paper/Purpur plugins: localized UI, commands, items, mobs, worlds, storage, web modules and cross-plugin services. These local documents cover Core 0.64.0, all 109 capability flags, and the Screens prototype; check capabilities and runtime service availability before using optional features.
+> Vystorm Core is a shared API for Paper/Purpur plugins: localized UI, commands, items, mobs, worlds, storage, web modules and cross-plugin services. These local documents cover Core 0.65.0, all 110 capability flags, and the Screens prototype; check capabilities and runtime service availability before using optional features.
 
 ## Start here
 
@@ -39,6 +39,7 @@
 
 - [The managers (0.64.0)](docs/API.md#the-managers-0640): Every service through an accessor on API; table of accessors and the static classes they replace.
 - [Event order between plugins (0.64.0)](docs/API.md#event-order-between-plugins-0640): Named stages instead of Bukkit priorities for events several plugins handle.
+- [Placeholders (0.65.0)](docs/API.md#placeholders-0650): One registry for the values of all plugins, `%vystorm_<namespace>_<key>%` and `{namespace:key}`, PlaceholderAPI in both directions, Core's own values.
 - [Compatibility helpers (since 0.48.0)](docs/API.md#compatibility-helpers-since-0480): Paper 1.20.6 feature detection and portable forms.
 - [Core 0.51.0: shared Bukkit adapters](docs/API.md#core-0510-shared-bukkit-adapters): Shared Bukkit adapters and native persistence.
 - [World-event runtime (0.31.0)](docs/API.md#world-event-runtime-0310): Durable owner-bound event execution.

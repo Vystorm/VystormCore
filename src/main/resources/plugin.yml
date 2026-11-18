@@ -3,6 +3,7 @@ version: '${version}'
 main: Vystorm.vystorm_core.main
 softdepend:
   - Vault
+  - PlaceholderAPI
 api-version: '1.20.6'
 load: STARTUP
 libraries:

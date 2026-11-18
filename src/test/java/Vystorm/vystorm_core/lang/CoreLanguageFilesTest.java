@@ -33,6 +33,30 @@ class CoreLanguageFilesTest {
         en.forEach((k, v) -> assertFalse(v.toString().isBlank(), k));
     }
 
+    /** YAML reads the bare keys on/off/yes/no as booleans, so "screen.classic.on" became "screen.classic.true" (0.65.0). */
+    @Test
+    void givenEveryLanguageFile_whenParsed_thenNoKeyWasReadAsBoolean() throws Exception {
+        for (String code : new String[] { "en", "de", "fr", "it", "pt_br", "ru", "zh_cn" }) {
+            Map<String, Object> texts = load(code);
+            String raw;
+            try (InputStream in = CoreLanguageFilesTest.class.getClassLoader().getResourceAsStream("lang/" + code + ".yml")) {
+                raw = new String(in.readAllBytes(), StandardCharsets.UTF_8);
+            }
+            java.util.regex.Matcher bare = java.util.regex.Pattern.compile("(?mi)^[ \\t]*(on|off|yes|no|true|false|y|n)[ \\t]*:").matcher(raw);
+            assertFalse(bare.find(), () -> "lang/" + code + ".yml: quote the key in the line \"" + bare.group().strip() + "\", YAML reads it as a boolean");
+            for (String key : new String[] { "screen.classic.on", "screen.classic.off", "trace.on", "trace.off", "network.off" })
+                assertTrue(texts.containsKey(key), "lang/" + code + ".yml lacks " + key);
+        }
+    }
+
+    @Test
+    void givenClassicScreensSwitched_whenAnswered_thenATextNotTheKey() {
+        Lang core = Localization.get().core();
+        for (String language : new String[] { "en", "de" })
+            for (String key : new String[] { "screen.classic.on", "screen.classic.off", "trace.on", "trace.off", "network.off" })
+                assertNotEquals(key, PlainTextComponentSerializer.plainText().serialize(core.component(language, key, "player", "Alex")), language + " " + key);
+    }
+
     @Test
     void givenCoreBundle_whenGermanOrOtherClient_thenGermanOrEnglish() {
         Lang core = Localization.get().core();

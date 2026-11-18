@@ -4,7 +4,7 @@ plugins {
 }
 
 group = 'Vystorm'
-version = '0.64.0-Vystorm-Core-26.2'
+version = '0.65.0-Vystorm-Core-26.2'
 
 sourceSets {
     main {
@@ -186,6 +186,21 @@ tasks.named('test') {
     systemProperty 'vystorm.test.baselineClasspath', '@' + baselineFile.absolutePath
     doFirst { baselineFile.parentFile.mkdirs(); baselineFile.text = baselineClasspath.asPath }
 }
+
+// Bridges to optional plugins (PlaceholderAPI): classes that extend a type of the other plugin and are only loaded
+// once that plugin is enabled. No jar of PlaceholderAPI is needed to build: they are compiled against the
+// hand-written signature stubs in the test sources (src/test/java/me/clip), which are never shipped.
+def placeholderApiStubs = tasks.register('compilePlaceholderApiStubs', JavaCompile) {
+    source = fileTree('src/test/java') { include 'me/clip/placeholderapi/**' }
+    classpath = configurations.compileClasspath
+    destinationDirectory = layout.buildDirectory.dir('classes/java/placeholderApiStubs')
+}
+sourceSets { bridges { java.srcDirs = ['src/bridges/java'] } }
+sourceSets.bridges.compileClasspath += configurations.compileClasspath + sourceSets.main.output + files(placeholderApiStubs.map { it.destinationDirectory })
+tasks.named('compileBridgesJava', JavaCompile) { dependsOn placeholderApiStubs }
+sourceSets.test.compileClasspath += sourceSets.bridges.output
+sourceSets.test.runtimeClasspath += sourceSets.bridges.output
+tasks.named('jar') { from(sourceSets.bridges.output) }
 
 // Proxy entry points (Velocity, BungeeCord) are compiled against the full API set: Velocity's types need a newer
 // Adventure than the Paper 1.20.6 baseline used for main. They only depend on the JDK-only network core in main.

@@ -15,6 +15,8 @@ public final class RegionCommand implements TabExecutor {
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
         var lang = Vystorm.vystorm_core.lang.Localization.get().core();
         if (!sender.hasPermission("vystorm_core.admin")) { lang.send(sender, "region.no-permission"); return true; }
+        // region-register.enabled off (0.65.0): the command is off; the register keeps working for the plugins
+        if (!Vystorm.vystorm_core.lifecycle.CoreSwitches.on(Vystorm.vystorm_core.lifecycle.CoreSwitches.Switch.REGIONS)) { lang.send(sender, "feature-off"); return true; }
         var service = RegionService.get();
         if (args.length >= 1 && args[0].equalsIgnoreCase("list")) {
             var regions = args.length >= 2 ? service.all(args[1].toLowerCase(Locale.ROOT)) : service.all();
@@ -48,6 +50,7 @@ public final class RegionCommand implements TabExecutor {
     @Override
     public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
         if (!sender.hasPermission("vystorm_core.admin") || args.length == 0) return List.of();
+        if (!Vystorm.vystorm_core.lifecycle.CoreSwitches.on(Vystorm.vystorm_core.lifecycle.CoreSwitches.Switch.REGIONS)) return List.of();
         List<String> out = List.of();
         if (args.length == 1) out = List.of("at", "list");
         else if (args.length == 2 && args[0].equalsIgnoreCase("at")) out = Bukkit.getOnlinePlayers().stream().map(Player::getName).toList();

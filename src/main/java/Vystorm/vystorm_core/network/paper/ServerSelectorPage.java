@@ -1,5 +1,6 @@
 package Vystorm.vystorm_core.network.paper;
 
+import Vystorm.vystorm_core.compat.InventoryCompat;
 import Vystorm.vystorm_core.lang.Lang;
 import Vystorm.vystorm_core.lang.Localization;
 import net.kyori.adventure.text.minimessage.MiniMessage;
@@ -32,7 +33,7 @@ public final class ServerSelectorPage implements InventoryHolder, Listener {
     private final List<ServerSelectorModel.Entry> entries;
     private Inventory inventory;
 
-    private ServerSelectorPage(List<ServerSelectorModel.Entry> entries) { this.entries = entries; }
+    ServerSelectorPage(List<ServerSelectorModel.Entry> entries) { this.entries = entries; }
 
     @Override public Inventory getInventory() { return inventory; }
 
@@ -92,7 +93,8 @@ public final class ServerSelectorPage implements InventoryHolder, Listener {
 
     @EventHandler
     public void onClick(InventoryClickEvent event) {
-        if (!(event.getInventory().getHolder() instanceof ServerSelectorPage page)) return;
+        // menuHolder: a chest or barrel in the world is recognised by its location, without copying its block state
+        if (!(InventoryCompat.menuHolder(event.getInventory()) instanceof ServerSelectorPage page)) return;
         event.setCancelled(true);
         if (!(event.getWhoClicked() instanceof Player player)) return;
         if (event.getClickedInventory() != event.getInventory()) return;
@@ -113,6 +115,6 @@ public final class ServerSelectorPage implements InventoryHolder, Listener {
 
     @EventHandler
     public void onDrag(InventoryDragEvent event) {
-        if (event.getInventory().getHolder() instanceof ServerSelectorPage) event.setCancelled(true);
+        if (InventoryCompat.menuHolder(event.getInventory()) instanceof ServerSelectorPage) event.setCancelled(true);
     }
 }

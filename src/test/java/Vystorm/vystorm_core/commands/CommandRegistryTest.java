@@ -73,6 +73,31 @@ class CommandRegistryTest {
     }
 
     @Test
+    void givenSeveralChangesInABatch_whenDone_thenPlayersGetTheirCommandListOnce() {
+        Player online = mock(Player.class);
+        Registry.INSTANCE.online = () -> List.of(online);
+        CommandSpec one = CommandSpec.command("menuone").executes(c -> { }).build(), two = CommandSpec.command("menutwo").executes(c -> { }).build();
+        CommandRegistration[] made = new CommandRegistration[2];
+        CommandBatch.run(() -> {
+            made[0] = CoreCommands.register(kit.plugin, kit.lang, one);
+            made[1] = CoreCommands.register(kit.plugin, kit.lang, two);
+            verify(online, never()).updateCommands();   // nothing is sent while the changes are still coming
+        });
+        verify(online, times(1)).updateCommands();
+        assertNotNull(known.get("menuone"));
+        assertNotNull(known.get("menutwo"));
+        // nested batches end with the outermost one; a batch without a change sends nothing
+        CommandBatch.run(() -> CommandBatch.run(() -> CoreCommands.unregister(made[0])));
+        verify(online, times(2)).updateCommands();
+        CommandBatch.run(() -> { });
+        verify(online, times(2)).updateCommands();
+        // outside a batch every change is sent at once, as before
+        CoreCommands.unregister(made[1]);
+        verify(online, times(3)).updateCommands();
+        assertNull(known.get("menutwo"));
+    }
+
+    @Test
     void givenFreeLabels_whenRegistered_thenRootFixedAndLocalizedAliasesInCommandMap() {
         CommandRegistration r = CoreCommands.register(kit.plugin, kit.lang, kit.spec);
         assertEquals(CommandRegistration.Mount.BUKKIT, r.mount());

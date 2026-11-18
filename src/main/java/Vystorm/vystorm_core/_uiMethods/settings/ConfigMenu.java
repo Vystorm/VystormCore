@@ -33,9 +33,9 @@ import org.bukkit.plugin.Plugin;
  */
 final class ConfigMenu implements Listener {
     private static final int PER_PAGE = 45, PREVIOUS = 45, BACK = 49, NEXT = 53, LINE = 38, DESCRIPTION_LINES = 6;
-    private interface Click { void run(Player player, boolean right); }
+    interface Click { void run(Player player, boolean right); }   // package-private for ConfigMenuClickTest
     private record Entry(ItemStack icon, Click click) {}
-    private static final class Holder implements InventoryHolder {
+    static final class Holder implements InventoryHolder {
         final UUID viewer; final ConfigEditorService.PluginState state;
         final Map<Integer, Click> actions = new HashMap<>();
         Inventory inventory;
@@ -89,7 +89,7 @@ final class ConfigMenu implements Listener {
         footer.put(47, new Entry(button(p, Material.COMPASS, "search"), (v, r) -> search(v, state)));
         footer.put(48, new Entry(button(p, Material.HOPPER, "only-changed"), (v, r) -> changed(v, state, 0)));
         footer.put(50, new Entry(button(p, Material.CLOCK, "history"), (v, r) -> { v.closeInventory(); service.sendHistory(v, name, 1); }));
-        if (FirstRunSetup.has(name)) footer.put(51, new Entry(button(p, Material.NETHER_STAR, "setup"), (v, r) -> FirstRunSetup.open(v, name)));
+        if (FirstRunSetup.setupOn() && FirstRunSetup.has(name)) footer.put(51, new Entry(button(p, Material.NETHER_STAR, "setup"), (v, r) -> FirstRunSetup.open(v, name)));
         show(p, state, lang().component(p, "config-menu.plugin-title", "plugin", name), entries, page, next -> plugin(p, state, next), footer);
     }
 
@@ -315,7 +315,8 @@ final class ConfigMenu implements Listener {
     }
 
     @EventHandler public void click(InventoryClickEvent event) {
-        if (!(InventoryCompat.top(event.getView()).getHolder() instanceof Holder holder)) return;
+        // menuHolder: a chest or barrel in the world is recognised by its location, without copying its block state
+        if (!(InventoryCompat.menuHolder(InventoryCompat.top(event.getView())) instanceof Holder holder)) return;
         event.setCancelled(true);
         if (!(event.getWhoClicked() instanceof Player p) || !holder.viewer.equals(p.getUniqueId()) || event.getClickedInventory() != holder.inventory) return;
         Click action = holder.actions.get(event.getSlot());
@@ -335,6 +336,6 @@ final class ConfigMenu implements Listener {
         });
     }
     @EventHandler public void drag(InventoryDragEvent event) {
-        if (InventoryCompat.top(event.getView()).getHolder() instanceof Holder) event.setCancelled(true);
+        if (InventoryCompat.menuHolder(InventoryCompat.top(event.getView())) instanceof Holder) event.setCancelled(true);
     }
 }

@@ -1,0 +1,143 @@
+{
+  "format": "vystorm-menu",
+  "version": 1,
+  "id": "locks-general",
+  "title": "VystormLocks · General",
+  "frame": "chest",
+  "grid": {
+    "columns": 9,
+    "rows": 6
+  },
+  "header": [
+    "close"
+  ],
+  "footer": "Point at a setting to read what it does",
+  "widgets": [
+    {
+      "id": "auto-protect",
+      "type": "tile",
+      "slot": 0,
+      "text": "Auto protect",
+      "icon": "SLIME_BALL",
+      "description": "Protect containers automatically when they are placed.",
+      "click": {
+        "actions": [
+          {
+            "command": "locks set auto-protect",
+            "as": "player"
+          }
+        ]
+      }
+    },
+    {
+      "id": "protect",
+      "type": "tile",
+      "slot": 1,
+      "text": "Protect",
+      "icon": "LEAD",
+      "description": "Protect the container you look at.",
+      "click": {
+        "actions": [
+          {
+            "command": "locks set protect",
+            "as": "player"
+          }
+        ]
+      }
+    },
+    {
+      "id": "hopper-protection",
+      "type": "tile",
+      "slot": 2,
+      "text": "Hopper protection",
+      "icon": "SLIME_BALL",
+      "description": "Hoppers cannot empty protected containers.",
+      "click": {
+        "actions": [
+          {
+            "command": "locks set hopper-protection",
+            "as": "player"
+          }
+        ]
+      }
+    },
+    {
+      "id": "explosion-protection",
+      "type": "tile",
+      "slot": 3,
+      "text": "Explosion protection",
+      "icon": "SLIME_BALL",
+      "description": "Explosions leave protected containers alone.",
+      "click": {
+        "actions": [
+          {
+            "command": "locks set explosion-protection",
+            "as": "player"
+          }
+        ]
+      }
+    },
+    {
+      "id": "chest-buddies",
+      "type": "tile",
+      "slot": 4,
+      "text": "Chest buddies",
+      "icon": "SLIME_BALL",
+      "description": "Friends may open your containers.",
+      "click": {
+        "actions": [
+          {
+            "command": "locks set chest-buddies",
+            "as": "player"
+          }
+        ]
+      }
+    },
+    {
+      "id": "passwords",
+      "type": "tile",
+      "slot": 5,
+      "text": "Passwords",
+      "icon": "SLIME_BALL",
+      "description": "Open containers with a password.",
+      "click": {
+        "actions": [
+          {
+            "command": "locks set passwords",
+            "as": "player"
+          }
+        ]
+      }
+    },
+    {
+      "id": "max-buddies",
+      "type": "tile",
+      "slot": 6,
+      "text": "Max buddies",
+      "icon": "LEAD",
+      "description": "How many friends a container can have.",
+      "click": {
+        "actions": [
+          {
+            "command": "locks set max-buddies",
+            "as": "player"
+          }
+        ]
+      }
+    },
+    {
+      "id": "back",
+      "type": "tile",
+      "slot": 49,
+      "text": "Back",
+      "icon": "DARK_OAK_DOOR",
+      "click": {
+        "actions": [
+          {
+            "back": true
+          }
+        ]
+      }
+    }
+  ]
+}

@@ -55,7 +55,7 @@ player.sendMessage(core.message().chat().button("Open", "Opens the menu", p -> o
 | --- | --- | --- |
 | `api.compat().platform()` | Text, items, inventories, chunks, scoreboards and server facts on every supported server | `compat.PlatformCompat` |
 | `api.compat().server()` | Feature detection, renamed materials, entities, sounds and attributes | `compat.ServerCompat` |
-| `api.compat().inventory()` | Top and bottom inventory of a view | `compat.InventoryCompat` |
+| `api.compat().inventory()` | Top and bottom inventory of a view; `menuHolder(inventory)` (0.64.1) to recognise your own menu in click handlers without copying a chest's block state | `compat.InventoryCompat` |
 | `api.compat().gameplay()` | Attributes, damage, game rules, entity state | `compat.GameplayCompat` |
 | `api.compat().world()` | Worlds by key, biomes, view distance, world creation | `compat.WorldCompat` |
 | `api.compat().storage()` | Items and entities as bytes | `compat.StorageCompat` |
@@ -83,6 +83,7 @@ player.sendMessage(core.message().chat().button("Open", "Opens the menu", p -> o
 | `api.gui().playerMenu()` | Entries in the menu about another player | `playermenu.PlayerMenu` |
 | `api.gui().profiles()` | Sections on the player profile card | `profile.Profiles` |
 | `api.gui().menuExplorer()` | Recent menus | `_uiMethods.menu.MenuExplorer` |
+| `api.gui().fileMenus()` | Screen menus from files in `plugins/vystorm_core/menus` (0.65.0, section "Menus from files (0.65.0)") | `menus.FileMenus` |
 | `api.gui().onboarding()` | Milestones of the first-steps guide | `_uiMethods.tutorial.CoreOnboarding` |
 | `api.dialogs().buttons()` | Navigation buttons for dialogs: home, back, category, settings | `_uiMethods.menu.CompatMenuButtons` |
 | `api.area().regions()` | Regions with shapes, priorities, enter and leave events | `region.RegionService.get()` |
@@ -106,6 +107,7 @@ player.sendMessage(core.message().chat().button("Open", "Opens the menu", p -> o
 | `api.events().services()` | World events provided by other plugins | `worldevent.WorldEventServices` |
 | `api.lang().coreLanguage()` | A player's language choice, native names, reload | `lang.CoreLanguage` |
 | `api.priority().stages()` | The order in which plugins handle a shared event (next section) | new |
+| `api.placeholders()` | Placeholders of all plugins, Core's own values, PlaceholderAPI in both directions (0.65.0, section "Placeholders (0.65.0)") | new |
 | `api.loot()` | Shared loot tables | `loot.LootTables` |
 | `api.loot().rolls()` | Rolls with luck, tiers, pity and conditions | `loot.LootRoll` |
 | `api.loot().mobs()` | Mob drops: ownership, level, rank, extra parts | `loot.MobLoot` |
@@ -169,13 +171,13 @@ Rules:
   method with the same name, as described in the sections below.
 - **What stays static:** `CoreApi` (it finds the hub), builders and value types (`Lang`, `CommandSpec`, `Arg`,
   `PanelSpec`, `Ui`, `Region`, `WebRoute`, records and enums), the test helpers `PanelTesting`, `CommandTesting`,
-  `ClientUiTesting` and `EventStageTesting`, and pure functions such as `TextWidth`. `DebugMessages` may also still be called directly, for
+  `ClientUiTesting`, `EventStageTesting` and `PlaceholderTesting`, and pure functions such as `TextWidth`. `DebugMessages` may also still be called directly, for
   example from a static initialiser.
 - **Core only.** Methods named `initialize`, `shutdown`, `start` or `stop` on the static classes are called by Core
   itself and are not offered by the managers.
 - **Replacing a manager.** The new managers have `api.overrideCompatHandler(..)`, `overrideTaskHandler`,
-  `overrideLootHandler`, `overrideWebHandler`, `overridePartyHandler`, `overrideItemHandler`, `overrideMobHandler`
-  and `overrideRuntimeHandler`, like the older ones. A part of an existing manager is replaced by overriding the
+  `overrideLootHandler`, `overrideWebHandler`, `overridePartyHandler`, `overrideItemHandler`, `overrideMobHandler`,
+  `overrideRuntimeHandler` and (0.65.0) `overridePlaceholderHandler`, like the older ones. A part of an existing manager is replaced by overriding the
   manager and returning another part. All methods have default bodies, so a replacement overrides only what it
   changes. Replacing a manager affects callers that go through the manager; callers of the static class are not
   redirected.
@@ -288,6 +290,323 @@ when(core.priority()).thenReturn(stages.priority());
 | `<E extends Event> E fire(E event)` | Calls the handlers like the server (one dispatch per stage in use, LOWEST to MONITOR) and returns the event. An exception in a handler is logged, not thrown. |
 
 Only staged handlers exist in such a test: listeners registered with `@EventHandler` are not called by `fire`.
+
+## Placeholders (0.65.0)
+
+Capability `CoreApi.Capability.PLACEHOLDERS` (`placeholders`, since `0.65.0`).
+
+`api.placeholders()` is one registry for the values of all Vystorm plugins. A plugin registers a **namespace** and
+declares its values; from then on every text resolved through Core shows them, every plugin that uses PlaceholderAPI
+shows them, and `/vadmin placeholders` lists them with their descriptions.
+
+```java
+import Vystorm.vystorm_core._advancedMethods.placeholderHandler.PlaceholderValue;
+
+// in onEnable, after the version gate (CoreApi.atLeast("0.65.0"))
+core.placeholders().register(this, "xpvault")
+        .value("balance", "XP in the player's account", player -> bank.balance(player.getUniqueId()))
+        .global("accounts", "Number of accounts", bank::accounts)
+        .resolver("top", "Name of the player on this rank", "<rank>", context -> ranking.name(context.intArgument(0, 1)));
+
+String line = core.placeholders().resolve(player, "Balance: %vystorm_xpvault_balance%");
+Component text = core.placeholders().component(player, "<gray>Balance: <white>{xpvault:balance}");
+```
+
+You do not unregister: Core removes the namespace when the plugin is disabled.
+
+### Syntax
+
+| Form | Example | Where |
+| --- | --- | --- |
+| `%vystorm_<namespace>_<key>%` | `%vystorm_xpvault_balance%`, with arguments `%vystorm_boards_votes_event_pvp%` | Everywhere: Vystorm texts and, through PlaceholderAPI, every other plugin |
+| `{<namespace>:<key>}` | `{xpvault:balance}`, with arguments `{boards:votes:event:pvp}` | Vystorm texts (the short form) |
+
+Why two forms: the percent form is PlaceholderAPI's, so one and the same text works in a Vystorm board, in a
+scoreboard plugin and in a hologram. The brace form is what Vystorm texts already use for named placeholders
+(`{player}`), with the colon that Vystorm Boards uses for arguments (`{countdown:...}`).
+
+Rules:
+
+- **Namespace:** a letter followed by letters and digits, at most 32 characters. **Key:** letters, digits, `_`, `.`
+  and `-`. Both are matched without regard to case; arguments keep their case.
+- **Keys with underscores:** in the percent form the underscore also separates arguments, so the longest declared
+  key wins and the rest are arguments: with the keys `world` and `world_time`, `%vystorm_core_world_time%` is
+  `world_time` without arguments. An argument that contains underscores arrives in pieces; `context.rest(0)` puts it
+  together again (`world_the_end`). In the brace form the colon separates, so `{core:time:HH:mm}` has the two
+  arguments `HH` and `mm` and `context.rest(0)` is `HH:mm`.
+- **Braces are only placeholders with a registered namespace before the colon.** `{player}`, `{0}`, language
+  references `{lang:...}` and client tooltip data `{data:...}` are never touched. Reserved names that cannot be
+  namespaces: `lang`, `data`, `rel`, `vystorm`, and `countdown`, `votes`, `vote`, `guestbook` (placeholders of
+  Vystorm Boards).
+- **Unknown stays.** A placeholder nobody answers stays in the text exactly as written. So does a value of a
+  player when the text has no viewer (console).
+- **Escaping:** a backslash directly before a placeholder shows it as written, without the backslash:
+  `\%vystorm_core_online%`, `\{core:online}`.
+- **One pass, no nesting.** A text is read once from left to right. What a value returns is never read again, and
+  a placeholder inside a placeholder is not supported (`{a:x:{core:online}}` resolves only the inner one).
+- **Limits:** a placeholder is at most 256 characters long and does not span lines.
+- **Relational values** (how one player sees another) get a second player:
+  `resolve(viewer, other, text)`; in other plugins they are written `%rel_vystorm_<namespace>_<key>%`, which Core
+  accepts too.
+
+### Registering values
+
+`PlaceholderInterface` (`api.placeholders()`):
+
+| Method | Description |
+| --- | --- |
+| `PlaceholderNamespace register(Plugin owner, String namespace)` | Registers the namespace or returns the one this plugin registered before. Another enabled plugin's namespace throws `IllegalStateException`; an invalid or reserved name `IllegalArgumentException`. |
+| `PlaceholderNamespace register(Plugin owner, String namespace, PlaceholderResolver resolver)` | A namespace answered by one resolver for every key that is not declared (`PlaceholderNamespace.fallback`). |
+| `PlaceholderNamespace value(Plugin owner, String namespace, String key, Function<OfflinePlayer, ?> value)` | Shortcut for one value of the viewer. |
+| `boolean unregister(Plugin owner, String namespace)`, `int unregisterAll(Plugin owner)` | Removes namespaces (and bridges) of a plugin; Core calls `unregisterAll` when a plugin is disabled. |
+| `List<PlaceholderNamespace> namespaces()`, `Optional<PlaceholderNamespace> namespace(String name)` | What is registered. |
+
+`PlaceholderNamespace` (all declaring methods return the namespace; declaring a key again replaces it):
+
+| Method | The value is |
+| --- | --- |
+| `value(key, [description,] Function<OfflinePlayer, ?>)` | of the viewer, online or not |
+| `player(key, description, Function<Player, ?>)` | of the viewer and needs him online (world, position) |
+| `global(key, description, Supplier<?>)` | the same for everyone |
+| `relational(key, description, BiFunction<Player, Player, ?>)` | between the viewer and a second player |
+| `resolver(key, description, arguments, PlaceholderResolver)` | computed from the whole context, for values with arguments |
+| `add(PlaceholderValue)` | declared with all options, see below |
+| `fallback(PlaceholderResolver[, boolean asyncSafe])` | every key that is not declared |
+| `remove(key)`, `values()`, `value(key)`, `hasFallback()`, `registered()`, `name()`, `owner()` | housekeeping |
+
+`PlaceholderValue` holds one value and its options: `PlaceholderValue.of(key, resolver)`, `.global(key, supplier)`,
+`.viewer(key, function)`, `.player(key, function)`, `.relational(key, biFunction)`, then
+`.description("...")` (one line for `/vadmin placeholders`; a `lang.ref("...")` is shown in the admin's language),
+`.arguments("<rank>")` (hint shown in lists), `.asyncSafe()`, `.formatted()` and `.cacheTicks(n)`.
+
+A resolver gets a `PlaceholderContext`: `viewer()` (an `OfflinePlayer`, null for the console), `player()` (the viewer
+if online), `other()` (the second player or null), `namespace()`, `key()`, `arguments()`, `argument(i)`,
+`argument(i, fallback)`, `intArgument(i, fallback)`, `numberArgument(i, fallback)`, `rest(i)`, `raw()` and
+`onServerThread()`. It returns the value (any object, shown with `String.valueOf`), an **empty string** for "exists
+but is empty" (no region, no party), or **null** for "unknown or not available here", which leaves the placeholder
+in the text.
+
+A resolver that throws is reported through `ProviderFailures` (at most once a minute per value) and its placeholder
+stays as written. Values of a disabled plugin are not asked.
+
+### Resolving
+
+| Method | Description |
+| --- | --- |
+| `String resolve(OfflinePlayer viewer, String text)` / `resolve(viewer, Player other, text)` | Plain text for String-based places (signs, scoreboards, item lore as legacy text). `viewer` may be null. A text without `%` and `{`, and a text in which nothing was replaced, comes back as the same instance. |
+| `String resolveFor(CommandSender sender, String text)` | The same for a command sender: a player is the viewer, the console is none. |
+| `Component component(OfflinePlayer viewer, String miniMessage)` / `component(viewer, other, miniMessage)` | Parses a MiniMessage text with its placeholders. |
+| `Prepared miniMessage(OfflinePlayer viewer, Player other, String text)` | For callers that parse themselves, for example with tag resolvers of their own: `prepared.text()` has a private tag for every resolved placeholder, `prepared.resolver()` fills them, `prepared.replaced()` counts them. |
+| `String value(OfflinePlayer viewer, String namespace, String key, String... arguments)` | One value without writing a text; null if nothing answers. |
+| `String request(OfflinePlayer viewer, Player other, String params)` | One value given as `<namespace>_<key>[_<arguments>]`; this is what a bridge calls. |
+
+**Safety.** Values can contain what players typed: names, chat, guestbook lines. In `component` and `miniMessage`
+a value is therefore inserted literally and its `<tags>` are not parsed; only a value its registrant marked with
+`formatted()` is parsed as MiniMessage. Do not pass the result of `resolve` to MiniMessage yourself, and never mark
+a value as formatted that contains player input. A value that contains `%vystorm_...%` or `{core:online}` is shown
+as it is, because values are not read again. Legacy `§` colours inside a value are shown as colours. Placeholders
+inside the arguments of a MiniMessage tag (`<click:run_command:'...'>`) are not resolved in the component variants.
+
+**Cost.** The parser makes one pass without regular expressions and allocates nothing until the first placeholder
+is replaced. An expensive value can keep its answer for some ticks per viewer and arguments with `cacheTicks(n)`;
+by default nothing is cached.
+
+### Threads
+
+A resolver runs on the **server thread**, unless its value was declared `asyncSafe()` (it only reads immutable,
+volatile or concurrent data and calls nothing that needs the server thread). `resolve`, `component` and the other
+resolving methods may be called from any thread: off the server thread only async-safe values are asked, and every
+other placeholder **stays in the text as written**. Core never moves a call to the server thread on its own and
+never waits for it. This matters for the bridge: scoreboard, tab list and chat plugins often ask PlaceholderAPI
+from another thread, so declare a value `asyncSafe()` wherever that is true. Registering is allowed from any thread.
+
+### Other placeholder plugins
+
+**PlaceholderAPI** (optional, no dependency): when it is installed, Core registers one expansion with the identifier
+`vystorm` that answers every registered value, so `%vystorm_xpvault_balance%` works in every plugin that uses
+PlaceholderAPI, and `%rel_vystorm_party_same%` between two players. In the other direction Core passes every
+`%identifier_params%` placeholder it does not answer itself to PlaceholderAPI, one placeholder at a time, so
+`%player_name%` or `%luckperms_prefix%` work inside texts resolved through Core. PlaceholderAPI may be enabled after
+Core, disabled, reloaded or replaced at runtime: Core looks again whenever a plugin is enabled or disabled, its
+expansion stays registered through `/papi reload`, and `/vadmin placeholders` shows the state and reconnects. Nothing
+is written to PlaceholderAPI's folder. Settings in Core's `config.yml`:
+
+```yaml
+placeholders:
+  in-messages: false          # language files of all Vystorm plugins may contain placeholders
+  placeholderapi:
+    provide: true             # offer Vystorm values to PlaceholderAPI
+    consume: true             # show PlaceholderAPI's placeholders in Vystorm texts
+    consume-async: false      # also ask PlaceholderAPI off the server thread
+```
+
+**MiniPlaceholders** is not bridged yet: its expansions must name every tag in advance and its API differs between
+its major versions; a bridge can be added through the interface below without changing Core's registry.
+
+**Your own bridge:** implement `PlaceholderBridge` and add it with `api.placeholders().bridge(plugin, bridge)`.
+`provide(Source)` connects the other plugin to Core (`source.request(viewer, other, "<namespace>_<key>")`,
+`source.known()` lists the declared values), `consume(viewer, other, placeholder)` answers one foreign placeholder
+or returns null, `available()` and `providing()` report the state, `withdraw()` disconnects, `asyncSafe()` says
+whether `consume` may be called off the server thread. `provide` is called when the bridge is added and whenever a
+plugin is enabled or disabled, so it must be cheap and safe to repeat. Keep every class of the other plugin behind
+reflection or in a class of its own that is only loaded once the plugin is there.
+
+### Placeholders in language files
+
+By default a language text is shown as written, as before 0.65.0. Two switches let the texts of `Lang` bundles
+resolve registered placeholders:
+
+- a plugin for its own bundle: `lang.placeholders(true)`;
+- the server owner for all bundles: `placeholders.in-messages: true` in Core's `config.yml`.
+
+It applies to the `Lang` methods that take a viewer (`component`, `text`, `plain`, `lines`, `send`, `actionBar`,
+`name`, `lore`); the methods that take a language code have no viewer and resolve nothing. Named placeholders
+(`{player}`) are filled first and what they insert is never read as a placeholder. Cost: off, one flag is read per
+call. On, the manager is looked up once per call; a text without `%` and `{` still comes from the component cache, any other text is scanned once per call
+and, if it holds a placeholder, parsed per call like every text with named placeholders.
+
+### Core's own placeholders
+
+Core registers the namespaces `core`, `region`, `party`, `vault` and `character`. "Thread: any" means async-safe.
+Values of a player stay as written without a viewer; `region`, `party`, `vault` and `character` values are empty
+when there is no region, party, economy or character plugin. Truth values are `true` and `false`.
+
+<!-- core-placeholders:begin (generated by CorePlaceholdersTest, do not edit by hand) -->
+| Placeholder | Short form | What it shows | Thread |
+| --- | --- | --- | --- |
+| `%vystorm_core_player%` | `{core:player}` | Name of the player | any |
+| `%vystorm_core_displayname%` | `{core:displayname}` | Display name of the player, without colours | any |
+| `%vystorm_core_uuid%` | `{core:uuid}` | UUID of the player | any |
+| `%vystorm_core_world%` | `{core:world}` | Name of the world the player is in | any |
+| `%vystorm_core_x%` | `{core:x}` | Block coordinate X of the player | any |
+| `%vystorm_core_y%` | `{core:y}` | Block coordinate Y of the player | any |
+| `%vystorm_core_z%` | `{core:z}` | Block coordinate Z of the player | any |
+| `%vystorm_core_online%` | `{core:online}` | Players online | any |
+| `%vystorm_core_max%` | `{core:max}` | Player limit of the server | any |
+| `%vystorm_core_time_[pattern]%` | `{core:time:[pattern]}` | Server time; optional pattern, default HH:mm | any |
+| `%vystorm_core_date_[pattern]%` | `{core:date:[pattern]}` | Server date; optional pattern, default yyyy-MM-dd | any |
+| `%vystorm_core_world_time_[world]%` | `{core:world_time:[world]}` | Clock of the player's world as HH:mm, or of the named world | server |
+| `%vystorm_core_language%` | `{core:language}` | Language code in which the player sees Vystorm texts | server |
+| `%vystorm_core_tps%` | `{core:tps}` | Ticks per second over the last minute, at most 20.0 | any |
+| `%vystorm_core_mspt%` | `{core:mspt}` | Average milliseconds per tick | any |
+| `%vystorm_core_ping%` | `{core:ping}` | Ping of the player in milliseconds | any |
+| `%vystorm_core_level%` | `{core:level}` | Vanilla experience level of the player | any |
+| `%vystorm_core_xp%` | `{core:xp}` | Total vanilla experience points of the player | server |
+| `%vystorm_core_health%` | `{core:health}` | Health of the player, rounded up | any |
+| `%vystorm_core_food%` | `{core:food}` | Food level of the player, 0 to 20 | any |
+| `%vystorm_core_gamemode%` | `{core:gamemode}` | Game mode of the player | any |
+| `%vystorm_core_version%` | `{core:version}` | Version of Vystorm Core | any |
+| `%vystorm_core_minecraft%` | `{core:minecraft}` | Minecraft version of the server | any |
+| `%vystorm_region_id%` | `{region:id}` | Id of the top region at the player's position; empty outside regions | any |
+| `%vystorm_region_kind%` | `{region:kind}` | Kind of that region, such as city, arena or market | any |
+| `%vystorm_region_key%` | `{region:key}` | Kind and id of that region, joined by a colon | any |
+| `%vystorm_region_owner%` | `{region:owner}` | Owner entry of that region, usually the plugin that registered it | any |
+| `%vystorm_region_count%` | `{region:count}` | Number of regions at the player's position | any |
+| `%vystorm_region_flag_<flag>%` | `{region:flag:<flag>}` | true or false: the named region flag at the player's position | any |
+| `%vystorm_region_attribute_<name>%` | `{region:attribute:<name>}` | The named attribute of the top region; empty if it has none | any |
+| `%vystorm_party_name%` | `{party:name}` | Name of the player's party; empty without a party | server |
+| `%vystorm_party_size%` | `{party:size}` | Number of members of the player's party | server |
+| `%vystorm_party_online%` | `{party:online}` | Members of the player's party who are online | server |
+| `%vystorm_party_leader%` | `{party:leader}` | Name of the party leader | server |
+| `%vystorm_party_is_leader%` | `{party:is_leader}` | true or false: the player leads the party | server |
+| `%vystorm_party_same%` | `{party:same}` | true or false: both players are in the same party (between two players) | server |
+| `%vystorm_vault_balance%` | `{vault:balance}` | Balance of the player as a plain number; empty without an economy | server |
+| `%vystorm_vault_balance_formatted%` | `{vault:balance_formatted}` | Balance of the player as the economy plugin writes it | server |
+| `%vystorm_vault_economy%` | `{vault:economy}` | Name of the economy plugin behind Vault | server |
+| `%vystorm_character_level%` | `{character:level}` | Character level of the player; empty without a character plugin | server |
+| `%vystorm_character_max_level%` | `{character:max_level}` | Highest character level | server |
+<!-- core-placeholders:end -->
+
+The optional pattern of `time` and `date` is a Java `DateTimeFormatter` pattern (`{core:time:HH:mm:ss}`,
+`%vystorm_core_date_dd.MM.yyyy%`); an invalid pattern leaves the placeholder as written. `world_time` shows the
+Minecraft clock of a world (tick 0 is 06:00).
+
+### Admin command
+
+`/vadmin placeholders` lists the namespaces with their plugin and the state of the bridges;
+`/vadmin placeholders <namespace> [page]` lists the values of a namespace in both forms with their descriptions and
+marks the ones that only answer on the server thread; `/vadmin placeholders test <text>` shows the text resolved
+for you. Permission `vystorm_core.admin`.
+
+### Testing without a server
+
+`PlaceholderTesting` (same package) gives a unit test a registry of its own that is not connected to Bukkit, to
+Core's registry or to another test. Values are registered as in a plugin and resolved by Core's real parser.
+
+```java
+PlaceholderTesting placeholders = PlaceholderTesting.detached();
+myPlugin.registerPlaceholders(placeholders.placeholders());          // the method that declares your values
+
+OfflinePlayer alex = PlaceholderTesting.viewer("Alex");
+assertEquals("Balance: 120", placeholders.resolve(alex, "Balance: %vystorm_xpvault_balance%"));
+assertEquals("{xpvault:balance}", placeholders.resolveOffThread(alex, "{xpvault:balance}"));   // not async-safe
+```
+
+If the plugin asks the hub itself, stub it: `when(core.placeholders()).thenReturn(placeholders.placeholders())`.
+
+| Method | Description |
+| --- | --- |
+| `static PlaceholderTesting detached()` | A new, empty registry; the calling thread is its "server thread". |
+| `static Plugin plugin(String name)` / `static OfflinePlayer viewer(String name)` | An enabled plugin to own a namespace, and an offline player as viewer, without a mocking library. |
+| `PlaceholderInterface placeholders()` | The registry, to pass to the code under test. |
+| `register(owner, namespace)`, `resolve(viewer, text)`, `component(viewer, miniMessage)` | The same methods as on the manager. |
+| `String resolveOffThread(OfflinePlayer viewer, String text)` | Resolves on another thread and waits: only async-safe values answer. |
+| `int disable(Plugin owner)` | What Core does when a plugin is disabled. |
+| `PlaceholderTesting bridge(PlaceholderBridge bridge)` / `advanceTicks(long ticks)` | Adds a bridge; moves the tick forward for values with `cacheTicks`. |
+
+## Menus from files (0.65.0)
+
+Capability `CoreApi.Capability.FILE_MENUS` (`file-menus`, since `0.65.0`).
+
+A server owner can add screen menus without a plugin: one file per menu in `plugins/vystorm_core/menus/<id>.json`,
+format `vystorm-menu` version 1, written by the Vystorm menu editor or by hand. Core reads the folder when it starts,
+when its config is reloaded and on `/vadmin menus reload`, and shows each menu as a Vystorm screen (section "Screens
+(0.57.0, prototype)"). The guide for server owners with every field of the format is `docs/MENUS.md`.
+
+For a plugin this is a way to open a menu the owner designed, and to know which menus exist:
+
+```java
+// in onEnable, after the version gate (CoreApi.atLeast("0.65.0"))
+FileMenusInterface menus = core.gui().fileMenus();
+
+if (!menus.open(player, "shop")) player.sendMessage("The shop is closed.");   // false: no such menu, or not allowed
+```
+
+| `api.gui().fileMenus()` | |
+| --- | --- |
+| `boolean enabled()` | The feature is switched on (`menus.enabled` in Core's `config.yml`) and Core is running. |
+| `List<String> ids()` | Ids of the loaded menus. |
+| `boolean open(Player player, String id)` | Opens the menu for the player and checks the menu's permission. False, without a message to the player, when no menu has this id or the player may not open it. |
+| `int reload()` | Reads the folder again; returns the number of loaded menus. Menus, tiles and commands of removed files disappear; a screen of a changed menu closes. |
+| `Map<String, List<String>> errors()` | Files that were skipped: file name to the reasons (field and what is wrong with it). |
+| `Map<String, List<String>> warnings()` | Remarks about loaded files: an item this server does not have, a console command every player can run, a target menu that does not exist. |
+
+All methods on the server thread. `FileMenus` has the same methods as static calls.
+
+How a file menu fits into what Core already has:
+
+- **Keys.** The screen and its place in the Back history have the key `menus:<id>` (`ScreenSpec.id`, `Screens.open(player,
+  spec, key, reopen)`), so `screens.off: [menus]` or `[menus:shop]` in Core's `config.yml` sends them to their fallback.
+  A menu with a tile is registered like every other menu, as `vystorm_core:menus/<id>` (`api.gui().openMenu(player,
+  "vystorm_core:menus/shop")`, `menuEntries`, `/menu access`). `/vmenu <id>` and `/vmenu menus:<id>` open a file menu
+  when no registered menu answers to that argument first; existing keys are unchanged.
+- **Tile.** `"mainMenu": false` in the file keeps the menu out of the registry: no tile, not in the menu search.
+  `icon` and `group` (`character`, `economy`, `community`, `world`, `building`, `admin`) place the tile.
+- **Own command.** `"command": "shop"` is registered through `api.command()` on the first server tick and on every
+  reload, only when no command has that name yet (also not a server command or another plugin's).
+- **Layout.** Frame `menu` uses the numbers of Core's main menu (title, header buttons, footer, tiles), frame `chest`
+  those of chest menus shown as screens (grid, tile, name, hint line), frame `none` only the panel. Every length of the
+  file is multiplied by the viewer's UI size (`ScreenProfile.scale()`); a panel that with its border does not fit the
+  viewer's display (`viewWidth()`, `viewHeight()`) is shrunk by one factor.
+- **Texts** are MiniMessage limited to colours, bold, italic, underlined, strikethrough and reset. `{player}`,
+  `{page}`, `{pages}` and the placeholders of `api.placeholders()` are inserted as plain text. A menu with
+  placeholders gets its texts again every `menus.refresh-seconds` seconds while it is open.
+- **Clicks** run commands as the player (`Player.performCommand`) or as the console (`Bukkit.dispatchCommand`); a
+  command gets `{player}` and `{uuid}` and never passes the placeholder manager.
+- **Fallback.** Where no screen can open, the buttons and tiles are items in a chest (`api.gui().createInventory`)
+  with the same click actions.
+
+`/vadmin menus` lists the files with their state; see the appendix.
 
 ## Core 0.51.0: shared Bukkit adapters
 
@@ -528,6 +847,9 @@ Capability names are strings in `CoreApi.Capability` (use the constants, e.g. `C
 | `CORE_API` | `core-api` | 0.11.0 | `CoreApi` itself |
 | `MANAGERS` | `managers` | 0.64.0 | Every static service class is reachable through a manager of `API` under the same method names: `api.compat()`, `api.tasks()`, `api.loot()`, `api.web()`, `api.parties()`, `api.items()`, `api.mobs()`, `api.runtime()` and parts of the existing managers such as `api.data().files()`, `api.settings().config()`, `api.message().chat()`, `api.gui().panels()` (see "The managers (0.64.0)" at the top) |
 | `EVENT_STAGES` | `event-stages` | 0.64.0 | `api.priority().stages()`: handlers of shared Bukkit events registered with a named stage (`EventStage`), called by Core in one configured plugin order, `event-order` in Core's `config.yml`; `EventStageTesting` for unit tests without a server (see "Event order between plugins (0.64.0)" at the top) |
+| `PLACEHOLDERS` | `placeholders` | 0.65.0 | `api.placeholders()`: one registry for the values of all Vystorm plugins (`%vystorm_<namespace>_<key>%`, `{namespace:key}`), Core's own values, the bridge to PlaceholderAPI in both directions, `/vadmin placeholders`, `Lang.placeholders(true)`; `PlaceholderTesting` for unit tests without a server (see "Placeholders (0.65.0)" at the top) |
+| `FILE_MENUS` | `file-menus` | 0.65.0 | `api.gui().fileMenus()`: screen menus from files in `plugins/vystorm_core/menus` (format `vystorm-menu` version 1), opened with `/vmenu <id>`, their own command or their tile in the main menu; `enabled()`, `ids()`, `open(player, id)`, `reload()`, `errors()`, `warnings()`; `/vadmin menus` (see "Menus from files (0.65.0)" at the top and `docs/MENUS.md`) |
+| `COMMAND_VISIBILITY` | `command-visibility` | 0.65.0 | `CommandSpec.Builder.visibleWhen(..)`, `CommandSpec.visibleTo(sender)`, `api.command().refresh()`; the same label registered again after startup keeps its Paper node (see 24.2) |
 | `ITEM_REF_PRIORITY` | `item-ref-priority` | 0.12.0 | Several `ItemRefs` providers per namespace with priority |
 | `MOB_REFS` | `mob-refs` | 0.12.0 | `mob.MobRefs` |
 | `SPAWN_POINTS` | `spawn-points` | 0.13.0 | `spawn.SpawnPointService` |
@@ -3759,7 +4081,7 @@ use them carry the Javadoc line "Internal: not part of the public API; may chang
 the annotation `@org.jetbrains.annotations.ApiStatus.Internal`. They are excluded from Core's API compatibility
 check, so do not import them. Marked are: every class in `network.core`, `network.paper` and `trace`;
 `metrics.CoreMetrics`; `mythic.MythicItemDrops`; `lifecycle.UpdateChecker` and `lifecycle.ReviewReminder`;
-`chat.TradeChatCommand`; `commands.CommandsAdmin` and `commands.CommandOverview`;
+`chat.TradeChatCommand`; `commands.CommandsAdmin`, `commands.CommandOverview` and (0.65.0) `commands.CommandBatch`;
 `_uiMethods.settings.SettingsDraftDialog`, `FirstRunSetup` and `ConfigHistory`. The public network API is
 `Vystorm.vystorm_core.network` (`Network`, `NetworkListener`, `NetworkServer`, `Subscription`). Packages named
 `internal` stay internal as before.
@@ -3853,6 +4175,9 @@ unusable (Core logs it and falls back to English/jar texts).
 | `/vworlds [list\|visits\|restore <player>\|check <player>]` | – | Managed worlds, running visits, admin restore, hand-item check (0.26.0) | `vystorm_core.admin` |
 | `/vhelp [plugin] [page]` | localized (`/vhilfe`, `/befehle`, `/v帮助`, `/vcommands`) | All commands of all Vystorm plugins the sender may use, by plugin, clickable (0.45.0, §24.4) | – |
 | `/vadmin commands [page]`, `/vadmin commands mode all\|default\|none`, `/vadmin commands alias <alias> on\|off` | – | Registered command trees, localized root aliases with collisions and toggles (0.45.0, §24.4) | `vystorm_core.admin` |
+| `/vadmin placeholders [namespace] [page]`, `/vadmin placeholders test <text>` | – | Registered placeholders with their descriptions, bridges to other placeholder plugins, and a text resolved for the sender (0.65.0, "Placeholders (0.65.0)") | `vystorm_core.admin` |
+| `/vadmin menus`, `/vadmin menus reload` | – | Menu files in `plugins/vystorm_core/menus`: loaded menus with command and tile, remarks, skipped files with every reason; `reload` reads the folder again (0.65.0, "Menus from files (0.65.0)") | `vystorm_core.admin` |
+| `/vmenu <id>`, `/vmenu menus:<id>`, the command a menu file names | – | Opens a menu from a file (0.65.0); registered menu keys are tried first | `vystorm_core.menu` and the menu's own permission |
 
 Other permissions: `vystorm_core.playermenu` (player menu by shift-right-click or `/menu player`, default everyone,
 0.43.0), `vystormCore.debug` (HIGH debug messages in chat, default op), `vystorm_core.chat.teleport`
@@ -4543,12 +4868,13 @@ Bukkit command map. Both work from the console. Core removes your commands when 
 
 | Method | Description |
 | --- | --- |
-| `CommandRegistration register(Plugin, Lang, CommandSpec)` | Registers a tree (`lang` `null` = the plugin's registered bundle). The same label again replaces the earlier tree. |
+| `CommandRegistration register(Plugin, Lang, CommandSpec)` | Registers a tree (`lang` `null` = the plugin's registered bundle). The same label again replaces the earlier tree; since 0.65.0 a Paper-mounted root registered again by the same plugin after startup keeps its registration and Paper node and runs the new tree (fixed root aliases stay as first registered until a restart). For feature switches use `visibleWhen` and `refresh()` instead of registering again. |
 | `CommandRegistration adopt(JavaPlugin, Lang, CommandSpec declaration)` | Migration adapter for a plugin.yml command, see 24.6. |
 | `void unregister(CommandRegistration)` / `unregister(Plugin)` | Removes trees (Bukkit entries and aliases; a Paper root answers "not available" until restart). |
 | `List<CommandRegistration> registrations()` / `registrations(Plugin)` | Everything registered through Core. |
 | `Optional<CommandRegistration> find(String label)` | Owner of an English label, fixed alias or active localized alias (e.g. to treat `/nachricht` like `/msg` in a mute filter). |
 | `AliasPolicy aliasPolicy()` / `void refreshAliases()` | Current policy; re-apply aliases after editing language files. |
+| `void refresh()` | Since 0.65.0 (also `api.command().refresh()`): sends the online players their command list again, once at the end inside `CommandBatch.run`; any thread (moves to the server thread). Call it after a reload in which a feature switch changed. |
 
 `CommandSpec.Builder` (one builder for root and subcommands):
 
@@ -4562,6 +4888,7 @@ Bukkit command map. Both work from the console. Core removes your commands when 
 | `cooldown(Duration)` | Per player; bypass with `vystorm_core.commands.bypass-cooldown`. |
 | `async()` | The handler runs on the async scheduler (parsing and checks stay on the server thread). |
 | `hidden()` | Runs, but not in help or completion. |
+| `visibleWhen(BooleanSupplier)` / `visibleWhen(Predicate<? super CommandSender>)` | Since 0.65.0: listed in help, `/vhelp` and tab completion only while the condition holds (asked at every completion, so a feature switch applies at once without registering again). Does not block running: the handler answers that the feature is off. On a root: no subcommand suggestions and no `/vhelp` line; the root label stays in the client's list (Paper's `requires` would also block running). Several calls must all hold; a condition that throws counts as visible. `CommandSpec.visibleTo(sender)` evaluates it (with `hidden()`), e.g. in tests. |
 | `arg(Arg<?>)` | Arguments in order; only trailing ones optional, only the last greedy. |
 | `executes(CommandHandler)` | What the node does. A node without handler but with subcommands shows its help. |
 | `description(String)` / `usage(String)` | English fallbacks when the language files have no text. |

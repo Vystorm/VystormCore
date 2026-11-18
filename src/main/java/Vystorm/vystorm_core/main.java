@@ -93,7 +93,8 @@ public void onEnable() {
         saveDefaultConfig();
         try { LootTableConfig.reloadCore(this); }
         catch (Exception failure) { getLogger().severe("Shared loot tables not loaded: " + failure.getMessage()); }
-        MobLoot.configure(MobLoot.Settings.of(getConfig()));
+        Vystorm.vystorm_core.lifecycle.CoreSwitches.configure(getConfig());
+        MobLoot.configure(lootSettings());
         Vystorm.vystorm_core._coreMethods.eventRegulator.EventStages.shared().configure(getConfig().getConfigurationSection("event-order"));
         try { CoreLanguage.enable(this); }
         catch (RuntimeException | LinkageError failure) { getLogger().warning("Localization not started: " + failure); }
@@ -114,6 +115,9 @@ public void onEnable() {
         start("News board", () -> NewsService.start(this, api));
         start("Inbox", () -> InboxService.start(this, api));
         start("Profile cards", () -> ProfileService.start(this, api));
+        start("Placeholders", () -> Vystorm.vystorm_core._advancedMethods.placeholderHandler.internal.PlaceholderRuntime.start(this, api));
+        // Screen menus from plugins/vystorm_core/menus (0.65.0); a broken file is skipped, never a reason to stop.
+        start("File menus", () -> Vystorm.vystorm_core.menus.internal.FileMenuService.start(this, api));
         // Nach /reload oder Plugman: Daten bereits eingeloggter Spieler laden.
         for (Player player : getServer().getOnlinePlayers()) {
             try { api.player().loadPlayer(player.getUniqueId()); }
@@ -173,6 +177,9 @@ private void startScreens() {
             || ScreenRuntime.listed(getConfig().getStringList("screens.off"), owner, keys));
     ScreenRuntime.install(runtime);
     getServer().getPluginManager().registerEvents(new ScreenListener(), this);
+    // 0.65.0: a click that closes or replaces a screen must not reach the block or mob behind it
+    try { Vystorm.vystorm_core.screen.internal.ScreenWorldGuard.register(api.priority().stages(), this, ScreenRuntime::get); }
+    catch (RuntimeException | LinkageError noStages) { getLogger().log(Level.WARNING, "Screen click guard not started", noStages); }
     try { Class.forName("org.bukkit.event.player.PlayerInputEvent"); getServer().getPluginManager().registerEvents((org.bukkit.event.Listener) Class.forName("Vystorm.vystorm_core.screen.internal.ScreenKeys").getDeclaredConstructor().newInstance(), this); }
     catch (ReflectiveOperationException | LinkageError noInput) { }
     for (World world : getServer().getWorlds()) runtime.sweep(world.getEntities());
@@ -196,6 +203,7 @@ public void onDisable() {
         ReviewReminder.stop();
         NewsService.stop();
         InboxService.stop();
+        try { Vystorm.vystorm_core.menus.internal.FileMenuService.stop(); } catch (RuntimeException | LinkageError ignored) { }
         CoreMetrics.stop();
         WorldEvents.get().close();
      ClientBiomes.shutdown();
@@ -264,17 +272,66 @@ private void registerOwnConfig() {
                 quit.put("client", "client"); quit.put("all", "all"); quit.put("none", "none");
                 ConfigEditor.choices(this, "web.client.end-sessions-on-quit", quit);
                 ConfigEditor.register(this, "config.yml",
-                        () -> { reloadConfig(); MobLoot.configure(MobLoot.Settings.of(getConfig())); CoreLanguage.reload(); CoreCommands.configure(getConfig().getConfigurationSection("commands"));
+                        () -> { reloadConfig(); var switchesBefore = Vystorm.vystorm_core.lifecycle.CoreSwitches.off();
+                                Vystorm.vystorm_core.lifecycle.CoreSwitches.configure(getConfig()); MobLoot.configure(lootSettings()); CoreLanguage.reload(); CoreCommands.configure(getConfig().getConfigurationSection("commands"));
+                                // a switch changed: the players get their command list again (completion follows at once)
+                                if (!switchesBefore.equals(Vystorm.vystorm_core.lifecycle.CoreSwitches.off())) CoreCommands.refresh();
+                                applyStartSwitches();
+                                Vystorm.vystorm_core._advancedMethods.placeholderHandler.internal.PlaceholderRuntime.configure(this);
+                                Vystorm.vystorm_core.menus.FileMenus.reload();
                                 Vystorm.vystorm_core._coreMethods.eventRegulator.EventStages.shared().configure(getConfig().getConfigurationSection("event-order")); });
                 for (String lootFile : LootTableConfig.CORE_FILES)
                         ConfigEditor.register(this, lootFile, () -> {
                                 try { LootTableConfig.reloadCore(this); }
                                 catch (Exception failure) { throw new IllegalStateException("Loot tables rejected; previous tables retained", failure); }
                         });
+                declareSwitches();
                 DebugMessages.mid("[main] Core config registered in the config editor");
         } catch (RuntimeException | LinkageError failure) {
                 DebugMessages.high("[main] Core config editor registration failed", failure);
         }
+}
+
+/** Mob-level luck and pity from {@code loot}; with {@code loot.enabled: false} drops ignore the mob's level. */
+private MobLoot.Settings lootSettings() {
+        if (!Vystorm.vystorm_core.lifecycle.CoreSwitches.on(Vystorm.vystorm_core.lifecycle.CoreSwitches.Switch.LOOT))
+                return new MobLoot.Settings(0, 0, null, null, null);
+        return MobLoot.Settings.of(getConfig());
+}
+
+/**
+ * The switches that used to be read only at start apply at once (0.65.0): the update check and the review reminder
+ * start or stop when their {@code enabled} changed, and the message source on hover follows {@code messages.show-source}.
+ */
+private void applyStartSwitches() {
+        try { Vystorm.vystorm_core.trace.MessageSource.configure(getConfig().getBoolean("messages.show-source", true)); }
+        catch (RuntimeException | LinkageError failure) { DebugMessages.high("[main] Message source not reconfigured", failure); }
+        // diagnostics.enabled off: /vadmin trace is off as well, so no trace may keep running without a way to stop it
+        if (!Vystorm.vystorm_core.lifecycle.CoreSwitches.on(Vystorm.vystorm_core.lifecycle.CoreSwitches.Switch.DIAGNOSTICS))
+                try { Vystorm.vystorm_core.trace.TraceLifecycle.stop(); } catch (RuntimeException | LinkageError ignored) { }
+        boolean updates = getConfig().getBoolean("update-check.enabled", true);
+        if (updates != (Vystorm.vystorm_core.lifecycle.UpdateChecker.get() != null)) {
+                if (updates) start("Update check", () -> Vystorm.vystorm_core.lifecycle.UpdateChecker.start(this));
+                else Vystorm.vystorm_core.lifecycle.UpdateChecker.stop();
+        }
+        boolean reviews = getConfig().getBoolean("review-reminder.enabled", true);
+        if (reviews != Vystorm.vystorm_core.lifecycle.ReviewReminder.running()) {
+                if (reviews) start("Review reminder", () -> Vystorm.vystorm_core.lifecycle.ReviewReminder.start(this));
+                else Vystorm.vystorm_core.lifecycle.ReviewReminder.stop();
+        }
+}
+
+/**
+ * Core's switches in {@code /vadmin features} with a one-line description in the admin's language: the new ones of
+ * 0.65.0 and the older keys that were switchable but not on the feature screen. {@code metrics} needs a restart.
+ */
+private void declareSwitches() {
+        var lang = Vystorm.vystorm_core.lang.Localization.get().core();
+        for (var feature : Vystorm.vystorm_core.lifecycle.CoreSwitches.Switch.values())
+                ConfigEditor.feature(this, feature.path, null, lang.ref(feature.description()));
+        for (String[] declared : Vystorm.vystorm_core.lifecycle.CoreSwitches.DECLARED)
+                ConfigEditor.feature(this, declared[0], null, lang.ref(declared[1]));
+        ConfigEditor.activation(this, "metrics", SettingPolicy.Activation.RESTART);
 }
 
 /** Reads {@code database.shared} and connects asynchronously; a failure only logs, Core keeps running. */

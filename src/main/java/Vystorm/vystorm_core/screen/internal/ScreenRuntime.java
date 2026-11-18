@@ -50,7 +50,9 @@ public final class ScreenRuntime {
     /** Text display line height in blocks at scale 1 (10 px of 1/40 block). */
     static final double LINE = 0.25;
     /** Tallest text line of a widget (panel units). */
-    static final double TEXT_MAX = 0.08;
+    public static final double TEXT_MAX = 0.08;
+    /** The panel box is this much wider and higher than its layout (panel units). */
+    public static final double PANEL_BORDER = 0.06;
     /** One text pixel in blocks at scale 1, and the solid glyph's size (8 px). */
     static final double PIXEL = 1.0 / 40, GLYPH = 8 * PIXEL;
     /** PINNED backdrop: wide enough for ultrawide screens (about ±79° at distance 1), slightly behind the panel. */
@@ -145,6 +147,71 @@ public final class ScreenRuntime {
     private final Set<UUID> backing = new java.util.HashSet<>();
     /** Time of each player's last counted left click, across screens. */
     private final Map<UUID, Long> lastLeftClick = new HashMap<>();
+
+    // ---- click guard (0.65.0): a click that closes or replaces a screen must not reach the world ------------------
+    //
+    // A click is handled when the button goes DOWN. When that click closes the screen, its click box is gone at once
+    // while the player still holds the button: the client then aims at the block (or mob) behind and breaks, mines,
+    // uses or hits it. So for a short time after such a click the player's actions on the world are cancelled.
+
+    /** The guard lasts this long after the click that closed or replaced the screen (10 ticks: a held click plus the way to the client and back). */
+    static final long GUARD_MILLIS = 500;
+    /**
+     * Every action the guard stops shows that the button is still down and keeps the guard up this much longer. A held
+     * button repeats slowly: creative breaks again every 6 ticks (300 ms), a held right button uses every 5 ticks; the
+     * time must be clearly longer than that (measured in the client: with 300 ms every third long hold got through) …
+     */
+    static final long GUARD_EXTEND_MILLIS = 450;
+    /** … but never longer than this after the click, so the guard cannot block normal play. */
+    static final long GUARD_MAX_MILLIS = 1_500;
+    /** When the client reports that the button was let go (mining aborted), the guard ends this soon. */
+    static final long GUARD_RELEASE_MILLIS = 60;
+    /** A screen that closes within this time after a click on it was closed by that click (handlers that close one tick later). */
+    static final long CLICK_CLOSES_MILLIS = 250;
+
+    private record Guard(long start, long until) {}
+
+    private final Map<UUID, Guard> guards = new HashMap<>();
+    /** Time of each player's last counted screen click, either button; players inside a click handler right now. */
+    private final Map<UUID, Long> lastClick = new HashMap<>();
+    private final Set<UUID> clicking = new HashSet<>();
+
+    /** True while the click guard of this player is up. */
+    boolean guarded(UUID id) {
+        Guard guard = guards.get(id);
+        if (guard == null) return false;
+        if (clock.getAsLong() <= guard.until()) return true;
+        guards.remove(id);
+        return false;
+    }
+
+    /**
+     * Whether an action of this player on the world (break, start mining, use, hit) must be cancelled: while a screen is
+     * open (all clicks belong to the screen) and while the click guard is up. {@code buttonDown}: the action shows a
+     * pressed button (not a mere arm swing), which keeps the guard up a little longer.
+     */
+    public boolean stopsWorldAction(Player player, boolean buttonDown) {
+        UUID id = player.getUniqueId();
+        if (guarded(id)) {
+            if (buttonDown) {
+                Guard guard = guards.get(id);
+                long until = Math.min(guard.start() + GUARD_MAX_MILLIS, clock.getAsLong() + GUARD_EXTEND_MILLIS);
+                if (until > guard.until()) guards.put(id, new Guard(guard.start(), until));
+            }
+            return true;
+        }
+        return sessions.containsKey(id);
+    }
+
+    /** The client let go of the button (it aborted mining): the guard has done its work. */
+    public void onButtonReleased(Player player) {
+        UUID id = player.getUniqueId();
+        Guard guard = guards.get(id);
+        if (guard == null) return;
+        long soon = clock.getAsLong() + GUARD_RELEASE_MILLIS;
+        if (soon < guard.until()) guards.put(id, new Guard(guard.start(), soon));
+    }
+
     /** 0.62.0: screens switched off by the server ({@code screens.enabled}, {@code screens.off}); never blocks by default. */
     private volatile java.util.function.BiPredicate<String, java.util.List<String>> blocked = (owner, keys) -> false;
     /** Keys of the screens asked for since the start (newest last), with their plugin: what {@code screens.off} can name. */
@@ -309,12 +376,19 @@ public final class ScreenRuntime {
     public void close(Player player, ScreenInput.Reason reason) {
         UUID id = player.getUniqueId();
         Session session = sessions.remove(id);
-        if (session == null) return;
+        if (session == null) {
+            if (reason == ScreenInput.Reason.QUIT) { lastLeftClick.remove(id); lastClick.remove(id); guards.remove(id); }
+            return;
+        }
         // closed by code: the next screen (if one follows at once) gets this one as its parent; closed by the
         // player, damage, teleport and so on: the whole history ends
         if (reason == ScreenInput.Reason.PLUGIN) pending.put(id, new Pending(session.origin, clock.getAsLong()));
         else { pending.remove(id); history.remove(id); }
-        if (reason == ScreenInput.Reason.QUIT) lastLeftClick.remove(id);
+        // 0.65.0: closed by a click (inside its handler or right after it): the button is probably still down
+        long now = clock.getAsLong();
+        Long clicked = lastClick.get(id);
+        if (clicking.contains(id) || (clicked != null && now - clicked <= CLICK_CLOSES_MILLIS)) guards.put(id, new Guard(now, now + GUARD_MILLIS));
+        if (reason == ScreenInput.Reason.QUIT) { lastLeftClick.remove(id); lastClick.remove(id); guards.remove(id); }
         session.finish(reason);
     }
 
@@ -356,14 +430,32 @@ public final class ScreenRuntime {
     boolean onClick(Player player, Entity clicked, boolean right) {
         Session session = sessions.get(player.getUniqueId());
         if (session == null || clicked == null || session.interaction == null || !session.interaction.getUniqueId().equals(clicked.getUniqueId())) return false;
+        // 0.65.0: the click box is there before the screen is drawn; nothing can be clicked on a screen nobody sees yet
+        if (!session.built) return true;
+        // a right button that is still down from the click that led here repeats "use" several times a second
+        if (right && stopsHeldRight(player.getUniqueId())) return true;
         session.click(right);
         return true;
     }
 
-    /** Arm swing while a screen is open counts as a left click unless it directly follows a right click. */
+    private boolean stopsHeldRight(UUID id) {
+        if (!guarded(id)) return false;
+        Guard guard = guards.get(id);
+        long until = Math.min(guard.start() + GUARD_MAX_MILLIS, clock.getAsLong() + GUARD_EXTEND_MILLIS);
+        if (until > guard.until()) guards.put(id, new Guard(guard.start(), until));
+        return true;
+    }
+
+    /**
+     * Arm swing while a screen is open counts as a left click unless it directly follows a right click. Not while the
+     * screen is still being built or the click guard is up: then the swing comes from the button of the click that
+     * led here, held down on the block behind the new screen (0.65.0). A new click on the screen itself is an attack
+     * on its click box and counts at once.
+     */
     void onSwing(Player player) {
         Session session = sessions.get(player.getUniqueId());
-        if (session != null && clock.getAsLong() - session.lastRight > 80) session.click(false);
+        if (session == null || !session.built || guarded(player.getUniqueId())) return;
+        if (clock.getAsLong() - session.lastRight > 80) session.click(false);
     }
 
     void onScroll(Player player, int delta) {
@@ -438,6 +530,8 @@ public final class ScreenRuntime {
         double lastU, lastV;
         long lastRight = Long.MIN_VALUE / 2, lastLeft = Long.MIN_VALUE / 2;
         boolean closing, open = true;
+        /** True once the screen is drawn ({@link #buildVisuals}); the click box exists before that. */
+        boolean built;
 
         /** Player state before the screen hid the first-person hand; restored in {@link #showHand}. */
         boolean wasInvisible; int savedSlot = -1; boolean handHidden;
@@ -503,6 +597,11 @@ public final class ScreenRuntime {
         void build() {
             mount = entities.mount(player, saved);
             if (mount != null) mount.addPassenger(player);
+            // 0.65.0: the click box is spawned at once, not with the visuals two ticks later. When this screen replaces
+            // another one, the old box goes and the new one comes in the same tick, so the mouse button that is still
+            // down from the click never finds the world behind the screens. The player is inside the box either way
+            // (3 blocks high around the eye; sitting moves the eye by less than a block).
+            interaction = entities.interaction(player, eye.clone().subtract(0, 1.5, 0), 3f, 3f);
             later.accept(() -> {
                 if (!open) return;
                 Location seated = player.getEyeLocation().clone();
@@ -516,12 +615,27 @@ public final class ScreenRuntime {
         void buildVisuals() {
             hideHand();
             hideNearBlocks();
-            interaction = entities.interaction(player, eye.clone().subtract(0, 1.5, 0), 3f, 3f);
+            centreClickBox();
             if (mode == ScreenSpec.Mode.PINNED && spec.backdrop() != ScreenSpec.Backdrop.NONE) backdrop = entities.text(player, panelLocation(), this::placeBackdrop);
             background = entities.text(player, panelLocation(), d -> placeBackground(d));
             spawnWidgets();
             if (mode == ScreenSpec.Mode.PINNED) pointer = entities.text(player, pointerLocation(), this::placePointer);
             for (ScreenWidget widget : widgets.values()) draw(widget);
+            built = true;
+        }
+
+        /** Puts the click box around the seated eye, where it was spawned before 0.65.0. */
+        private void centreClickBox() {
+            if (interaction == null) { interaction = entities.interaction(player, eye.clone().subtract(0, 1.5, 0), 3f, 3f); return; }
+            try {
+                Location at = eye.clone().subtract(0, 1.5, 0);
+                Location now = interaction.getLocation();
+                if (now != null && now.distanceSquared(at) > 0.01) {
+                    at.setYaw(now.getYaw());
+                    at.setPitch(now.getPitch());
+                    interaction.teleport(at);
+                }
+            } catch (RuntimeException | LinkageError keepsItsPlace) { }
         }
 
         // -- placement --
@@ -563,7 +677,7 @@ public final class ScreenRuntime {
 
         private void placeBackground(TextDisplay d) {
             common(d);
-            solid(d, layout.width() + 0.06, layout.height() + 0.06, mode == ScreenSpec.Mode.PINNED ? 0 : 0.008, 0x1B1F27, 235);
+            solid(d, layout.width() + PANEL_BORDER, layout.height() + PANEL_BORDER, mode == ScreenSpec.Mode.PINNED ? 0 : 0.008, 0x1B1F27, 235);
         }
 
         /** PINNED only: a dim, screen-filling backdrop behind the panel, like the dark background of vanilla menus. */
@@ -810,12 +924,32 @@ public final class ScreenRuntime {
                 lastLeftClick.put(player.getUniqueId(), now);
                 lastLeft = now;
             }
-            hover(player.getLocation().getYaw(), player.getLocation().getPitch());
-            ScreenWidget hit = hovered == null ? null : widgets.get(hovered);
-            // Core's Back button: go to the parent screen; a screen with its own "back" of that id still gets the click
-            // when there is no parent
-            if (hit != null && hit.clickable() && BACK_ID.equals(hit.id()) && back(player)) return;
-            deliver(new ScreenInput.Click(hit == null || !hit.clickable() ? null : hit.id(), lastU, lastV, right));
+            UUID clicker = player.getUniqueId();
+            lastClick.put(clicker, now);
+            boolean outermost = clicking.add(clicker);
+            try {
+                hover(player.getLocation().getYaw(), player.getLocation().getPitch());
+                ScreenWidget hit = hovered == null ? null : widgets.get(hovered);
+                // Core's Back button: go to the parent screen; a screen with its own "back" of that id still gets the click
+                // when there is no parent
+                if (hit != null && hit.clickable() && BACK_ID.equals(hit.id()) && back(player)) return;
+                deliver(new ScreenInput.Click(hit == null || !hit.clickable() ? null : hit.id(), lastU, lastV, right));
+            } finally {
+                // 0.65.0: the two halves of a click are told apart by time, and the second half waits in the server's
+                // queue while the first is handled. A handler that takes longer than the window (a config save with a
+                // reload took 3 s) let the second half through as a new click: one click toggled a switch twice. So
+                // the window starts again when the handler is done.
+                long done = clock.getAsLong();
+                if (outermost) clicking.remove(clicker);
+                lastClick.computeIfPresent(clicker, (id, at) -> Math.max(at, done));
+                if (done > now) {
+                    if (right) lastRight = done;
+                    else {
+                        lastLeft = done;
+                        lastLeftClick.computeIfPresent(player.getUniqueId(), (id, at) -> Math.max(at, done));
+                    }
+                }
+            }
         }
 
         void deliver(ScreenInput input) {
@@ -936,7 +1070,7 @@ public final class ScreenRuntime {
             mapPixels.keySet().removeIf(id -> next.widgets().stream().noneMatch(w -> w.id().equals(id) && w.kind() == ScreenWidget.Kind.MAP));
             for (ScreenWidget widget : next.widgets()) widgets.put(widget.id(), widget);
             hovered = null;
-            if (interaction == null) return; // visuals not built yet: buildVisuals will spawn them
+            if (!built) return; // visuals not built yet: buildVisuals will spawn them
             if (background != null && background.isValid()) placeBackground(background);
             spawnWidgets();
             // the pointer must stay the last (topmost) display, so it is spawned again after the new widgets

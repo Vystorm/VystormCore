@@ -17,7 +17,7 @@ import net.kyori.adventure.text.format.TextDecoration;
  * under the pointer. Filler panes (glass panes without a name) stay empty. Pure, tested without a server.
  */
 public final class InventoryScreenLayout {
-    static final int TEXT = 0xF2F2F2, MUTED = 0x9AA3B2, LINE = 0xFF343B47, TILE = 0x70252A33, TILE_LIT = 0xF03A4352, EMPTY = 0x30252A33;
+    public static final int TEXT = 0xF2F2F2, MUTED = 0x9AA3B2, LINE = 0xFF343B47, TILE = 0x70252A33, TILE_LIT = 0xF03A4352, EMPTY = 0x30252A33;
     public static final String CLOSE = "close", HINT = "hint", SLOT = "s";
     /** Button that shows the menu as the real chest (0.61.0), for moving items and shift-clicks. */
     public static final String CHEST = "chest";
@@ -56,57 +56,106 @@ public final class InventoryScreenLayout {
      */
     public static Result layout(Component title, List<Slot> slots, int columns, ScreenProfile profile, Component closeLabel, Component idleHint,
                                 Component chestLabel, Component chestHint) {
-        double s = profile.scale();
-        int cols = Math.max(1, columns);
-        int rows = Math.max(1, (slots.size() + cols - 1) / cols);
-        double margin = 0.04 * s, head = 0.1 * s, foot = 0.065 * s, gap = 0.008 * s;
-        double maxW = profile.viewWidth() * 0.92, maxH = profile.viewHeight() * 0.86;
-        double tile = Math.min(0.2 * s, Math.min((maxW - 2 * margin) / cols, (maxH - head - foot - 2 * gap) / rows));
-        double w = Math.max(0.9 * s, cols * tile + 2 * margin), h = head + gap + rows * tile + gap + foot;
-        double gridX = (w - cols * tile) / 2, gridY = head + gap;
-
-        List<ScreenWidget> out = new ArrayList<>();
+        Grid grid = Grid.of(slots.size(), columns, profile);
         Map<String, Component> hints = new HashMap<>();
-        double closeW = 0.2 * s;
-        double buttons = chestLabel == null ? closeW : 2 * closeW + gap;
-        out.add(ScreenWidget.label("title", margin, 0.025 * s, w - 2 * margin - buttons - gap, 0.06 * s,
-                title.colorIfAbsent(TextColor.color(TEXT)).decorate(TextDecoration.BOLD)).withAlign(ScreenWidget.Align.START));
-        if (chestLabel != null) {
-            out.add(ScreenWidget.button(CHEST, w - margin - 2 * closeW - gap, 0.025 * s, closeW, 0.06 * s, chestLabel).withTextHeight(0.034 * s));
-            if (chestHint != null) hints.put(CHEST, chestHint);
-        }
-        out.add(ScreenWidget.button(CLOSE, w - margin - closeW, 0.025 * s, closeW, 0.06 * s, closeLabel).withTextHeight(0.034 * s));
-        out.add(ScreenWidget.fill("head-line", 0, head, w, 0.004 * s, LINE));
-
-        double nameH = Math.max(0.018, tile * 0.16), icon = tile * 0.52;
+        List<String> ids = chestLabel == null ? List.of(CLOSE) : List.of(CHEST, CLOSE);
+        List<Component> labels = chestLabel == null ? List.of(closeLabel) : List.of(chestLabel, closeLabel);
+        if (chestLabel != null && chestHint != null) hints.put(CHEST, chestHint);
+        List<ScreenWidget> out = new ArrayList<>(header(grid, title, ids, labels));
         for (Slot slot : slots) {
-            int r = slot.index() / cols, c = slot.index() % cols;
-            if (r >= rows) continue;
-            double x = gridX + c * tile, y = gridY + r * tile, inner = tile - gap;
+            if (slot.index() / grid.columns() >= grid.rows()) continue;
             if (slot.empty()) {
-                out.add(ScreenWidget.fill("e" + slot.index(), x + gap / 2, y + gap / 2, inner, inner, EMPTY));
+                out.add(empty(grid, "e" + slot.index(), slot.index()));
                 continue;
             }
             String id = slotId(slot.index());
-            out.add(new ScreenWidget(id, ScreenWidget.Kind.BUTTON, x + gap / 2, y + gap / 2, inner, inner, "", true)
-                    .withFill(TILE).withHighlight(TILE_LIT));
-            out.add(ScreenWidget.icon("i" + slot.index(), x + (tile - icon) / 2, y + tile * 0.1, icon, icon, slot.icon()));
-            if (slot.amount() > 1) {
-                out.add(ScreenWidget.label("n" + slot.index(), x + tile * 0.5, y + tile * 0.1 + icon - nameH, tile * 0.42, nameH,
-                        Component.text(Integer.toString(slot.amount())).color(TextColor.color(TEXT))).withAlign(ScreenWidget.Align.END));
-            }
-            out.add(ScreenWidget.label("t" + slot.index(), x + gap, y + tile * 0.1 + icon + tile * 0.04, tile - 2 * gap, nameH,
-                    shorten(slot.name(), 14)));
+            out.addAll(tile(grid, id, "i" + slot.index(), "n" + slot.index(), "t" + slot.index(), slot));
             hints.put(id, hint(slot));
         }
+        out.addAll(footer(grid, idleHint));
+        return new Result(new ScreenLayout(grid.width(), grid.height(), out), hints, idleHint);
+    }
 
-        out.add(ScreenWidget.fill("foot-line", 0, h - foot, w, 0.004 * s, LINE));
-        out.add(ScreenWidget.label(HINT, margin, h - foot + 0.016 * s, w - 2 * margin, 0.034 * s, idleHint).withAlign(ScreenWidget.Align.START));
-        return new Result(new ScreenLayout(w, h, out), hints, idleHint);
+    /** Characters of a slot name on its tile. */
+    public static final int NAME_CHARS = 14;
+    /** Widget ids of the frame besides {@link #CLOSE}, {@link #CHEST} and {@link #HINT}. */
+    public static final String TITLE = "title", HEAD_LINE = "head-line", FOOT_LINE = "foot-line";
+
+    /**
+     * Sizes of the tile grid for one display (0.65.0, shared with file menus): {@code slots} slots in {@code columns}
+     * columns; the tile is at most 0.2 at UI size 1 and shrinks until the panel fits 92 % x 86 % of the view.
+     */
+    public record Grid(double scale, int columns, int rows, double margin, double head, double foot, double gap, double tile,
+                       double width, double height, double gridX, double gridY, double nameHeight, double icon, double buttonWidth) {
+        public static Grid of(int slots, int columns, ScreenProfile profile) {
+            double s = profile.scale();
+            int cols = Math.max(1, columns);
+            int rows = Math.max(1, (slots + cols - 1) / cols);
+            double margin = 0.04 * s, head = 0.1 * s, foot = 0.065 * s, gap = 0.008 * s;
+            double maxW = profile.viewWidth() * 0.92, maxH = profile.viewHeight() * 0.86;
+            double tile = Math.min(0.2 * s, Math.min((maxW - 2 * margin) / cols, (maxH - head - foot - 2 * gap) / rows));
+            double w = Math.max(0.9 * s, cols * tile + 2 * margin), h = head + gap + rows * tile + gap + foot;
+            return new Grid(s, cols, rows, margin, head, foot, gap, tile, w, h, (w - cols * tile) / 2, head + gap,
+                    Math.max(0.018, tile * 0.16), tile * 0.52, 0.2 * s);
+        }
+        /** Left edge of the cell of slot {@code index}. */
+        public double cellU(int index) { return gridX + (index % columns) * tile; }
+        /** Top edge of the cell of slot {@code index}. */
+        public double cellV(int index) { return gridY + (index / columns) * tile; }
+        public int slots() { return columns * rows; }
+    }
+
+    /**
+     * Title (bold, left), the header buttons right-aligned in the order given, and the line under the header. Chest
+     * menus have Close and sometimes the chest button; the same numbers hold for any count.
+     */
+    public static List<ScreenWidget> header(Grid g, Component title, List<String> ids, List<? extends Component> labels) {
+        double s = g.scale(), w = g.width();
+        int n = ids.size();
+        double buttons = n * g.buttonWidth() + Math.max(0, n - 1) * g.gap();
+        List<ScreenWidget> out = new ArrayList<>();
+        out.add(ScreenWidget.label(TITLE, g.margin(), 0.025 * s, w - 2 * g.margin() - buttons - g.gap(), 0.06 * s,
+                title.colorIfAbsent(TextColor.color(TEXT)).decorate(TextDecoration.BOLD)).withAlign(ScreenWidget.Align.START));
+        for (int i = 0; i < n; i++)
+            out.add(ScreenWidget.button(ids.get(i), w - g.margin() - (n - i) * g.buttonWidth() - (n - i - 1) * g.gap(), 0.025 * s, g.buttonWidth(), 0.06 * s,
+                    labels.get(i)).withTextHeight(0.034 * s));
+        out.add(ScreenWidget.fill(HEAD_LINE, 0, g.head(), w, 0.004 * s, LINE));
+        return out;
+    }
+
+    /** The line above the hint and the hint label. */
+    public static List<ScreenWidget> footer(Grid g, Component idleHint) {
+        double s = g.scale();
+        return List.of(ScreenWidget.fill(FOOT_LINE, 0, g.height() - g.foot(), g.width(), 0.004 * s, LINE),
+                ScreenWidget.label(HINT, g.margin(), g.height() - g.foot() + 0.016 * s, g.width() - 2 * g.margin(), 0.034 * s, idleHint).withAlign(ScreenWidget.Align.START));
+    }
+
+    /** The dark cell of an empty slot. */
+    public static ScreenWidget empty(Grid g, String id, int index) {
+        double inner = g.tile() - g.gap();
+        return ScreenWidget.fill(id, g.cellU(index) + g.gap() / 2, g.cellV(index) + g.gap() / 2, inner, inner, EMPTY);
+    }
+
+    /**
+     * A filled slot: the clickable box {@code id}, the icon, the amount (only above 1) and the name cut to
+     * {@link #NAME_CHARS} characters.
+     */
+    public static List<ScreenWidget> tile(Grid g, String id, String iconId, String amountId, String nameId, Slot slot) {
+        double x = g.cellU(slot.index()), y = g.cellV(slot.index()), tile = g.tile(), gap = g.gap(), inner = tile - gap, icon = g.icon(), nameH = g.nameHeight();
+        List<ScreenWidget> out = new ArrayList<>();
+        out.add(new ScreenWidget(id, ScreenWidget.Kind.BUTTON, x + gap / 2, y + gap / 2, inner, inner, "", true)
+                .withFill(TILE).withHighlight(TILE_LIT));
+        out.add(ScreenWidget.icon(iconId, x + (tile - icon) / 2, y + tile * 0.1, icon, icon, slot.icon()));
+        if (slot.amount() > 1) {
+            out.add(ScreenWidget.label(amountId, x + tile * 0.5, y + tile * 0.1 + icon - nameH, tile * 0.42, nameH,
+                    Component.text(Integer.toString(slot.amount())).color(TextColor.color(TEXT))).withAlign(ScreenWidget.Align.END));
+        }
+        out.add(ScreenWidget.label(nameId, x + gap, y + tile * 0.1 + icon + tile * 0.04, tile - 2 * gap, nameH, shorten(slot.name(), NAME_CHARS)));
+        return out;
     }
 
     /** Full name plus the first lore lines, joined into one line. */
-    static Component hint(Slot slot) {
+    public static Component hint(Slot slot) {
         Component out = slot.name().colorIfAbsent(TextColor.color(TEXT));
         int shown = 0;
         for (Component line : slot.lore()) {

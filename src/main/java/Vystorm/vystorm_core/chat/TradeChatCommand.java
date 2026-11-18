@@ -30,6 +30,8 @@ public final class TradeChatCommand implements TabExecutor, Listener {
     TradeChatCommand(LongSupplier nanos) { this.nanos = nanos; }
     @Override public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
         var lang = Localization.get().core();
+        // trade-chat.enabled off (0.65.0): the channel is closed
+        if (!Vystorm.vystorm_core.lifecycle.CoreSwitches.on(Vystorm.vystorm_core.lifecycle.CoreSwitches.Switch.TRADE_CHAT)) { lang.send(sender, "feature-off"); return true; }
         if (!(sender instanceof Player player)) { lang.send(sender, "channel-chat.players-only"); return true; }
         if (!player.hasPermission(SEND_PERMISSION)) { feedback(player, "chat.no-permission"); return true; }
         String text = String.join(" ", args).trim();

@@ -23,7 +23,9 @@ public interface CoreCommandsInterface {
 
     /**
      * Registers a command tree for {@code plugin}. {@code lang} is the plugin's bundle ({@code null}: the registered
-     * bundle of the plugin, registering one if needed). Registering the same label again replaces the earlier tree.
+     * bundle of the plugin, registering one if needed). Registering the same label again replaces the earlier tree
+     * (0.65.0: after startup on Paper inside the existing registration, so the Paper node keeps working and returns
+     * the same registration; fixed root aliases stay as first registered until a restart).
      */
     default CommandRegistration register(Plugin plugin, Lang lang, CommandSpec spec) { return CoreCommands.register(plugin, lang, spec); }
 
@@ -58,4 +60,13 @@ public interface CoreCommandsInterface {
 
     /** Re-applies localized root aliases, e.g. after language files were edited. */
     default void refreshAliases() { CoreCommands.refreshAliases(); }
+
+    /**
+     * Sends every online player their command list again, e.g. after a reload in which a feature switch changed
+     * (suggestions and help follow {@link CommandSpec.Builder#visibleWhen visibleWhen} by themselves). Inside
+     * {@link CommandBatch#run} once at the end; any thread.
+     *
+     * @since 0.65.0
+     */
+    default void refresh() { CoreCommands.refresh(); }
 }

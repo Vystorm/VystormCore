@@ -283,15 +283,14 @@ public final class EventStages {
             if (entry.stage.bukkit() != priority || !entry.type.isInstance(event) || !entry.owner.isEnabled()) continue;
             boolean cancelled = cancellable != null && cancellable.isCancelled();
             if (cancelled && !entry.receivesCancelled) continue;
-            String operation = entry.type.getSimpleName() + " at " + entry.stage;
             try {
                 entry.handler.accept(event);
             } catch (RuntimeException | LinkageError failure) {
-                ProviderFailures.report("EventStages", entry.ownerName, operation, failure);
+                ProviderFailures.report("EventStages", entry.ownerName, operation(entry), failure);
             }
             if (entry.stage == EventStage.OBSERVE && cancellable != null && cancellable.isCancelled() != cancelled) {
                 cancellable.setCancelled(cancelled);
-                ProviderFailures.report("EventStages", entry.ownerName, operation,
+                ProviderFailures.report("EventStages", entry.ownerName, operation(entry),
                         new IllegalStateException("An OBSERVE handler changed the cancelled state; Core restored it"));
             }
         }
@@ -331,5 +330,10 @@ public final class EventStages {
         Plugin core = Vystorm.vystorm_core.main.getPlugin();
         Bukkit.getPluginManager().registerEvent(root, LISTENER, priority,
                 (listener, event) -> { if (root.isInstance(event)) dispatcher.accept(event); }, core, false);
+    }
+
+    /** Label for failure reports; built only when a handler fails, not for every call. */
+    private static String operation(Entry entry) {
+        return entry.type.getSimpleName() + " at " + entry.stage;
     }
 }

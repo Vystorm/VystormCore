@@ -66,10 +66,11 @@ public final class CommandRegistration {
     }
 
     private final Plugin plugin;
-    private final Lang lang;
-    private final CommandSpec spec;
+    private final Lang core;
+    private volatile Lang lang;
+    private volatile CommandSpec spec;
     private final Legacy legacy;
-    private final Engine engine;
+    private volatile Engine engine;
     private final Cooldowns cooldowns = new Cooldowns();
     volatile Mount mount = Mount.NONE;
     volatile List<String> registeredLabels = List.of();
@@ -83,7 +84,20 @@ public final class CommandRegistration {
         this.lang = Objects.requireNonNull(lang, "lang");
         this.spec = Objects.requireNonNull(spec, "spec");
         this.legacy = legacy;
+        this.core = core;
         this.engine = new Engine(this, new Names(lang, core));
+    }
+
+    /**
+     * The same plugin registered the same label again after its root was mounted on Paper (0.65.0): the new tree
+     * takes over inside this registration, so the Paper node (which cannot be replaced after startup) runs it.
+     */
+    void replace(Lang bundle, CommandSpec next) {
+        Lang l = Objects.requireNonNull(bundle, "lang");
+        Engine e = new Engine(this, new Names(l, core));
+        this.lang = l;
+        this.spec = Objects.requireNonNull(next, "spec");
+        this.engine = e;
     }
 
     public Plugin plugin() { return plugin; }

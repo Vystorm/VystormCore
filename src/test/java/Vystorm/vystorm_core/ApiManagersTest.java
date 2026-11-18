@@ -110,7 +110,8 @@ class ApiManagersTest {
             new NewManager<>("parties", API::parties, API::overridePartyHandler, () -> new PartyServicesInterface() {}),
             new NewManager<>("items", API::items, API::overrideItemHandler, () -> new ItemsInterface() {}),
             new NewManager<>("mobs", API::mobs, API::overrideMobHandler, () -> new MobsInterface() {}),
-            new NewManager<>("runtime", API::runtime, API::overrideRuntimeHandler, () -> new RuntimeInterface() {}));
+            new NewManager<>("runtime", API::runtime, API::overrideRuntimeHandler, () -> new RuntimeInterface() {}),
+            new NewManager<>("placeholders", API::placeholders, API::overridePlaceholderHandler, () -> new Vystorm.vystorm_core._advancedMethods.placeholderHandler.PlaceholderInterface() {}));
 
     @TestFactory
     Stream<DynamicTest> givenNewManager_whenAccessedAndOverridden_thenDefaultThenReplacementAndNullRejected() {

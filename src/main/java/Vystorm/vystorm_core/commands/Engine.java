@@ -75,7 +75,8 @@ final class Engine {
     }
 
     static boolean visible(CommandSender sender, CommandSpec node) {
-        return allowed(sender, node) && !node.hidden() && !(node.playerOnly() && !(sender instanceof Player));
+        // 0.65.0: visibleWhen (a feature switch) is asked here, at every completion and help listing
+        return allowed(sender, node) && node.visibleTo(sender) && !(node.playerOnly() && !(sender instanceof Player));
     }
 
     /** Whether running the node does something (own handler or the adapter's old executor). */
@@ -255,7 +256,7 @@ final class Engine {
 
     List<String> suggest(CommandSender sender, String label, String[] rawArgs) {
         String[] args = rawArgs == null || rawArgs.length == 0 ? new String[]{""} : rawArgs;
-        if (!registration.plugin().isEnabled() || !allowed(sender, root())) return List.of();
+        if (!registration.plugin().isEnabled() || !allowed(sender, root()) || !root().conditionMet(sender)) return List.of();
         String language = language(sender);
         int last = args.length - 1;
         String prefix = args[last];

@@ -1,0 +1,596 @@
+{
+  "format": "vystorm-menu",
+  "version": 1,
+  "id": "main",
+  "title": "Vystorm · Main menu",
+  "command": "mainmenu",
+  "frame": "menu",
+  "size": {
+    "width": 2.04,
+    "height": 1.12
+  },
+  "header": [
+    "display",
+    "search",
+    "close"
+  ],
+  "footer": "Hello {player} · point at a tile to read what it does",
+  "widgets": [
+    {
+      "id": "section-character",
+      "type": "label",
+      "u": 0.05,
+      "v": 0.16,
+      "width": 1.94,
+      "height": 0.05,
+      "text": "Character"
+    },
+    {
+      "id": "herbarium",
+      "type": "tile",
+      "u": 0.325,
+      "v": 0.225,
+      "width": 0.19,
+      "height": 0.16,
+      "text": "Herbarium",
+      "icon": "FLOWERING_AZALEA",
+      "description": "Plants you have found",
+      "click": {
+        "actions": [
+          {
+            "command": "herbarium",
+            "as": "player"
+          },
+          {
+            "close": true
+          }
+        ]
+      }
+    },
+    {
+      "id": "skills",
+      "type": "tile",
+      "u": 0.525,
+      "v": 0.225,
+      "width": 0.19,
+      "height": 0.16,
+      "text": "Skills",
+      "icon": "EXPERIENCE_BOTTLE",
+      "description": "Your skills and levels",
+      "click": {
+        "actions": [
+          {
+            "command": "skills",
+            "as": "player"
+          },
+          {
+            "close": true
+          }
+        ]
+      }
+    },
+    {
+      "id": "talent-world",
+      "type": "tile",
+      "u": 0.725,
+      "v": 0.225,
+      "width": 0.19,
+      "height": 0.16,
+      "text": "Talent world",
+      "icon": "END_CRYSTAL",
+      "description": "Travel to the talent world",
+      "click": {
+        "actions": [
+          {
+            "command": "talentworld",
+            "as": "player"
+          },
+          {
+            "close": true
+          }
+        ]
+      }
+    },
+    {
+      "id": "companions",
+      "type": "tile",
+      "u": 0.925,
+      "v": 0.225,
+      "width": 0.19,
+      "height": 0.16,
+      "text": "Companions",
+      "icon": "BONE",
+      "description": "Your pets and helpers",
+      "click": {
+        "actions": [
+          {
+            "command": "companions",
+            "as": "player"
+          },
+          {
+            "close": true
+          }
+        ]
+      }
+    },
+    {
+      "id": "herd-book",
+      "type": "tile",
+      "u": 1.125,
+      "v": 0.225,
+      "width": 0.19,
+      "height": 0.16,
+      "text": "Herd book",
+      "icon": "LEAD",
+      "description": "Animals you have bred",
+      "click": {
+        "actions": [
+          {
+            "command": "herdbook",
+            "as": "player"
+          },
+          {
+            "close": true
+          }
+        ]
+      }
+    },
+    {
+      "id": "loot-filter",
+      "type": "tile",
+      "u": 1.325,
+      "v": 0.225,
+      "width": 0.19,
+      "height": 0.16,
+      "text": "Loot filter",
+      "icon": "HOPPER",
+      "description": "Choose what you pick up",
+      "click": {
+        "actions": [
+          {
+            "command": "lootfilter",
+            "as": "player"
+          },
+          {
+            "close": true
+          }
+        ]
+      }
+    },
+    {
+      "id": "fatigue",
+      "type": "tile",
+      "u": 1.525,
+      "v": 0.225,
+      "width": 0.19,
+      "height": 0.16,
+      "text": "Fatigue",
+      "icon": "FEATHER",
+      "description": "How rested you are",
+      "click": {
+        "actions": [
+          {
+            "command": "fatigue reset {player}",
+            "as": "console"
+          },
+          {
+            "message": "<green>You feel rested again."
+          }
+        ],
+        "cooldown": 3600,
+        "permission": "vystorm.vip"
+      },
+      "rightClick": {
+        "actions": [
+          {
+            "open": "fatigue-help"
+          }
+        ]
+      }
+    },
+    {
+      "id": "section-economy",
+      "type": "label",
+      "u": 0.05,
+      "v": 0.4,
+      "width": 1.94,
+      "height": 0.05,
+      "text": "Economy"
+    },
+    {
+      "id": "xp-account",
+      "type": "tile",
+      "u": 0.125,
+      "v": 0.465,
+      "width": 0.19,
+      "height": 0.16,
+      "text": "XP Account",
+      "icon": "EXPERIENCE_BOTTLE",
+      "description": "Store and withdraw experience",
+      "click": {
+        "actions": [
+          {
+            "command": "xpaccount",
+            "as": "player"
+          },
+          {
+            "close": true
+          }
+        ]
+      }
+    },
+    {
+      "id": "market",
+      "type": "tile",
+      "u": 0.325,
+      "v": 0.465,
+      "width": 0.19,
+      "height": 0.16,
+      "text": "Market",
+      "icon": "EMERALD",
+      "description": "Market, own offers, list an item and chest shops",
+      "click": {
+        "actions": [
+          {
+            "command": "market",
+            "as": "player"
+          },
+          {
+            "close": true
+          }
+        ]
+      }
+    },
+    {
+      "id": "my-offers",
+      "type": "tile",
+      "u": 0.525,
+      "v": 0.465,
+      "width": 0.19,
+      "height": 0.16,
+      "text": "My offers",
+      "icon": "PAPER",
+      "description": "What you are selling",
+      "click": {
+        "actions": [
+          {
+            "command": "myoffers",
+            "as": "player"
+          },
+          {
+            "close": true
+          }
+        ]
+      }
+    },
+    {
+      "id": "deep-inventory",
+      "type": "tile",
+      "u": 0.725,
+      "v": 0.465,
+      "width": 0.19,
+      "height": 0.16,
+      "text": "Deep Inventory",
+      "icon": "PAPER",
+      "description": "Your large inventory",
+      "click": {
+        "actions": [
+          {
+            "command": "deepinventory",
+            "as": "player"
+          },
+          {
+            "close": true
+          }
+        ]
+      }
+    },
+    {
+      "id": "deep-storage",
+      "type": "tile",
+      "u": 0.925,
+      "v": 0.465,
+      "width": 0.19,
+      "height": 0.16,
+      "text": "Deep storage",
+      "icon": "PURPLE_CARPET",
+      "description": "Shared storage",
+      "click": {
+        "actions": [
+          {
+            "command": "deepstorage",
+            "as": "player"
+          },
+          {
+            "close": true
+          }
+        ]
+      }
+    },
+    {
+      "id": "warehouse",
+      "type": "tile",
+      "u": 1.125,
+      "v": 0.465,
+      "width": 0.19,
+      "height": 0.16,
+      "text": "Warehouse",
+      "icon": "OAK_DOOR",
+      "description": "Bulk storage for your city",
+      "when": {
+        "permission": "!vystorm.guest"
+      },
+      "click": {
+        "actions": [
+          {
+            "command": "warehouse",
+            "as": "player"
+          },
+          {
+            "close": true
+          }
+        ]
+      }
+    },
+    {
+      "id": "loadouts",
+      "type": "tile",
+      "u": 1.325,
+      "v": 0.465,
+      "width": 0.19,
+      "height": 0.16,
+      "text": "Loadouts",
+      "icon": "ARMOR_STAND",
+      "description": "Saved equipment sets",
+      "click": {
+        "actions": [
+          {
+            "command": "loadouts",
+            "as": "player"
+          },
+          {
+            "close": true
+          }
+        ]
+      }
+    },
+    {
+      "id": "my-plots",
+      "type": "tile",
+      "u": 1.525,
+      "v": 0.465,
+      "width": 0.19,
+      "height": 0.16,
+      "text": "My plots",
+      "icon": "OAK_TRAPDOOR",
+      "description": "Plots you own",
+      "click": {
+        "actions": [
+          {
+            "command": "myplots",
+            "as": "player"
+          },
+          {
+            "close": true
+          }
+        ]
+      }
+    },
+    {
+      "id": "rent-buy-plots",
+      "type": "tile",
+      "u": 1.725,
+      "v": 0.465,
+      "width": 0.19,
+      "height": 0.16,
+      "text": "Rent/buy plots",
+      "icon": "MAP",
+      "description": "Free plots near you",
+      "click": {
+        "actions": [
+          {
+            "command": "rentbuyplots",
+            "as": "player"
+          },
+          {
+            "close": true
+          }
+        ]
+      }
+    },
+    {
+      "id": "section-community",
+      "type": "label",
+      "u": 0.05,
+      "v": 0.64,
+      "width": 1.94,
+      "height": 0.05,
+      "text": "Community"
+    },
+    {
+      "id": "city",
+      "type": "tile",
+      "u": 0.225,
+      "v": 0.705,
+      "width": 0.19,
+      "height": 0.16,
+      "text": "City",
+      "icon": "BEACON",
+      "description": "Your city and its members",
+      "click": {
+        "actions": [
+          {
+            "command": "city",
+            "as": "player"
+          },
+          {
+            "close": true
+          }
+        ]
+      }
+    },
+    {
+      "id": "chat",
+      "type": "tile",
+      "u": 0.425,
+      "v": 0.705,
+      "width": 0.19,
+      "height": 0.16,
+      "text": "Chat",
+      "icon": "WRITABLE_BOOK",
+      "description": "Channels and private messages",
+      "click": {
+        "actions": [
+          {
+            "command": "chat",
+            "as": "player"
+          },
+          {
+            "close": true
+          }
+        ]
+      }
+    },
+    {
+      "id": "photo-album",
+      "type": "tile",
+      "u": 0.625,
+      "v": 0.705,
+      "width": 0.19,
+      "height": 0.16,
+      "text": "Photo album",
+      "icon": "BOOK",
+      "description": "Your pictures",
+      "click": {
+        "actions": [
+          {
+            "command": "photoalbum",
+            "as": "player"
+          },
+          {
+            "close": true
+          }
+        ]
+      }
+    },
+    {
+      "id": "photo-albums",
+      "type": "tile",
+      "u": 0.825,
+      "v": 0.705,
+      "width": 0.19,
+      "height": 0.16,
+      "text": "Photo albums",
+      "icon": "WRITABLE_BOOK",
+      "description": "Albums of other players",
+      "click": {
+        "actions": [
+          {
+            "command": "photoalbums",
+            "as": "player"
+          },
+          {
+            "close": true
+          }
+        ]
+      }
+    },
+    {
+      "id": "photo-gallery",
+      "type": "tile",
+      "u": 1.025,
+      "v": 0.705,
+      "width": 0.19,
+      "height": 0.16,
+      "text": "Photo gallery",
+      "icon": "PAINTING",
+      "description": "The public gallery",
+      "click": {
+        "actions": [
+          {
+            "command": "photogallery",
+            "as": "player"
+          },
+          {
+            "close": true
+          }
+        ]
+      }
+    },
+    {
+      "id": "horse-races",
+      "type": "tile",
+      "u": 1.225,
+      "v": 0.705,
+      "width": 0.19,
+      "height": 0.16,
+      "text": "Horse races",
+      "icon": "GOLDEN_HORSE_ARMOR",
+      "description": "Tracks, bets and results",
+      "click": {
+        "actions": [
+          {
+            "command": "horseraces",
+            "as": "player"
+          },
+          {
+            "close": true
+          }
+        ]
+      }
+    },
+    {
+      "id": "painting-exhibition",
+      "type": "tile",
+      "u": 1.425,
+      "v": 0.705,
+      "width": 0.19,
+      "height": 0.16,
+      "text": "Painting exhibition",
+      "icon": "PAINTING",
+      "description": "Vote for the best painting",
+      "click": {
+        "actions": [
+          {
+            "command": "paintingexhibition",
+            "as": "player"
+          },
+          {
+            "close": true
+          }
+        ]
+      }
+    },
+    {
+      "id": "party",
+      "type": "tile",
+      "u": 1.625,
+      "v": 0.705,
+      "width": 0.19,
+      "height": 0.16,
+      "text": "Party",
+      "icon": "CAKE",
+      "description": "Play together with friends",
+      "click": {
+        "actions": [
+          {
+            "command": "party",
+            "as": "player"
+          },
+          {
+            "close": true
+          }
+        ]
+      }
+    },
+    {
+      "id": "section-world",
+      "type": "label",
+      "u": 0.05,
+      "v": 0.88,
+      "width": 1.94,
+      "height": 0.05,
+      "text": "World & Adventure"
+    }
+  ]
+}

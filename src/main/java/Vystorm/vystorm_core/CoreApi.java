@@ -47,6 +47,24 @@ public final class CoreApi {
          * by Core in one configured plugin order ({@code event-order} in Core's config.yml). @since 0.64.0
          */
         public static final String EVENT_STAGES = "event-stages";
+        /**
+         * {@code api.placeholders()}: one registry for the values of all Vystorm plugins
+         * ({@code %vystorm_<namespace>_<key>%}, <code>{namespace:key}</code>), Core's own values, the bridge to
+         * PlaceholderAPI in both directions and {@code /vadmin placeholders}. @since 0.65.0
+         */
+        public static final String PLACEHOLDERS = "placeholders";
+        /**
+         * {@code api.gui().fileMenus()}: screen menus from files in {@code plugins/vystorm_core/menus} (format
+         * {@code vystorm-menu} version 1, written by the menu editor), opened with {@code /vmenu <id>}, their own
+         * command or their tile in the main menu; {@code /vadmin menus}. @since 0.65.0
+         */
+        public static final String FILE_MENUS = "file-menus";
+        /**
+         * {@code CommandSpec.Builder.visibleWhen}: tab completion and help of a command node follow a condition
+         * (feature switch) at once; {@code api.command().refresh()} sends the players their command list again; a
+         * second {@code register} of the same label by the same plugin after startup keeps the Paper node. @since 0.65.0
+         */
+        public static final String COMMAND_VISIBILITY = "command-visibility";
         /** Shared Bukkit/Spigot adapters, native persistence and portable client events. @since 0.51.0 */
         public static final String BUKKIT_COMPAT = "bukkit-compat";
         /** Cross-server network via a Velocity/BungeeCord hub: {@link #network()}, {@code /vnet}, server selector. @since 0.53.0 */
@@ -403,6 +421,9 @@ public final class CoreApi {
         since.put(Capability.HORIZONTAL_VISUALS, "0.30.0");
         since.put(Capability.MANAGERS, "0.64.0");
         since.put(Capability.EVENT_STAGES, "0.64.0");
+        since.put(Capability.PLACEHOLDERS, "0.65.0");
+        since.put(Capability.FILE_MENUS, "0.65.0");
+        since.put(Capability.COMMAND_VISIBILITY, "0.65.0");
         SINCE = Collections.unmodifiableMap(since);
     }
 

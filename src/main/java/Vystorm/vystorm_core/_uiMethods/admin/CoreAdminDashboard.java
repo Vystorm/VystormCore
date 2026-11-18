@@ -33,6 +33,24 @@ public final class CoreAdminDashboard implements TabExecutor {
         return Vystorm.vystorm_core.lang.Localization.get();
     }
 
+    /** The switch of an admin subcommand, or null: diagnostics, migration and trace, loot. */
+    static Vystorm.vystorm_core.lifecycle.CoreSwitches.Switch switchOf(String sub) {
+        return switch (sub.toLowerCase(java.util.Locale.ROOT)) {
+            case "diagnostics", "migration", "trace" -> Vystorm.vystorm_core.lifecycle.CoreSwitches.Switch.DIAGNOSTICS;
+            case "loot" -> Vystorm.vystorm_core.lifecycle.CoreSwitches.Switch.LOOT;
+            case "setup" -> Vystorm.vystorm_core.lifecycle.CoreSwitches.Switch.SETUP;
+            default -> null;
+        };
+    }
+
+    /** True (and the shared message sent) when the subcommand's switch is off. */
+    static boolean switchedOff(CommandSender sender, String sub) {
+        var feature = switchOf(sub);
+        if (feature == null || Vystorm.vystorm_core.lifecycle.CoreSwitches.on(feature)) return false;
+        lang().send(sender, "feature-off");
+        return true;
+    }
+
     public void registerMenu() {
         CoreFeatureDiagnostics.register(core);
         Vystorm.vystorm_core.main.getApi().gui().registerMenu(
@@ -56,6 +74,8 @@ public final class CoreAdminDashboard implements TabExecutor {
             else lang().send(sender, "admin.usage");
             return true;
         }
+        // 0.65.0: diagnostics.enabled and loot.enabled switch their admin commands
+        if (switchedOff(sender, args[0])) return true;
         if (args[0].equalsIgnoreCase("migration")) {
             var keys = Vystorm.vystorm_core.storage.MigrationPreviews.keys();
             if (args.length != 2 || !keys.contains(args[1])) {
@@ -120,6 +140,15 @@ public final class CoreAdminDashboard implements TabExecutor {
         }
         if (args[0].equalsIgnoreCase("trace")) {
             trace(sender, args);
+            return true;
+        }
+        if (args[0].equalsIgnoreCase("placeholders")) {
+            Vystorm.vystorm_core._advancedMethods.placeholderHandler.internal.PlaceholdersAdmin.handle(
+                    sender, Vystorm.vystorm_core.main.getApi().placeholders(), args);
+            return true;
+        }
+        if (args[0].equalsIgnoreCase("menus")) {
+            Vystorm.vystorm_core.menus.internal.FileMenusAdmin.handle(sender, args);
             return true;
         }
         if (args[0].equalsIgnoreCase("permissions")) {
@@ -320,11 +349,14 @@ public final class CoreAdminDashboard implements TabExecutor {
             return Vystorm.vystorm_core.commands.CommandsAdmin.complete(a).stream()
                     .filter(x -> x.toLowerCase(Locale.ROOT).startsWith(p)).toList();
         }
+        if (sub.equals("placeholders") && a.length >= 2)
+            return Vystorm.vystorm_core._advancedMethods.placeholderHandler.internal.PlaceholdersAdmin.complete(
+                    Vystorm.vystorm_core.main.getApi().placeholders(), a);
         if ((sub.equals("language") || sub.equals("lang")) && a.length >= 2)
             return Vystorm.vystorm_core.lang.internal.LanguageAdmin.complete(core, a);
         List<String> out = new ArrayList<>();
         if (a.length == 1) {
-            out.addAll(SUBCOMMANDS);
+            for (String name : SUBCOMMANDS) { var feature = switchOf(name); if (feature == null || Vystorm.vystorm_core.lifecycle.CoreSwitches.on(feature)) out.add(name); }
             visible(s).stream().map(AdminModule::id).forEach(out::add);
         } else if (a.length == 2) {
             switch (sub) {
@@ -356,6 +388,7 @@ public final class CoreAdminDashboard implements TabExecutor {
                     }
                 }
                 case "news" -> out.addAll(Vystorm.vystorm_core.news.internal.NewsService.ADMIN_SUBCOMMANDS);
+                case "menus" -> out.addAll(Vystorm.vystorm_core.menus.internal.FileMenusAdmin.SUBCOMMANDS);
                 case "permissions" -> PermissionList.plugins(core.getServer().getPluginManager(), core)
                         .forEach(p -> out.add(p.getName()));
                 default -> {}
@@ -382,7 +415,7 @@ public final class CoreAdminDashboard implements TabExecutor {
     /** Subcommands handled in {@link #onCommand} besides module ids. */
     static final List<String> SUBCOMMANDS = List.of(
             "list", "status", "language", "lang", "diagnostics", "updates", "migration", "config", "features",
-            "screens", "setup", "permissions", "news", "loot", "commands", "trace");
+            "screens", "setup", "permissions", "news", "loot", "commands", "trace", "placeholders", "menus");
 
     private void open(Player p, int page) {
         if (!valid(p)) return;

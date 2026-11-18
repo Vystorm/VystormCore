@@ -646,7 +646,28 @@ public class API {
         DebugMessages.mid("[API] Handler override applied: overrideRuntimeHandler");
     }
 
+    // ---- Manager added in 0.65.0. ----
+
+    private final ManagerHolder<Vystorm.vystorm_core._advancedMethods.placeholderHandler.PlaceholderInterface> placeholderSystem =
+            new ManagerHolder<>(Vystorm.vystorm_core._advancedMethods.placeholderHandler.PlaceholderHandler.shared());
+
+    /**
+     * Placeholders of all Vystorm plugins: a plugin registers a namespace and its values
+     * ({@code placeholders().register(plugin, "xpvault").value("balance", player -> ...)}), texts are resolved with
+     * {@code resolve(viewer, text)}, and plugins that use PlaceholderAPI see every value as
+     * {@code %vystorm_<namespace>_<key>%}. Capability {@link CoreApi.Capability#PLACEHOLDERS}.
+     *
+     * @since 0.65.0
+     */
+    public Vystorm.vystorm_core._advancedMethods.placeholderHandler.PlaceholderInterface placeholders() { return placeholderSystem.getInstance(); }
+
+    public void overridePlaceholderHandler(Vystorm.vystorm_core._advancedMethods.placeholderHandler.PlaceholderInterface replacement) {
+        placeholderSystem.override(java.util.Objects.requireNonNull(replacement, "replacement"));
+        DebugMessages.mid("[API] Handler override applied: overridePlaceholderHandler");
+    }
+
     public void releaseAdvancedResources(Plugin owner) {
+        placeholders().unregisterAll(owner);
         dialogs().removeAll(owner);
         gui().unregisterMenus(owner);
         if (settings != null) settings.unregister(owner);
@@ -658,6 +679,8 @@ public class API {
 
     public void shutdownAdvanced() {
         Vystorm.vystorm_core._coreMethods.eventRegulator.EventStages.shared().clear();
+        try { Vystorm.vystorm_core._advancedMethods.placeholderHandler.internal.PlaceholderRuntime.stop(); }
+        catch (RuntimeException | LinkageError failure) { DebugMessages.high("[API] Stopping placeholders failed", failure); }
         admin.clear();
         if (settings != null) settings.clear();
         dialogs().clear();

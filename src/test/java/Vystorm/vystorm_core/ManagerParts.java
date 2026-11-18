@@ -48,6 +48,7 @@ final class ManagerParts {
             new Part(Vystorm.vystorm_core.playermenu.PlayerMenuInterface.class, Vystorm.vystorm_core.playermenu.PlayerMenu.class, "api.gui().playerMenu()"),
             new Part(Vystorm.vystorm_core.profile.ProfilesInterface.class, Vystorm.vystorm_core.profile.Profiles.class, "api.gui().profiles()"),
             new Part(Vystorm.vystorm_core._uiMethods.menu.MenuExplorerInterface.class, Vystorm.vystorm_core._uiMethods.menu.MenuExplorer.class, "api.gui().menuExplorer()"),
+            new Part(Vystorm.vystorm_core.menus.FileMenusInterface.class, Vystorm.vystorm_core.menus.FileMenus.class, "api.gui().fileMenus()"),
             new Part(Vystorm.vystorm_core._uiMethods.tutorial.CoreOnboardingInterface.class, Vystorm.vystorm_core._uiMethods.tutorial.CoreOnboarding.class, "api.gui().onboarding()", "markMenu", "stop", "markLanguage", "register", "open", "reset", "skip"),
             new Part(Vystorm.vystorm_core._uiMethods.menu.CompatMenuButtonsInterface.class, Vystorm.vystorm_core._uiMethods.menu.CompatMenuButtons.class, "api.dialogs().buttons()"),
             new Part(Vystorm.vystorm_core.worlds.ManagedWorldsInterface.class, Vystorm.vystorm_core.worlds.ManagedWorlds.class, "api.worldGenerator().worlds()"),

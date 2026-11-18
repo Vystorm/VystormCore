@@ -91,9 +91,13 @@ public final class FirstRunSetup implements Listener {
         out.sort(java.util.Comparator.comparing(Plugin::getName, String.CASE_INSENSITIVE_ORDER));
         return out;
     }
-    static boolean anyPending(Player p) { return !available(p, true).isEmpty(); }
+    static boolean anyPending(Player p) { return setupOn() && !available(p, true).isEmpty(); }
+
+    /** setup.enabled (0.65.0): off = no join hint, no setup list, no setup button. */
+    static boolean setupOn() { return Vystorm.vystorm_core.lifecycle.CoreSwitches.on(Vystorm.vystorm_core.lifecycle.CoreSwitches.Switch.SETUP); }
 
     @EventHandler public void join(PlayerJoinEvent event) {
+        if (!setupOn()) return;
         Player p = event.getPlayer();
         Bukkit.getScheduler().runTaskLater(core, () -> {
             if (!p.isOnline()) return;
@@ -108,6 +112,7 @@ public final class FirstRunSetup implements Listener {
 
     /** {@code name == null}: the list of setups this admin may run. */
     public static void open(Player p, String name) {
+        if (!setupOn()) { lang().send(p, "feature-off"); return; }
         if (name != null) {
             Plugin plugin = plugin(name);
             if (plugin == null || !p.hasPermission(ConfigEditor.permission(plugin)) || definition(plugin) == null) { lang().send(p, "setup-flow.unknown", "plugin", name); return; }

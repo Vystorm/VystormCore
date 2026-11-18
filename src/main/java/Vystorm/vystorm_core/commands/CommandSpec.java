@@ -8,7 +8,10 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
+import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
+import java.util.function.Predicate;
+import org.bukkit.command.CommandSender;
 
 /**
  * Declaration of a command tree: a root command (its English label) with subcommands, arguments, permissions and
@@ -46,6 +49,7 @@ public final class CommandSpec {
     private final String description, usage;
     private final String langPrefix;
     private final boolean help;
+    private final Predicate<CommandSender> visibleWhen;
     private CommandSpec parent;
     private String path;
 
@@ -63,6 +67,7 @@ public final class CommandSpec {
         this.usage = b.usage;
         this.langPrefix = langPrefix;
         this.help = b.help;
+        this.visibleWhen = b.visibleWhen;
         Map<String, CommandSpec> kids = new LinkedHashMap<>();
         for (Builder child : b.children.values()) {
             CommandSpec node = new CommandSpec(child, null);
@@ -90,6 +95,23 @@ public final class CommandSpec {
 
     /** Not listed in help and tab completion (still runs). */
     public boolean hidden() { return hidden; }
+
+    /**
+     * Whether this node is listed for {@code sender} right now: not {@link #hidden()} and the
+     * {@link Builder#visibleWhen(Predicate) visibleWhen} condition (if any) holds. Asked at every tab completion and
+     * help listing, so a switch that changes applies at once. Permission and player-only checks are separate. A
+     * condition that throws counts as visible. {@code sender} may be {@code null} (a sender condition then sees null).
+     *
+     * @since 0.65.0
+     */
+    public boolean visibleTo(CommandSender sender) { return !hidden && conditionMet(sender); }
+
+    /** Only the {@code visibleWhen} condition (true without one); a root uses it without {@link #hidden()}. */
+    boolean conditionMet(CommandSender sender) {
+        if (visibleWhen == null) return true;
+        try { return visibleWhen.test(sender); }
+        catch (RuntimeException | LinkageError failure) { return true; }
+    }
 
     /** Handler runs off the server thread (parsing and checks still on it). */
     public boolean async() { return async; }
@@ -152,6 +174,7 @@ public final class CommandSpec {
         private final Map<String, Builder> children = new LinkedHashMap<>();
         private CommandHandler handler;
         private String description, usage, langPrefix;
+        private Predicate<CommandSender> visibleWhen;
 
         private Builder(String name, boolean root) {
             this.name = Arg.checkId(name == null ? null : name.toLowerCase(Locale.ROOT));
@@ -173,6 +196,29 @@ public final class CommandSpec {
         public Builder playerOnly() { this.playerOnly = true; return this; }
 
         public Builder hidden() { this.hidden = true; return this; }
+
+        /**
+         * Lists this node in tab completion and help only while {@code condition} holds for the sender (typically a
+         * feature switch). It is asked at every completion and help listing, so nothing has to be registered again
+         * when the switch changes. It does not block running the node: the handler still runs and should answer that
+         * the feature is off. On a root it hides the subcommand suggestions and the {@code /vhelp} line; the root
+         * label itself stays in the client's command list. Several calls must all hold.
+         *
+         * @since 0.65.0
+         */
+        public Builder visibleWhen(Predicate<? super CommandSender> condition) {
+            Objects.requireNonNull(condition, "condition");
+            Predicate<CommandSender> next = condition::test;
+            Predicate<CommandSender> before = visibleWhen;
+            this.visibleWhen = before == null ? next : sender -> before.test(sender) && next.test(sender);
+            return this;
+        }
+
+        /** {@link #visibleWhen(Predicate)} for a condition that does not depend on the sender. @since 0.65.0 */
+        public Builder visibleWhen(BooleanSupplier condition) {
+            Objects.requireNonNull(condition, "condition");
+            return visibleWhen(sender -> condition.getAsBoolean());
+        }
 
         /** Runs the handler with the async scheduler; the handler must not touch the world. */
         public Builder async() { this.async = true; return this; }
