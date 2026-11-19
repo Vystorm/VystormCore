@@ -144,6 +144,7 @@ Vystorm.vystorm_core.CoreApi$Capability field static NEWS_EDIT:java.lang.String
 Vystorm.vystorm_core.CoreApi$Capability field static ONBOARDING:java.lang.String
 Vystorm.vystorm_core.CoreApi$Capability field static PANELS:java.lang.String
 Vystorm.vystorm_core.CoreApi$Capability field static PANEL_EXTRAS:java.lang.String
+Vystorm.vystorm_core.CoreApi$Capability field static PANEL_LIST_LAYOUT:java.lang.String
 Vystorm.vystorm_core.CoreApi$Capability field static PARTY:java.lang.String
 Vystorm.vystorm_core.CoreApi$Capability field static PARTY_ACTIVITIES:java.lang.String
 Vystorm.vystorm_core.CoreApi$Capability field static PERMISSION_LIST:java.lang.String
@@ -1995,6 +1996,7 @@ Vystorm.vystorm_core._uiMethods.settings.SettingsRegistry method instance group(
 Vystorm.vystorm_core._uiMethods.settings.SettingsRegistry method instance keys(org.bukkit.entity.Player)java.util.List
 Vystorm.vystorm_core._uiMethods.settings.SettingsRegistry method instance onChange(Vystorm.vystorm_core._uiMethods.settings.SettingsRegistry$ChangeListener)java.lang.Runnable
 Vystorm.vystorm_core._uiMethods.settings.SettingsRegistry method instance openOverview(org.bukkit.entity.Player)void
+Vystorm.vystorm_core._uiMethods.settings.SettingsRegistry method instance openOverviewDialog(org.bukkit.entity.Player)void
 Vystorm.vystorm_core._uiMethods.settings.SettingsRegistry method instance openScope(org.bukkit.entity.Player,Vystorm.vystorm_core._uiMethods.settings.SettingScope)void
 Vystorm.vystorm_core._uiMethods.settings.SettingsRegistry method instance openSection(org.bukkit.entity.Player,java.lang.String)boolean
 Vystorm.vystorm_core._uiMethods.settings.SettingsRegistry method instance ownerVersion(java.lang.String)java.lang.String
@@ -2003,6 +2005,7 @@ Vystorm.vystorm_core._uiMethods.settings.SettingsRegistry method instance policy
 Vystorm.vystorm_core._uiMethods.settings.SettingsRegistry method instance register(org.bukkit.plugin.Plugin,Vystorm.vystorm_core._uiMethods.settings.SettingsSection)void
 Vystorm.vystorm_core._uiMethods.settings.SettingsRegistry method instance replace(org.bukkit.plugin.Plugin,Vystorm.vystorm_core._uiMethods.settings.SettingsSection)void
 Vystorm.vystorm_core._uiMethods.settings.SettingsRegistry method instance save(org.bukkit.entity.Player,java.lang.String,java.util.Map,java.lang.String)Vystorm.vystorm_core._uiMethods.settings.SettingsRegistry$SaveResult
+Vystorm.vystorm_core._uiMethods.settings.SettingsRegistry method instance screenOpener(java.util.function.BiPredicate)void
 Vystorm.vystorm_core._uiMethods.settings.SettingsRegistry method instance sections(org.bukkit.entity.Player,Vystorm.vystorm_core._uiMethods.settings.SettingScope)java.util.List
 Vystorm.vystorm_core._uiMethods.settings.SettingsRegistry method instance unregister(org.bukkit.plugin.Plugin)void
 Vystorm.vystorm_core._uiMethods.settings.SettingsRegistry method instance unregister(org.bukkit.plugin.Plugin,java.lang.String)boolean
@@ -5354,6 +5357,7 @@ Vystorm.vystorm_core.panel.Ui$Progress method instance rate(double)Vystorm.vysto
 Vystorm.vystorm_core.panel.Ui$Progress method instance segments(int)Vystorm.vystorm_core.panel.Ui$Progress
 Vystorm.vystorm_core.panel.Ui$Progress type class final
 Vystorm.vystorm_core.panel.Ui$Section method instance collapsible(boolean)Vystorm.vystorm_core.panel.Ui$Section
+Vystorm.vystorm_core.panel.Ui$Section method instance list()Vystorm.vystorm_core.panel.Ui$Section
 Vystorm.vystorm_core.panel.Ui$Section method instance variant(Vystorm.vystorm_core.panel.Ui$Variant)Vystorm.vystorm_core.panel.Ui$Section
 Vystorm.vystorm_core.panel.Ui$Section type class final
 Vystorm.vystorm_core.panel.Ui$Select method instance onChange(Vystorm.vystorm_core.panel.Ui$Change)Vystorm.vystorm_core.panel.Ui$Select

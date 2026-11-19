@@ -849,6 +849,7 @@ Capability names are strings in `CoreApi.Capability` (use the constants, e.g. `C
 | `EVENT_STAGES` | `event-stages` | 0.64.0 | `api.priority().stages()`: handlers of shared Bukkit events registered with a named stage (`EventStage`), called by Core in one configured plugin order, `event-order` in Core's `config.yml`; `EventStageTesting` for unit tests without a server (see "Event order between plugins (0.64.0)" at the top) |
 | `PLACEHOLDERS` | `placeholders` | 0.65.0 | `api.placeholders()`: one registry for the values of all Vystorm plugins (`%vystorm_<namespace>_<key>%`, `{namespace:key}`), Core's own values, the bridge to PlaceholderAPI in both directions, `/vadmin placeholders`, `Lang.placeholders(true)`; `PlaceholderTesting` for unit tests without a server (see "Placeholders (0.65.0)" at the top) |
 | `FILE_MENUS` | `file-menus` | 0.65.0 | `api.gui().fileMenus()`: screen menus from files in `plugins/vystorm_core/menus` (format `vystorm-menu` version 1), opened with `/vmenu <id>`, their own command or their tile in the main menu; `enabled()`, `ids()`, `open(player, id)`, `reload()`, `errors()`, `warnings()`; `/vadmin menus` (see "Menus from files (0.65.0)" at the top and `docs/MENUS.md`) |
+| `PANEL_LIST_LAYOUT` | `panel-list-layout` | 0.66.0 | `Ui.Section.list()`: a panel section drawn as a settings list on Vystorm Screens (see 18.12) |
 | `COMMAND_VISIBILITY` | `command-visibility` | 0.65.0 | `CommandSpec.Builder.visibleWhen(..)`, `CommandSpec.visibleTo(sender)`, `api.command().refresh()`; the same label registered again after startup keeps its Paper node (see 24.2) |
 | `ITEM_REF_PRIORITY` | `item-ref-priority` | 0.12.0 | Several `ItemRefs` providers per namespace with priority |
 | `MOB_REFS` | `mob-refs` | 0.12.0 | `mob.MobRefs` |
@@ -3862,7 +3863,7 @@ containers also `children(...)`, `child(...)`.
 
 | Factory | Element | Setters / handler |
 | --- | --- | --- |
-| `Ui.section(Object title)` | card/group | `variant(Ui.Variant)`, `collapsible(boolean collapsed)` |
+| `Ui.section(Object title)` | card/group | `variant(Ui.Variant)`, `collapsible(boolean collapsed)`, 0.66.0: `list()` (settings list on screens, see 18.12) |
 | `Ui.row()`, `Ui.col()` | flex row/column (`Ui.Box`) | `gap`, `pad`, `justify(Ui.Justify.START|CENTER|END|BETWEEN)`, `wrap()`, `scrollY(int maxHeight)` |
 | `Ui.grid(int columns)`, `Ui.gridCells(int minWidth)` | grid | `gap` |
 | `Ui.tabs(String id)` | tabs | `tab(id, label, children...)`, `lazyTab(id, label)`, `select(tabId)`, `onTab(Change<String>)` |
@@ -4012,7 +4013,10 @@ public final class PortalPanels {
   `SettingsRegistry.save(player, key, values, "panel")` – same validation, `afterSave` once, change listeners fire;
   `settings().changed(player)` refreshes open panels. Element IDs are `s:<section key>/<setting id>` (a hash when that
   does not fit the ID rules), so they stay put when sections come and go. `/vsettings [server|<plugin:section>]` and the settings menu
-  entry open it for players with the mod; no plugin has to do anything.
+  entry open it for players with the mod; no plugin has to do anything. Since 0.66.0 every section is drawn with the
+  list layout (18.12) on Vystorm Screens, and `api.settings().openOverview(player)`, `openScope(..)` and
+  `openSection(..)` (also when another plugin calls them) open this screen first; the Paper dialogs remain for players
+  who cannot get a screen. Config-editor sections keep their dialog.
 - **Main menu:** `MenuPanels` builds `vystorm_core:menu` – a grid of item buttons per `MenuCategory` from
   `GuiInteface.menuEntries(...)`. Entries whose key is itself a registered panel (e.g. via `PanelSpec.menu`) open
   natively with a back stack; all others call your `opener` as before. Tile IDs are `m:<menu key>`. `/vmenu` without arguments and key **K** open
@@ -4049,6 +4053,41 @@ No running server, no Paper registries for string item ids (`Ui.item("minecraft:
 JsonObject doc = PanelTesting.render(spec, null, "portal-7");
 assertEquals("Remove", PanelTesting.plain(PanelTesting.find(doc, "list/p7/rm").get("label")));
 ```
+
+### 18.12 List layout for settings (0.66.0, `PANEL_LIST_LAYOUT`)
+
+A grid of tiles suits destinations (a main menu). Settings need their name and value side by side. Mark such a
+section with `list()`:
+
+```java
+Ui.section(lang.ref("settings.sounds")).list()
+    .child(Ui.toggle("ping", lang.ref("settings.ping")).description(lang.ref("settings.ping-desc")).value(ping).onChange(..))
+    .child(Ui.slider("volume", lang.ref("settings.volume")).range(0, 100, 10).value(volume).tooltip(lang.ref("settings.volume-desc")).onChange(..))
+    .child(Ui.select("tone", lang.ref("settings.tone")).option("bell", "Bell").option("ping", "Ping").value(tone).onChange(..));
+```
+
+On Vystorm Screens the section title becomes a full-width heading row, and each control one full-width row:
+
+| Element | Row shows (right column) | Left click | Right click |
+| --- | --- | --- | --- |
+| `toggle` | ON / OFF in green / red | switch | switch |
+| `slider` | the value (with `format`) | one step up | one step down |
+| `number` | the value | typing dialog (sends a number) | typing dialog |
+| `select` | the chosen option | next option | previous option |
+| `input` | the text (or the placeholder) | typing dialog | typing dialog |
+| `button` | `›` | its action / navigation / web link | the same |
+
+The full name stands on the left (two lines at most, cut with `…` only at the end of the second), the toggle's
+`description` or the element's first tooltip line under it in a dimmer colour. The whole row is the click target, and
+every click goes through the same checks and handlers as the control itself (inside a `form` the row changes the field
+and the form's button sends it). The hint line shows the full description of the row under the pointer and, while the
+page scrolls, which rows are visible ("3 to 12 of 27"). Other elements in such a section (texts, badges, tables) keep
+their normal look. The client mod and the web page show a normal section (the field `layout: "list"` is ignored there).
+
+Core uses it for every section of its settings screen, so the sections other plugins register through
+`api.settings().register(..)` (with `api.settings().prefs()` values or their own getters and setters) are lists without
+any change in those plugins. Core's feature screen (`/vadmin features`) and config editor (`/vadmin config`) use the same
+rows; the main menu and the admin dashboard, which lead to other places, keep their tiles.
 
 ## 19. Not public API
 

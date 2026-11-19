@@ -8,6 +8,7 @@ import static Vystorm.vystorm_core.web.internal.clientproto.panel.PanelLimits.KI
 
 import Vystorm.vystorm_core.screen.ScreenLayout;
 import Vystorm.vystorm_core.screen.ScreenWidget;
+import Vystorm.vystorm_core.screen.internal.ScreenListLayout;
 import Vystorm.vystorm_core.screen.internal.ScreenRuntime;
 import Vystorm.vystorm_core.web.internal.clientproto.panel.PanelColor;
 import Vystorm.vystorm_core.web.internal.clientproto.panel.PanelDocument;
@@ -60,6 +61,13 @@ final class PanelScreenLayout {
         Component close();
         Component page(int page, int pages);
         Component scrollHint();
+        /** Value text of a switched-on toggle in the list layout (0.66.0). */
+        default Component on() { return Component.text("ON").color(TextColor.color(OK)); }
+        default Component off() { return Component.text("OFF").color(TextColor.color(BAD)); }
+        /** Position of the visible list rows, e.g. "3 to 12 of 27" (0.66.0). */
+        default Component rows(int from, int to, int total) { return Component.text(from + "–" + to + " / " + total); }
+        /** Click help of a list row: {@code number} (left more, right less), {@code choice} (next/previous) or {@code type}. */
+        default Component listHelp(String kind) { return Component.empty(); }
     }
 
     /** What a click on a widget does. */
@@ -73,8 +81,15 @@ final class PanelScreenLayout {
         /** A field inside a form changed: stored in the view until the form is sent. {@code alt}: right click. */
         record FormSet(String elementId, JsonElement value, JsonElement alt) implements Act {}
         record Submit(String formId, JsonObject values, DialogDowngrade.Confirm confirm) implements Act {}
-        /** Text input: opens a typing dialog; {@code formId} null = send as CHANGE (or SEARCH). */
-        record Edit(String elementId, UiText label, String value, int maxLength, String formId, boolean search) implements Act {}
+        /**
+         * Text input: opens a typing dialog; {@code formId} null = send as CHANGE (or SEARCH). {@code number} (0.66.0): the
+         * typed text is sent as a number (list rows of number fields).
+         */
+        record Edit(String elementId, UiText label, String value, int maxLength, String formId, boolean search, boolean number) implements Act {
+            Edit(String elementId, UiText label, String value, int maxLength, String formId, boolean search) {
+                this(elementId, label, value, maxLength, formId, search, false);
+            }
+        }
         record Toggle(String sectionKey) implements Act {}
     }
 
@@ -111,12 +126,16 @@ final class PanelScreenLayout {
     private final View view;
     private final Metrics m;
     private final Texts texts;
+    private final Set<String> lists;
+    /** Content position {y, height} of every list entry row, for the "3 to 12 of 27" hint. */
+    private final List<double[]> listRows = new ArrayList<>();
     private final List<ScreenWidget> body = new ArrayList<>();
     private final Map<String, Act> acts = new LinkedHashMap<>();
     private final Map<String, Component> hints = new HashMap<>();
     private int next, sections;
 
-    private PanelScreenLayout(PanelDocument doc, View view, Metrics m, Texts texts) {
+    private PanelScreenLayout(PanelDocument doc, View view, Metrics m, Texts texts, Set<String> lists) {
+        this.lists = lists == null ? Set.of() : lists;
         this.doc = doc;
         this.view = view;
         this.m = m;
@@ -125,7 +144,32 @@ final class PanelScreenLayout {
 
     /** @param status handler messages of the last action ({@code ✔ …}/{@code ✖ …}), shown in the hint line */
     static Result layout(PanelDocument doc, View view, Metrics m, Texts texts, List<String> status) {
-        return new PanelScreenLayout(doc, view, m, texts).build(status);
+        return layout(doc, view, m, texts, status, Set.of());
+    }
+
+    /** @param lists ids of the sections drawn with the list layout ({@link #listIds}) */
+    static Result layout(PanelDocument doc, View view, Metrics m, Texts texts, List<String> status, Set<String> lists) {
+        return new PanelScreenLayout(doc, view, m, texts, lists).build(status);
+    }
+
+    /**
+     * Ids of the elements a plugin marked with the list layout ({@code Ui.Section.list()}, field {@code layout: "list"}
+     * in the written document; the shared panel schema ignores the field, so mod and web show a normal section).
+     */
+    static Set<String> listIds(JsonObject document) {
+        Set<String> out = new HashSet<>();
+        if (document != null) collectLists(document, out);
+        return out;
+    }
+
+    private static void collectLists(JsonElement e, Set<String> out) {
+        if (e instanceof JsonObject o) {
+            if (o.get("layout") instanceof JsonPrimitive p && p.isString() && "list".equals(p.getAsString())
+                    && o.get("id") instanceof JsonPrimitive id && id.isString()) out.add(id.getAsString());
+            for (Map.Entry<String, JsonElement> child : o.entrySet()) collectLists(child.getValue(), out);
+        } else if (e instanceof com.google.gson.JsonArray a) {
+            for (JsonElement child : a) collectLists(child, out);
+        }
     }
 
     // ------------------------------------------------------------------ frame
@@ -181,9 +225,13 @@ final class PanelScreenLayout {
         // body, clipped to its window
         double top = head + m.gap();
         Map<String, Act> shown = new LinkedHashMap<>();
+        Set<String> cutRows = new HashSet<>();
         for (ScreenWidget wd : bodyWidgets) {
             double v = wd.v() - view.scroll;
-            if (v < -1e-6 || v + wd.height() > bodyH + 1e-6) continue;
+            int dot = wd.id().indexOf('.');
+            // a list row ("w12") and its parts ("w12.n0", "w12.v" …) are shown or left out together
+            if (dot > 0 && cutRows.contains(wd.id().substring(0, dot))) continue;
+            if (v < -1e-6 || v + wd.height() > bodyH + 1e-6) { cutRows.add(wd.id()); continue; }
             out.add(moved(wd, wd.u(), top + v));
             Act a = bodyActs.get(wd.id());
             if (a != null) shown.put(wd.id(), a);
@@ -203,7 +251,18 @@ final class PanelScreenLayout {
             Act a = acts.get(wd.id());
             if (a != null) shown.put(wd.id(), a);
         }
-        Component hint = status.isEmpty() ? (maxScroll > 0 ? colored(texts.scrollHint(), MUTED) : Component.empty())
+        Component idle = maxScroll > 0 ? colored(texts.scrollHint(), MUTED) : Component.empty();
+        if (maxScroll > 0 && !listRows.isEmpty()) {   // 0.66.0: which list rows are on screen
+            int first = 0, last = 0;
+            for (int i = 0; i < listRows.size(); i++) {
+                double v = listRows.get(i)[0] - view.scroll;
+                if (v < -1e-6 || v + listRows.get(i)[1] > bodyH + 1e-6) continue;
+                if (first == 0) first = i + 1;
+                last = i + 1;
+            }
+            if (first > 0) idle = idle.append(Component.text("  ·  ").color(TextColor.color(MUTED))).append(colored(texts.rows(first, last, listRows.size()), MUTED));
+        }
+        Component hint = status.isEmpty() ? idle
                 : colored(Component.text(String.join("  ", status)), status.getFirst().startsWith("✖") ? BAD : OK);
         out.add(ScreenWidget.label(HINT, margin, h - m.foot() + 0.016 * m.s(), inner, m.small(), hint).withAlign(ScreenWidget.Align.START));
 
@@ -393,6 +452,7 @@ final class PanelScreenLayout {
     private double section(PanelNode.Section sec, double x, double y, double w, String form) {
         String key = sec.id() != null ? sec.id() : "s#" + sections;
         sections++;
+        if (sec.id() != null && lists.contains(sec.id())) return listSection(sec, key, x, y, w, form);
         boolean collapsed = sec.collapsible() && (sec.collapsed() ? !view.expanded.contains(key) : view.collapsed.contains(key));
         int backdrop = body.size();
         boolean card = sec.variant() == PanelNode.Section.Variant.CARD;
@@ -516,6 +576,138 @@ final class PanelScreenLayout {
         if (img.alt() == null || img.alt().isEmpty()) return 0;
         add(label(x, y, w, m.text(), colored(DialogDowngrade.component(img.alt()), MUTED)).withAlign(ScreenWidget.Align.START));
         return m.text();
+    }
+
+    // ------------------------------------------------------------------ list layout (0.66.0)
+
+    /**
+     * A section with the list layout: its title as a full-width heading row, then one row per setting with the name on
+     * the left, the current value on the right and the description (or the first tooltip line) under the name. The whole
+     * row is the click target with the meaning the control had: a toggle flips, a choice steps to the next option (right
+     * click: previous), a slider goes one step up (right click: down), number and text fields open the typing dialog,
+     * a button runs its action. Other elements keep their normal look inside the section.
+     */
+    private double listSection(PanelNode.Section sec, String key, double x, double y, double w, String form) {
+        ScreenListLayout.Sizes z = new ScreenListLayout.Sizes(m.s());
+        boolean collapsed = sec.collapsible() && (sec.collapsed() ? !view.expanded.contains(key) : view.collapsed.contains(key));
+        double at = 0;
+        if (!sec.title().isEmpty() || sec.collapsible()) {
+            Component title = DialogDowngrade.component(sec.title());
+            if (sec.collapsible()) title = Component.text(collapsed ? "▸ " : "▾ ").append(title);
+            String hid = id();
+            at += place(ScreenListLayout.Row.heading(hid, title, null, sec.collapsible()), x, y + at, w);
+            if (sec.collapsible()) acts.put(hid, new Act.Toggle(key));
+        }
+        if (collapsed) return at;
+        for (PanelNode c : sec.children()) {
+            if (!c.common().visible()) continue;
+            boolean on = doc.effectivelyEnabled(c);
+            String rid = id();
+            ListEntry entry = listEntry(c, rid, on, form);
+            if (entry == null) {
+                double h = node(c, x + z.inset(), y + at, w - 2 * z.inset(), form);
+                if (h > 0) at += h + m.gap() / 2;
+                continue;
+            }
+            double h = place(entry.row(), x, y + at, w);
+            listRows.add(new double[] { y + at, h - z.gap() });
+            if (entry.act() != null && on) acts.put(rid, entry.act());
+            Component help = entry.help() == null ? Component.empty() : texts.listHelp(entry.help());
+            Component hint = entry.row().name().colorIfAbsent(TextColor.color(TEXT));
+            if (entry.row().value() != null) hint = hint.append(Component.text(": ").color(TextColor.color(MUTED))).append(entry.row().value());
+            if (entry.tip() != null) hint = hint.append(Component.text(" – ").color(TextColor.color(MUTED))).append(colored(entry.tip(), MUTED));
+            if (!plain(help).isEmpty()) hint = hint.append(Component.text("  ·  ").color(TextColor.color(MUTED))).append(colored(help, MUTED));
+            hints.put(rid, hint);
+            at += h;
+        }
+        return at;
+    }
+
+    private record ListEntry(ScreenListLayout.Row row, Act act, String help, Component tip) {}
+
+    private double place(ScreenListLayout.Row row, double x, double y, double w) {
+        ScreenListLayout.Placed placed = ScreenListLayout.place(row, x, y, w, new ScreenListLayout.Sizes(m.s()));
+        body.addAll(placed.widgets());
+        return placed.height();
+    }
+
+    /** The list row of a control, or null when the element keeps its normal look. */
+    private ListEntry listEntry(PanelNode n, String rid, boolean on, String form) {
+        return switch (n) {
+            case PanelNode.Toggle t -> {
+                boolean value = form != null && view.form.get(t.id()) instanceof JsonPrimitive p && p.isBoolean() ? p.getAsBoolean() : t.value();
+                Component desc = t.description() != null && !t.description().isEmpty() ? DialogDowngrade.component(t.description()) : firstTip(t.common().tooltip());
+                Act act = form != null ? new Act.FormSet(t.id(), new JsonPrimitive(!value), null) : new Act.Action(t.id(), KIND_CHANGE, Boolean.toString(!value), null, null);
+                yield new ListEntry(row(rid, DialogDowngrade.component(t.label()), value ? texts.on() : texts.off(), desc, on), act, null, allTips(t.common().tooltip(), desc));
+            }
+            case PanelNode.Slider s -> numberEntry(rid, s.id(), s.label(), s.min(), s.max(), s.step(), s.value(), s.format(), s.decimals(), s.common().tooltip(), on, form, false);
+            case PanelNode.NumberField s -> numberEntry(rid, s.id(), s.label(), s.min(), s.max(), s.step(), s.value(), null, s.decimals(), s.common().tooltip(), on, form, true);
+            case PanelNode.Select s -> {
+                if (s.options().isEmpty()) yield null;
+                String value = form != null && view.form.get(s.id()) instanceof JsonPrimitive p && p.isString() ? p.getAsString()
+                        : s.value() != null ? s.value() : s.options().getFirst().id();
+                int current = 0;
+                for (int i = 0; i < s.options().size(); i++) if (s.options().get(i).id().equals(value)) current = i;
+                String nextId = s.options().get((current + 1) % s.options().size()).id();
+                String prevId = s.options().get((current - 1 + s.options().size()) % s.options().size()).id();
+                Act act = form != null ? new Act.FormSet(s.id(), new JsonPrimitive(nextId), new JsonPrimitive(prevId))
+                        : new Act.Action(s.id(), KIND_CHANGE, json(nextId), json(prevId), null);
+                Component shown = colored(DialogDowngrade.component(s.options().get(current).label()), GOLD);
+                Component desc = firstTip(s.common().tooltip());
+                yield new ListEntry(row(rid, DialogDowngrade.component(s.label()), shown, desc, on), act, s.options().size() > 1 ? "choice" : null,
+                        allTips(s.common().tooltip(), desc));
+            }
+            case PanelNode.Input i -> {
+                String value = form != null && view.form.get(i.id()) instanceof JsonPrimitive p && p.isString() ? p.getAsString() : i.value() == null ? "" : i.value();
+                Component shown = value.isEmpty()
+                        ? colored(i.placeholder() == null || i.placeholder().isEmpty() ? Component.text("–") : DialogDowngrade.component(i.placeholder()), MUTED)
+                        : Component.text(value).color(TextColor.color(TEXT));
+                Component desc = firstTip(i.common().tooltip());
+                Act act = new Act.Edit(i.id(), i.label(), value, i.maxLength() > 0 ? i.maxLength() : 256, form, i.search(), false);
+                yield new ListEntry(row(rid, DialogDowngrade.component(i.label()), shown, desc, on), act, "type", allTips(i.common().tooltip(), desc));
+            }
+            case PanelNode.Button b -> {
+                Act act = switch (b.target()) {
+                    case PanelNode.Button.Act a -> new Act.Action(b.id(), KIND_CLICK, "", null, confirm(b.confirm()));
+                    case PanelNode.Button.Navigate nav -> new Act.Navigate(nav.panel(), nav.arg());
+                    case PanelNode.Button.Web web -> new Act.Web(web.link().module(), web.link().page());
+                };
+                Component label = DialogDowngrade.component(b.label().isEmpty() ? UiText.plain(b.id() == null ? "?" : b.id()) : b.label());
+                Component desc = firstTip(b.common().tooltip());
+                yield new ListEntry(new ScreenListLayout.Row(rid, false, material(b.icon()), label, Component.text("›").color(TextColor.color(GOLD)), desc, on),
+                        act, null, allTips(b.common().tooltip(), desc));
+            }
+            default -> null;
+        };
+    }
+
+    private ListEntry numberEntry(String rid, String elementId, UiText label, double min, double max, double step, double value, String format, int decimals,
+                                  List<UiText> tooltip, boolean on, String form, boolean typed) {
+        double v = form != null && view.form.get(elementId) instanceof JsonPrimitive p && p.isNumber() ? p.getAsDouble() : value;
+        double s = step > 0 ? step : 1;
+        double up = clamp(v + s, min, max), down = clamp(v - s, min, max);
+        String shown = format != null && format.contains("{v}") ? format.replace("{v}", fmt(v, decimals)) : fmt(v, decimals);
+        Act act;
+        if (form != null) act = new Act.FormSet(elementId, new JsonPrimitive(up), new JsonPrimitive(down));
+        else if (typed) act = new Act.Edit(elementId, label, fmt(v, decimals), 32, null, false, true);
+        else act = new Act.Action(elementId, KIND_CHANGE, num(up), num(down), null);
+        Component desc = firstTip(tooltip);
+        return new ListEntry(row(rid, DialogDowngrade.component(label), Component.text(shown).color(TextColor.color(GOLD)), desc, on), act,
+                typed && form == null ? "type" : "number", allTips(tooltip, desc));
+    }
+
+    private static ScreenListLayout.Row row(String id, Component name, Component value, Component description, boolean on) {
+        return ScreenListLayout.Row.entry(id, null, name, value, description, on);
+    }
+
+    private static Component firstTip(List<UiText> tooltip) {
+        return tooltip == null || tooltip.isEmpty() ? null : DialogDowngrade.component(tooltip.getFirst());
+    }
+
+    /** All tooltip lines for the hover line when there are several; else the description. */
+    private static Component allTips(List<UiText> tooltip, Component description) {
+        if (tooltip != null && tooltip.size() > 1) return tooltip(tooltip);
+        return description;
     }
 
     // ------------------------------------------------------------------ tables and lists
@@ -790,7 +982,7 @@ final class PanelScreenLayout {
                 : Component.text(value).color(TextColor.color(TEXT));
         if (i.search()) shown = Component.text("⌕ ").color(TextColor.color(GOLD)).append(shown);
         add(new ScreenWidget(bid, ScreenWidget.Kind.INPUT, x, y + at, w, m.button(), shown, on).withTextHeight(m.text()).withAlign(ScreenWidget.Align.START).withHighlight(ROW_LIT));
-        acts.put(bid, new Act.Edit(i.id(), i.label(), value, i.maxLength() > 0 ? i.maxLength() : 256, form, i.search()));
+        acts.put(bid, new Act.Edit(i.id(), i.label(), value, i.maxLength() > 0 ? i.maxLength() : 256, form, i.search(), false));
         if (!i.common().tooltip().isEmpty()) hints.put(bid, tooltip(i.common().tooltip()));
         return at + m.button();
     }

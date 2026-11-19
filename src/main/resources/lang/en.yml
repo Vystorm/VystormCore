@@ -739,6 +739,7 @@ features:
   restart: "applies after a restart"
   hint-overview: "<gray>Click a plugin · mouse wheel: scroll · page {page}/{pages}"
   hint-plugin: "<gray>Click a row to switch it · hover for details · page {page}/{pages}"
+  hint-list: "<gray>Click a row to switch it · mouse wheel: scroll · {position}"
   none: "<gray>No plugin has feature switches, or you lack vystorm_core.config.<plugin>."
   unknown-plugin: "<red>{plugin} has no feature switches, or you may not configure it."
   ingame-only: "<gray>Feature switches open in game. Plugins: {plugins}"
@@ -1278,8 +1279,14 @@ setup-flow:
   done: "<green>{plugin} is set up. Every value stays editable in <white>/vadmin config {plugin}</white>."
 
 screen:
+  list:
+    position: "{from} to {to} of {total}"
+    help-number: "Left click: more · right click: less"
+    help-choice: "Left click: next · right click: previous"
+    help-type: "Click to type a value"
   inventory:
     hint: "<gray>Click: like in the chest · right-click: right click · sneak or Close: leave"
+    list-hint: "<gray>Click a row · right click: right click · mouse wheel: scroll · {position}"
     chest: "Chest"
     chest-hint: "<gray>Show this menu as a normal chest: to put items in, shift-click or drop."
   settings:

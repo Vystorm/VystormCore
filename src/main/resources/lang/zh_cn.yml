@@ -738,6 +738,7 @@ features:
   restart: "重启后生效"
   hint-overview: "<gray>点击插件 · 鼠标滚轮：翻页 · 第 {page}/{pages} 页"
   hint-plugin: "<gray>点击一行即可切换 · 悬停查看详情 · 第 {page}/{pages} 页"
+  hint-list: "<gray>点击一行即可切换 · 鼠标滚轮：滚动 · {position}"
   none: "<gray>没有带功能开关的插件，或你缺少 vystorm_core.config.<plugin>。"
   unknown-plugin: "<red>{plugin} 没有功能开关，或你无权配置它。"
   ingame-only: "<gray>功能开关需在游戏内打开。插件：{plugins}"
@@ -1276,8 +1277,14 @@ setup-flow:
   done: "<green>{plugin} 设置完成。可随时在 <white>/vadmin config {plugin}</white> 中修改。"
 
 screen:
+  list:
+    position: "第 {from}–{to} 项，共 {total} 项"
+    help-number: "左键：增加 · 右键：减少"
+    help-choice: "左键：下一个 · 右键：上一个"
+    help-type: "点击输入数值"
   inventory:
     hint: "<gray>点击：与箱子中相同 · 右键：右键点击 · 潜行或关闭：退出"
+    list-hint: "<gray>点击一行 · 右键：右键点击 · 鼠标滚轮：滚动 · {position}"
     chest: "箱子"
     chest-hint: "<gray>以普通箱子显示此菜单：用于放入物品、Shift 点击或丢弃。"
   settings:

@@ -127,5 +127,114 @@ class PanelScreenLayoutTest {
         assertNull(edit.formId());
     }
 
+    // ------------------------------------------------------------------ list layout (0.66.0)
+
+    static final String CONTROLS = """
+            {"type":"toggle","id":"hud","label":"Show the HUD","description":"The corner window with XP","value":true},
+            {"type":"slider","id":"range","label":"Range","min":4,"max":64,"step":4,"value":16,"tooltip":["How far you see others"]},
+            {"type":"select","id":"mode","label":"Mode","options":[{"id":"a","label":"Calm"},{"id":"b","label":"Busy"},{"id":"c","label":"Loud"}],"value":"a"},
+            {"type":"number","id":"big","label":"Budget","min":0,"max":100000,"step":1,"value":250},
+            {"type":"input","id":"name","label":"Name","value":"Esoren"}""";
+
+    static PanelScreenLayout.Result listLayout(String sectionFields, String children, PanelScreenLayout.View view, double height) {
+        String json = "{\"schema\":1,\"panel\":\"t:p\",\"root\":{\"type\":\"page\",\"title\":\"Settings\",\"size\":\"large\",\"children\":["
+                + "{\"type\":\"section\",\"id\":\"sec\",\"title\":\"Display\"" + sectionFields + ",\"children\":[" + children + "]}]}}";
+        com.google.gson.JsonObject o = JsonParser.parseString(json).getAsJsonObject();
+        PanelDocument d = PanelSchema.document(o, Deadline.NONE);
+        return PanelScreenLayout.layout(d, view, PanelScreenLayout.metrics(d.root(), 2.49, height, 1.0), TEXTS, List.of(), PanelScreenLayout.listIds(o));
+    }
+
+    static List<PanelScreenLayout.Act> actsOf(PanelScreenLayout.Result r) {
+        return r.acts().entrySet().stream().filter(e -> !e.getKey().equals(PanelScreenLayout.CLOSE)).map(Map.Entry::getValue).toList();
+    }
+
+    @Test
+    void givenListSection_whenLaidOut_thenEachControlIsOneRowWithNameValueAndDescription() {
+        PanelScreenLayout.Result r = listLayout(",\"layout\":\"list\"", CONTROLS, new PanelScreenLayout.View(), 1.4);
+        List<String> texts = r.layout().widgets().stream().map(w -> PanelScreenLayout.plain(asComponent(w.text()))).toList();
+        for (String s : List.of("Display", "Show the HUD", "ON", "The corner window with XP", "Range", "16", "How far you see others", "Mode", "Calm", "Budget", "250", "Name", "Esoren"))
+            assertTrue(texts.contains(s), "shows " + s + " in " + texts);
+        assertFalse(texts.contains("Calm  ◀ ▶"), "no tile-style select button");
+        // one clickable row per control, each spanning the section width
+        List<ScreenWidget> rows = r.layout().widgets().stream().filter(w -> r.acts().containsKey(w.id()) && !w.id().equals(PanelScreenLayout.CLOSE)).toList();
+        assertEquals(5, rows.size());
+        double width = rows.getFirst().width();
+        assertTrue(rows.stream().allMatch(w -> Math.abs(w.width() - width) < 1e-9 && w.kind() == ScreenWidget.Kind.BUTTON));
+        for (ScreenWidget row : rows) {
+            ScreenWidget value = r.layout().widgets().stream().filter(w -> w.id().equals(row.id() + ".v")).findFirst().orElseThrow();
+            assertEquals(ScreenWidget.Align.END, value.align());
+            assertTrue(value.u() + value.width() <= row.u() + row.width() + 1e-9 && value.u() > row.u() + row.width() / 2, "value on the right of " + row.id());
+        }
+    }
+
+    @Test
+    void givenListSection_whenRowsClicked_thenTheyMeanWhatTheControlsMeant() {
+        PanelScreenLayout.Result list = listLayout(",\"layout\":\"list\"", CONTROLS, new PanelScreenLayout.View(), 1.4);
+        PanelScreenLayout.Result plain = listLayout("", CONTROLS, new PanelScreenLayout.View(), 1.4);
+        // the same element ids, kinds and values as the normal controls (toggle flips, slider steps, select cycles)
+        List<PanelScreenLayout.Act.Action> before = acts(plain, PanelScreenLayout.Act.Action.class);
+        List<PanelScreenLayout.Act.Action> after = acts(list, PanelScreenLayout.Act.Action.class);
+        PanelScreenLayout.Act.Action toggle = after.stream().filter(a -> a.elementId().equals("hud")).findFirst().orElseThrow();
+        assertEquals(before.stream().filter(a -> a.elementId().equals("hud")).findFirst().orElseThrow(), toggle);
+        assertEquals("false", toggle.value());
+        PanelScreenLayout.Act.Action select = after.stream().filter(a -> a.elementId().equals("mode")).findFirst().orElseThrow();
+        assertEquals(before.stream().filter(a -> a.elementId().equals("mode")).findFirst().orElseThrow(), select);
+        assertEquals("\"b\"", select.value());
+        assertEquals("\"c\"", select.alt(), "right click goes back");
+        PanelScreenLayout.Act.Action slider = after.stream().filter(a -> a.elementId().equals("range")).findFirst().orElseThrow();
+        assertEquals(PanelLimits.KIND_CHANGE, slider.kind());
+        assertEquals("20", slider.value(), "left click: one step up, like the + button");
+        assertEquals("12", slider.alt(), "right click: one step down");
+        assertTrue(before.stream().anyMatch(a -> a.elementId().equals("range") && a.value().equals("20")), "the + button sent the same value");
+        PanelScreenLayout.Act.Edit number = acts(list, PanelScreenLayout.Act.Edit.class).stream().filter(e -> e.elementId().equals("big")).findFirst().orElseThrow();
+        assertTrue(number.number(), "wide number fields open the typing dialog and send a number");
+        PanelScreenLayout.Act.Edit name = acts(list, PanelScreenLayout.Act.Edit.class).stream().filter(e -> e.elementId().equals("name")).findFirst().orElseThrow();
+        assertFalse(name.number());
+        assertEquals("Esoren", name.value());
+        assertEquals(5, actsOf(list).size(), "one act per row, nothing else clickable");
+    }
+
+    @Test
+    void givenListSectionInAForm_whenRowsClicked_thenFieldsChangeLocally() {
+        PanelScreenLayout.View view = new PanelScreenLayout.View();
+        String json = "{\"schema\":1,\"panel\":\"t:p\",\"root\":{\"type\":\"page\",\"title\":\"S\",\"children\":[{\"type\":\"form\",\"id\":\"f\",\"submit\":\"Save\",\"children\":["
+                + "{\"type\":\"section\",\"id\":\"sec\",\"title\":\"Display\",\"layout\":\"list\",\"children\":[" + CONTROLS + "]}]}]}}";
+        com.google.gson.JsonObject o = JsonParser.parseString(json).getAsJsonObject();
+        PanelDocument d = PanelSchema.document(o, Deadline.NONE);
+        PanelScreenLayout.Result r = PanelScreenLayout.layout(d, view, PanelScreenLayout.metrics(d.root(), 2.49, 1.4, 1.0), TEXTS, List.of(), PanelScreenLayout.listIds(o));
+        List<PanelScreenLayout.Act.FormSet> sets = acts(r, PanelScreenLayout.Act.FormSet.class);
+        assertTrue(sets.stream().anyMatch(s -> s.elementId().equals("hud") && !s.value().getAsBoolean()));
+        assertTrue(sets.stream().anyMatch(s -> s.elementId().equals("mode") && s.value().getAsString().equals("b") && s.alt().getAsString().equals("c")));
+        assertEquals(1, acts(r, PanelScreenLayout.Act.Submit.class).size());
+    }
+
+    @Test
+    void givenLongList_whenScrolled_thenTheHintTellsWhichRowsAreShown() {
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < 27; i++) sb.append(i == 0 ? "" : ",").append("{\"type\":\"toggle\",\"id\":\"t").append(i).append("\",\"label\":\"Setting number ").append(i + 1).append("\",\"value\":false}");
+        PanelScreenLayout.View view = new PanelScreenLayout.View();
+        PanelScreenLayout.Result top = listLayout(",\"layout\":\"list\"", sb.toString(), view, 1.0);
+        assertTrue(top.maxScroll() > 0);
+        String hint = PanelScreenLayout.plain(top.hint());
+        assertTrue(hint.startsWith("scroll") && hint.contains("1–") && hint.endsWith("/ 27"), hint);
+        view.scroll = top.maxScroll();
+        PanelScreenLayout.Result end = listLayout(",\"layout\":\"list\"", sb.toString(), view, 1.0);
+        assertTrue(PanelScreenLayout.plain(end.hint()).endsWith("–27 / 27"), PanelScreenLayout.plain(end.hint()));
+        // a row is shown with all its parts or not at all
+        for (ScreenWidget w : end.layout().widgets()) {
+            int dot = w.id().indexOf('.');
+            if (dot > 0) assertTrue(end.layout().widgets().stream().anyMatch(o -> o.id().equals(w.id().substring(0, dot))), "part without its row: " + w.id());
+        }
+    }
+
+    @Test
+    void givenWrittenDocument_whenListIdsCollected_thenOnlyMarkedElements() {
+        com.google.gson.JsonObject o = JsonParser.parseString("""
+                {"root":{"type":"page","children":[{"type":"section","id":"a","layout":"list"},{"type":"section","id":"b"},
+                 {"type":"tabs","id":"t","tabs":[{"id":"x","children":[{"type":"section","id":"c","layout":"list"}]}]}]}}""").getAsJsonObject();
+        assertEquals(java.util.Set.of("a", "c"), PanelScreenLayout.listIds(o));
+        assertTrue(PanelScreenLayout.listIds(null).isEmpty());
+    }
+
     private static Component asComponent(Object text) { return text instanceof Component c ? c : Component.text(String.valueOf(text)); }
 }

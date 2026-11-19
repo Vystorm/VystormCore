@@ -134,7 +134,30 @@ public final class SettingsRegistry implements SettingsInterface {
         return visible(player, scope).stream().map(Entry::section).toList();
     }
 
+    /**
+     * Opens Core's settings panel as a screen (0.66.0, set by {@code SettingsPanels}): {@code arg} "" = all,
+     * {@code "server"} = server tab, a section key = only that section. Returns false when no screen could open; then the
+     * dialogs below follow as before.
+     */
+    private java.util.function.BiPredicate<Player, String> screen;
+
+    /** Core-internal: where {@link #openOverview}, {@link #openScope} and {@link #openSection} try the settings screen first. */
+    public void screenOpener(java.util.function.BiPredicate<Player, String> opener) { this.screen = opener; }
+
+    private boolean screen(Player player, String arg) {
+        if (screen == null) return false;
+        try { return screen.test(player, arg); }
+        catch (RuntimeException failure) { DebugMessages.high("[Settings] settings screen failed: " + failure); return false; }
+    }
+
     @Override public void openOverview(Player player) {
+        thread();
+        if (screen(player, "")) return;
+        openOverviewDialog(player);
+    }
+
+    /** The overview as native dialogs (also the settings panel's fallback). Server thread only. @since 0.66.0 */
+    public void openOverviewDialog(Player player) {
         thread();
         boolean admin = !visible(player, SettingScope.SERVER).isEmpty();
         if (!admin) { openScope(player, SettingScope.PLAYER); return; }
@@ -149,7 +172,10 @@ public final class SettingsRegistry implements SettingsInterface {
                 Player::isOnline, () -> {}, "Schließen", 2));
     }
 
-    @Override public void openScope(Player player, SettingScope scope) { page(player, scope, 0); }
+    @Override public void openScope(Player player, SettingScope scope) {
+        if (screen(player, scope == SettingScope.SERVER ? "server" : "")) return;
+        page(player, scope, 0);
+    }
 
     private void page(Player player, SettingScope scope, int requested) {
         thread();
@@ -187,6 +213,8 @@ public final class SettingsRegistry implements SettingsInterface {
         thread();
         Entry e = find(key);
         if (e == null || !allowed(e, player)) return false;
+        // config-editor sections can hold thousands of values: they keep their dialog (ConfigEditor opens them)
+        if (!groups.containsKey(e.key) && screen(player, e.key)) return true;
         section(player, e, List.of());
         return true;
     }

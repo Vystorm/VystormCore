@@ -34,12 +34,24 @@ public final class SettingsPanels {
         panels.register(NAME, PanelSpec.builder(lang().ref("settings.title"))
                 .render(ctx -> render(ctx, registry))
                 .web("settings", "")
-                .fallback(registry::openOverview)
+                .fallback(registry::openOverviewDialog)
                 .build());
+        // 0.66.0: /vsettings, api.settings().openOverview/openScope/openSection (also from other plugins) show the
+        // settings screen with the list layout when a screen can open; otherwise the dialogs as before
+        registry.screenOpener((player, arg) -> openScreen(panels, player, arg));
         registry.onChange((player, key) -> {
             if (player == null) panels.refreshAll(NAME);
             else panels.refresh(player, NAME);
         });
+    }
+
+    /** The settings panel natively (client mod) or as a screen; false when neither opened. Never the dialog fallback. */
+    static boolean openScreen(Panels panels, Player player, String arg) {
+        PanelRegistry.Registered reg = PanelRegistry.find(panels.id(NAME)).orElse(null);
+        PanelHub hub = PanelPlatform.hub().orElse(null);
+        if (reg == null || hub == null || player == null || !reg.owner().isEnabled()) return false;
+        if (hub.available(player)) return hub.openNative(player, reg, arg, 0) != Vystorm.vystorm_core.panel.PanelOpenResult.NONE;
+        return PanelOpener.screensForPanels() && hub.openScreen(player, reg, arg);
     }
 
     static Panel render(PanelContext ctx, SettingsRegistry registry) {
@@ -98,7 +110,8 @@ public final class SettingsPanels {
     }
 
     private static Ui.Section section(Player p, SettingsRegistry.SectionView v, SettingsRegistry registry) {
-        Ui.Section section = Ui.section(v.section().title());
+        // 0.66.0: every section, also those other plugins register, is a settings list on screens (name, value, description)
+        Ui.Section section = Ui.section(v.section().title()).list();
         if (!v.section().description().isBlank()) section.child(Ui.text(v.section().description()).style(Ui.TextStyle.MUTED));
         for (SettingsRegistry.SettingView s : v.settings()) section.child(control(settingId(v.key(), s.setting().id()), v.key(), s, registry));
         return section;

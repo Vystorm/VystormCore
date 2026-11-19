@@ -89,8 +89,12 @@ final class PanelScreens {
             @Override public Component close() { return lang.component(player, "menu.screen.close"); }
             @Override public Component page(int page, int pages) { return lang.component(player, "panel.screen.page", "page", page, "pages", pages); }
             @Override public Component scrollHint() { return lang.component(player, "panel.screen.scroll"); }
+            @Override public Component on() { return lang.component(player, "features.state-on"); }
+            @Override public Component off() { return lang.component(player, "features.state-off"); }
+            @Override public Component rows(int from, int to, int total) { return lang.component(player, "screen.list.position", "from", from, "to", to, "total", total); }
+            @Override public Component listHelp(String kind) { return lang.component(player, "screen.list.help-" + kind); }
         };
-        return PanelScreenLayout.layout(state.session.model, state.view, metrics, texts, state.status);
+        return PanelScreenLayout.layout(state.session.model, state.view, metrics, texts, state.status, PanelScreenLayout.listIds(state.session.doc));
     }
 
     private void handle(State state, ScreenInput input) {
@@ -181,6 +185,9 @@ final class PanelScreens {
             if (e.formId() != null) {
                 state.view.form.put(e.elementId(), new JsonPrimitive(text));
                 relayout(state);
+            } else if (e.number()) {
+                // number field shown as a list row: Core's check still tests range and step against what it sent
+                send(state, e.elementId(), KIND_CHANGE, numberJson(text));
             } else {
                 send(state, e.elementId(), e.search() ? KIND_SEARCH : KIND_CHANGE, new JsonPrimitive(text).toString());
             }
@@ -188,6 +195,18 @@ final class PanelScreens {
         Component title = DialogDowngrade.component(state.session.model.root().title());
         Vystorm.vystorm_core.main.getApi().dialogs().open(core, player, new DialogRequest(title, List.of(), List.of(field), List.of(apply),
                 Player::isOnline, () -> { }, lang.plain(player, "panel.dialog.close"), 2));
+    }
+
+    /** Typed text as a JSON number ({@code 2,5} counts as {@code 2.5}); anything else stays a string and is refused by the check. */
+    static String numberJson(String text) {
+        String t = text == null ? "" : text.strip().replace(',', '.');
+        try {
+            double v = Double.parseDouble(t);
+            if (Double.isFinite(v)) return new JsonPrimitive(v == Math.rint(v) && Math.abs(v) < 1e15 ? (Number) (long) v : (Number) v).toString();
+        } catch (NumberFormatException notANumber) {
+            // fall through
+        }
+        return new JsonPrimitive(t).toString();
     }
 
     private void send(State state, String elementId, int kind, String value) {

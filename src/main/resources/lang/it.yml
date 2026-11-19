@@ -741,6 +741,7 @@ features:
   restart: "vale dopo un riavvio"
   hint-overview: "<gray>Clicca un plugin · rotellina: scorri · pagina {page}/{pages}"
   hint-plugin: "<gray>Clicca una riga per cambiarla · passa sopra per i dettagli · pagina {page}/{pages}"
+  hint-list: "<gray>Clicca una riga per cambiarla · rotella: scorri · {position}"
   none: "<gray>Nessun plugin ha interruttori di funzione, oppure ti manca vystorm_core.config.<plugin>."
   unknown-plugin: "<red>{plugin} non ha interruttori di funzione, oppure non puoi configurarlo."
   ingame-only: "<gray>Gli interruttori di funzione si aprono in gioco. Plugin: {plugins}"
@@ -1284,8 +1285,14 @@ setup-flow:
   done: "<green>{plugin} è configurato. Tutto resta modificabile con <white>/vadmin config {plugin}</white>."
 
 screen:
+  list:
+    position: "da {from} a {to} di {total}"
+    help-number: "Clic sinistro: di più · clic destro: di meno"
+    help-choice: "Clic sinistro: successivo · clic destro: precedente"
+    help-type: "Clicca per scrivere un valore"
   inventory:
     hint: "<gray>Clic: come nella cassa · clic destro: clic destro · accovacciati o Chiudi: esci"
+    list-hint: "<gray>Clicca una riga · clic destro: clic destro · rotella: scorri · {position}"
     chest: "Cassa"
     chest-hint: "<gray>Mostra questo menu come una cassa normale: per inserire oggetti, shift-clic o gettare."
   settings:

@@ -65,6 +65,11 @@ public final class CoreApi {
          * second {@code register} of the same label by the same plugin after startup keeps the Paper node. @since 0.65.0
          */
         public static final String COMMAND_VISIBILITY = "command-visibility";
+        /**
+         * {@code Ui.Section.list()}: a panel section drawn as a settings list on Vystorm Screens (one full-width row per
+         * setting: name, value on the right, description under the name, the whole row clickable). @since 0.66.0
+         */
+        public static final String PANEL_LIST_LAYOUT = "panel-list-layout";
         /** Shared Bukkit/Spigot adapters, native persistence and portable client events. @since 0.51.0 */
         public static final String BUKKIT_COMPAT = "bukkit-compat";
         /** Cross-server network via a Velocity/BungeeCord hub: {@link #network()}, {@code /vnet}, server selector. @since 0.53.0 */
@@ -424,6 +429,7 @@ public final class CoreApi {
         since.put(Capability.PLACEHOLDERS, "0.65.0");
         since.put(Capability.FILE_MENUS, "0.65.0");
         since.put(Capability.COMMAND_VISIBILITY, "0.65.0");
+        since.put(Capability.PANEL_LIST_LAYOUT, "0.66.0");
         SINCE = Collections.unmodifiableMap(since);
     }
 

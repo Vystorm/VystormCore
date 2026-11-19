@@ -5,6 +5,7 @@ import Vystorm.vystorm_core.compat.PlatformCompat;
 import Vystorm.vystorm_core.lang.Lang;
 import Vystorm.vystorm_core.lang.Localization;
 import Vystorm.vystorm_core.main;
+import Vystorm.vystorm_core.screen.internal.InventoryListLayout;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -34,7 +35,9 @@ import org.bukkit.plugin.Plugin;
 final class ConfigMenu implements Listener {
     private static final int PER_PAGE = 45, PREVIOUS = 45, BACK = 49, NEXT = 53, LINE = 38, DESCRIPTION_LINES = 6;
     interface Click { void run(Player player, boolean right); }   // package-private for ConfigMenuClickTest
-    private record Entry(ItemStack icon, Click click) {}
+    /** How a slot looks in the list view of the screen (0.66.0): heading or row, name, value, description. */
+    record Row(boolean heading, Component name, Component value, Component description) {}
+    private record Entry(ItemStack icon, Click click, Row row) {}
     static final class Holder implements InventoryHolder {
         final UUID viewer; final ConfigEditorService.PluginState state;
         final Map<Integer, Click> actions = new HashMap<>();
@@ -63,50 +66,90 @@ final class ConfigMenu implements Listener {
             String name = state.owner.getName();
             List<Component> lore = new ArrayList<>();
             int changed = service.categories(state).stream().flatMap(c -> c.root().all().stream().map(path -> service.option(state, c.file(), path))).mapToInt(o -> o.changed() ? 1 : 0).sum();
-            lore.add(lang().component(p, "config-menu.plugin-lore", "changed", changed));
-            if (FirstRunSetup.pending(name)) lore.add(lang().component(p, "config-menu.setup-open"));
-            entries.add(new Entry(item(Material.BOOK, Component.text(name), lore, false), (v, r) -> plugin(v, state, 0)));
+            Component changedText = lang().component(p, "config-menu.plugin-lore", "changed", changed);
+            lore.add(changedText);
+            boolean pending = FirstRunSetup.pending(name);
+            if (pending) lore.add(lang().component(p, "config-menu.setup-open"));
+            entries.add(new Entry(item(Material.BOOK, Component.text(name), lore, false), (v, r) -> plugin(v, state, 0),
+                    new Row(false, Component.text(name), changedText, pending ? lang().component(p, "config-menu.setup-open") : null)));
         }
         Map<Integer, Entry> footer = new HashMap<>();
-        footer.put(BACK, new Entry(button(p, Material.BARRIER, "close"), (v, r) -> v.closeInventory()));
-        footer.put(47, new Entry(button(p, Material.CLOCK, "history"), (v, r) -> { v.closeInventory(); service.sendHistory(v, null, 1); }));
-        if (FirstRunSetup.anyPending(p)) footer.put(51, new Entry(button(p, Material.NETHER_STAR, "setup"), (v, r) -> FirstRunSetup.open(v, null)));
+        footer.put(BACK, button(p, Material.BARRIER, "close", (v, r) -> v.closeInventory()));
+        footer.put(47, button(p, Material.CLOCK, "history", (v, r) -> { v.closeInventory(); service.sendHistory(v, null, 1); }));
+        if (FirstRunSetup.anyPending(p)) footer.put(51, button(p, Material.NETHER_STAR, "setup", (v, r) -> FirstRunSetup.open(v, null)));
         show(p, null, lang().component(p, "config-menu.overview-title"), entries, page, next -> overview(p, next), footer);
     }
 
+    /**
+     * A plugin's page: every category as a heading (click: the category alone), under it the category's own values with
+     * their current value and description, then its sections as rows to open (0.66.0; before, only the categories).
+     */
     void plugin(Player p, ConfigEditorService.PluginState state, int page) {
         List<Entry> entries = new ArrayList<>();
+        Runnable refresh = () -> plugin(p, state, page);
+        String name = state.owner.getName();
         for (var category : service.categories(state)) {
+            String title = shortTitle(category.title(), name);
             List<Component> lore = new ArrayList<>(description(category.description()));
             int changed = (int) category.root().all().stream().map(path -> service.option(state, category.file(), path)).filter(ConfigEditorService.OptionView::changed).count();
-            lore.add(lang().component(p, "config-menu.category-lore", "count", category.root().size(), "changed", changed));
+            Component count = lang().component(p, "config-menu.category-lore", "count", category.root().size(), "changed", changed);
+            lore.add(count);
             entries.add(new Entry(item(Material.CHEST, Component.text(category.title()), lore, changed > 0),
-                    (v, r) -> folder(v, state, category.file(), category.title(), category.root(), 0, () -> plugin(v, state, page))));
+                    (v, r) -> folder(v, state, category.file(), category.title(), category.root(), 0, () -> plugin(v, state, page)),
+                    new Row(true, Component.text(title), count, null)));
+            contents(p, state, category.file(), category.title(), title, category.root(), entries, refresh);
         }
-        String name = state.owner.getName();
         Map<Integer, Entry> footer = new HashMap<>();
-        footer.put(BACK, new Entry(button(p, Material.DARK_OAK_DOOR, "back"), (v, r) -> overview(v, 0)));
-        footer.put(47, new Entry(button(p, Material.COMPASS, "search"), (v, r) -> search(v, state)));
-        footer.put(48, new Entry(button(p, Material.HOPPER, "only-changed"), (v, r) -> changed(v, state, 0)));
-        footer.put(50, new Entry(button(p, Material.CLOCK, "history"), (v, r) -> { v.closeInventory(); service.sendHistory(v, name, 1); }));
-        if (FirstRunSetup.setupOn() && FirstRunSetup.has(name)) footer.put(51, new Entry(button(p, Material.NETHER_STAR, "setup"), (v, r) -> FirstRunSetup.open(v, name)));
+        footer.put(BACK, button(p, Material.DARK_OAK_DOOR, "back", (v, r) -> overview(v, 0)));
+        footer.put(47, button(p, Material.COMPASS, "search", (v, r) -> search(v, state)));
+        footer.put(48, button(p, Material.HOPPER, "only-changed", (v, r) -> changed(v, state, 0)));
+        footer.put(50, button(p, Material.CLOCK, "history", (v, r) -> { v.closeInventory(); service.sendHistory(v, name, 1); }));
+        if (FirstRunSetup.setupOn() && FirstRunSetup.has(name)) footer.put(51, button(p, Material.NETHER_STAR, "setup", (v, r) -> FirstRunSetup.open(v, name)));
         show(p, state, lang().component(p, "config-menu.plugin-title", "plugin", name), entries, page, next -> plugin(p, state, next), footer);
+    }
+
+    /**
+     * The own values of {@code folder} (item names "{@code heading} › value" so the chest says where they belong), then
+     * one row per sub-section that opens it.
+     */
+    private void contents(Player p, ConfigEditorService.PluginState state, String file, String title, String heading, ConfigTree.Folder folder,
+                          List<Entry> entries, Runnable refresh) {
+        for (String path : folder.options()) entries.add(option(p, state, service.option(state, file, path), refresh, heading));
+        for (var sub : folder.folders()) entries.add(folderEntry(p, state, file, title, sub, false, refresh));
+    }
+
+    /** A sub-section: as a heading (its values follow) or as a row to open it. */
+    private Entry folderEntry(Player p, ConfigEditorService.PluginState state, String file, String title, ConfigTree.Folder sub, boolean heading, Runnable back) {
+        String name = ConfigEditorService.human(sub.name());
+        int changed = (int) sub.all().stream().map(path -> service.option(state, file, path)).filter(ConfigEditorService.OptionView::changed).count();
+        String comment = service.comment(state, file, sub.path());
+        List<Component> lore = new ArrayList<>(description(comment));
+        Component count = lang().component(p, "config-menu.category-lore", "count", sub.size(), "changed", changed);
+        lore.add(count);
+        Component shownName = Component.text(heading ? name : name + " ›");
+        return new Entry(item(Material.CHEST, Component.text(name), lore, changed > 0), (v, r) -> folder(v, state, file, title + " · " + name, sub, 0, back),
+                new Row(heading, shownName, count, heading || comment == null || comment.isBlank() ? null : Component.text(comment)));
     }
 
     private void folder(Player p, ConfigEditorService.PluginState state, String file, String title, ConfigTree.Folder folder, int page, Runnable back) {
         Runnable refresh = () -> folder(p, state, file, title, folder, page, back);
         List<Entry> entries = new ArrayList<>();
+        String own = title.contains(" · ") ? title.substring(title.lastIndexOf(" · ") + 3) : title;
+        // 0.66.0: the section's own values first, then every sub-section as a heading with its values under it
+        for (String path : folder.options()) entries.add(option(p, state, service.option(state, file, path), refresh, own));
         for (var sub : folder.folders()) {
-            String name = ConfigEditorService.human(sub.name());
-            int changed = (int) sub.all().stream().map(path -> service.option(state, file, path)).filter(ConfigEditorService.OptionView::changed).count();
-            List<Component> lore = new ArrayList<>(description(service.comment(state, file, sub.path())));
-            lore.add(lang().component(p, "config-menu.category-lore", "count", sub.size(), "changed", changed));
-            entries.add(new Entry(item(Material.CHEST, Component.text(name), lore, changed > 0), (v, r) -> folder(v, state, file, title + " · " + name, sub, 0, refresh)));
+            entries.add(folderEntry(p, state, file, title, sub, true, refresh));
+            contents(p, state, file, title + " · " + ConfigEditorService.human(sub.name()), ConfigEditorService.human(sub.name()), sub, entries, refresh);
         }
-        for (String path : folder.options()) entries.add(option(p, state, service.option(state, file, path), refresh));
         Map<Integer, Entry> footer = new HashMap<>();
-        footer.put(BACK, new Entry(button(p, Material.DARK_OAK_DOOR, "back"), (v, r) -> back.run()));
+        footer.put(BACK, button(p, Material.DARK_OAK_DOOR, "back", (v, r) -> back.run()));
         show(p, state, Component.text(shorten(title)), entries, page, next -> folder(p, state, file, title, folder, next, back), footer);
+    }
+
+    /** A category title without the plugin's name in front ("VystormChat · Showcase" → "Showcase"). */
+    static String shortTitle(String title, String plugin) {
+        String prefix = plugin + " · ";
+        return title.startsWith(prefix) && title.length() > prefix.length() ? title.substring(prefix.length()) : title;
     }
 
     private void search(Player p, ConfigEditorService.PluginState state) {
@@ -127,10 +170,10 @@ final class ConfigMenu implements Listener {
             var o = service.option(state, category.file(), path);
             if (changedOnly && !o.changed()) continue;
             if (!query.isEmpty() && !matches(p, o, query)) continue;
-            entries.add(option(p, state, o, refresh));
+            entries.add(option(p, state, o, refresh, shortTitle(category.title(), state.owner.getName())));
         }
         Map<Integer, Entry> footer = new HashMap<>();
-        footer.put(BACK, new Entry(button(p, Material.DARK_OAK_DOOR, "back"), (v, r) -> plugin(v, state, 0)));
+        footer.put(BACK, button(p, Material.DARK_OAK_DOOR, "back", (v, r) -> plugin(v, state, 0)));
         if (entries.isEmpty()) lang().send(p, "config-menu.no-results");
         show(p, state, title, entries, page, next -> results(p, state, title, query, changedOnly, next), footer);
     }
@@ -140,9 +183,16 @@ final class ConfigMenu implements Listener {
 
     // ------------------------------------------------------------------ one option
 
-    private Entry option(Player p, ConfigEditorService.PluginState state, ConfigEditorService.OptionView o, Runnable refresh) {
-        List<Component> lore = new ArrayList<>(description(o.description() == null ? null : Localization.get().resolve(p, o.description())));
+    /**
+     * One value. Chest item: name "{@code heading} › label" (the chest has no headings), lore: current value, the
+     * description, default, restart note and click hints. List row: label, current value (ON/OFF in colour, gold when
+     * changed), description with the default when changed and the restart note.
+     */
+    private Entry option(Player p, ConfigEditorService.PluginState state, ConfigEditorService.OptionView o, Runnable refresh, String heading) {
+        String description = o.description() == null ? null : Localization.get().resolve(p, o.description());
+        List<Component> lore = new ArrayList<>();
         lore.add(lang().component(p, "config-menu.current", "value", ConfigHistory.show(o.current(), 60)));
+        lore.addAll(description(description));
         lore.add(lang().component(p, "config-menu.default", "value", ConfigHistory.show(o.def(), 60)));
         if (o.activation() == SettingPolicy.Activation.RESTART) lore.add(lang().component(p, "config-menu.restart"));
         lore.add(lang().component(p, switch (o.kind()) {
@@ -151,14 +201,29 @@ final class ConfigMenu implements Listener {
             case FILE_ONLY -> "config-menu.hint-file";
         }));
         if (o.changed() && o.kind() != ConfigEditorService.OptionKind.FILE_ONLY) lore.add(lang().component(p, "config-menu.hint-reset"));
-        Component name = Component.text(Localization.get().resolve(p, o.label()));
+        String label = Localization.get().resolve(p, o.label());
+        Component name = Component.text(heading == null || heading.isBlank() ? label : heading + " › " + label);
         return new Entry(item(material(o), name, lore, o.changed()), (v, right) -> {
             if (right) {
                 if (o.changed() && o.kind() != ConfigEditorService.OptionKind.FILE_ONLY) { service.reset(v, state, o.file(), o.path()); refresh.run(); }
                 return;
             }
             edit(v, state, o, refresh);
-        });
+        }, new Row(false, Component.text(label), value(p, o), rowDescription(p, o, description)));
+    }
+
+    /** The current value as the list shows it: ON/OFF for switches, else the value, gold when it differs from the default. */
+    static Component value(Player p, ConfigEditorService.OptionView o) {
+        if (o.current() instanceof Boolean b) return lang().component(p, b ? "features.state-on" : "features.state-off");
+        return Component.text(ConfigHistory.show(o.current(), 48)).color(net.kyori.adventure.text.format.TextColor.color(o.changed() ? 0xE3B04B : 0xF2F2F2));
+    }
+
+    private static Component rowDescription(Player p, ConfigEditorService.OptionView o, String description) {
+        List<String> parts = new ArrayList<>();
+        if (description != null && !description.isBlank()) parts.add(description.strip());
+        if (o.changed()) parts.add(lang().plain(p, "config-menu.default", "value", ConfigHistory.show(o.def(), 40)));
+        if (o.activation() == SettingPolicy.Activation.RESTART) parts.add(lang().plain(p, "config-menu.restart"));
+        return parts.isEmpty() ? null : Component.text(String.join(" · ", parts));
     }
     private static Material material(ConfigEditorService.OptionView o) {
         if (o.kind() == ConfigEditorService.OptionKind.STRUCTURE) return Material.BUNDLE;
@@ -223,10 +288,15 @@ final class ConfigMenu implements Listener {
             int index = i;
             Map<String, Object> snapshot = list.get(i);
             List<Component> lore = new ArrayList<>();
-            StructureOps.fields(snapshot).entrySet().stream().limit(8).forEach(e -> lore.add(Component.text(e.getKey() + ": " + ConfigHistory.show(e.getValue(), LINE)).color(net.kyori.adventure.text.format.NamedTextColor.GRAY)));
+            Map<String, Object> fields = StructureOps.fields(snapshot);
+            fields.entrySet().stream().limit(8).forEach(e -> lore.add(Component.text(e.getKey() + ": " + ConfigHistory.show(e.getValue(), LINE)).color(net.kyori.adventure.text.format.NamedTextColor.GRAY)));
             lore.add(lang().component(p, "config-menu.entry-open"));
             if (list.size() > 1) lore.add(lang().component(p, "config-menu.entry-delete"));
-            entries.add(new Entry(item(Material.PAPER, lang().component(p, "config-menu.entry-name", "index", i + 1), lore, false), (v, right) -> {
+            // 0.66.0: "Entry 2: <first value>" instead of an anonymous "Entry 2"; the list shows the other fields under it
+            String first = fields.isEmpty() ? "" : ConfigHistory.show(fields.values().iterator().next(), 32);
+            String entryName = lang().plain(p, "config-menu.entry-name", "index", i + 1) + (first.isEmpty() ? "" : ": " + first);
+            String summary = String.join(" · ", fields.entrySet().stream().limit(6).map(e -> ConfigEditorService.human(e.getKey()) + ": " + ConfigHistory.show(e.getValue(), 24)).toList());
+            entries.add(new Entry(item(Material.PAPER, Component.text(entryName), lore, false), (v, right) -> {
                 if (!right) { entry(v, state, o, index, snapshot, refresh); return; }
                 if (service.structure(state, o.file(), o.path()).size() < 2) return;
                 v.closeInventory();
@@ -236,11 +306,12 @@ final class ConfigMenu implements Listener {
                     else lang().send(v, "config-menu.stale");
                     refresh.run();
                 }, refresh, x -> service.allowed(state, x));
-            }));
+            }, new Row(false, Component.text(entryName), Component.text("›").color(net.kyori.adventure.text.format.TextColor.color(0xE3B04B)),
+                    summary.isEmpty() ? null : Component.text(summary))));
         }
         Map<Integer, Entry> footer = new HashMap<>();
-        footer.put(BACK, new Entry(button(p, Material.DARK_OAK_DOOR, "back"), (v, r) -> back.run()));
-        if (!list.isEmpty()) footer.put(51, new Entry(button(p, Material.EMERALD, "add"), (v, r) -> {
+        footer.put(BACK, button(p, Material.DARK_OAK_DOOR, "back", (v, r) -> back.run()));
+        if (!list.isEmpty()) footer.put(51, button(p, Material.EMERALD, "add", (v, r) -> {
             var now = service.structure(state, o.file(), o.path());
             if (!now.isEmpty()) service.setStructure(v, state, o.file(), o.path(), StructureOps.add(now, now.getLast()));
             refresh.run();
@@ -265,10 +336,11 @@ final class ConfigMenu implements Listener {
                     if (parsed == null) { lang().send(v, "config-menu.invalid-value"); entry(v, state, o, index, snapshot, back); }
                     else saveField(v, state, o, index, snapshot, key, parsed, back);
                 }, () -> entry(v, state, o, index, snapshot, back));
-            }));
+            }, new Row(false, Component.text(ConfigEditorService.human(key)),
+                    value instanceof Boolean b ? lang().component(p, b ? "features.state-on" : "features.state-off") : Component.text(ConfigHistory.show(value, 48)), null)));
         }
         Map<Integer, Entry> footer = new HashMap<>();
-        footer.put(BACK, new Entry(button(p, Material.DARK_OAK_DOOR, "back"), (v, r) -> back.run()));
+        footer.put(BACK, button(p, Material.DARK_OAK_DOOR, "back", (v, r) -> back.run()));
         show(p, state, lang().component(p, "config-menu.entry-name", "index", index + 1), entries, 0, next -> {}, footer);
     }
     private void saveField(Player p, ConfigEditorService.PluginState state, ConfigEditorService.OptionView o, int index, Map<String, Object> snapshot, String field, Object value, Runnable back) {
@@ -290,13 +362,26 @@ final class ConfigMenu implements Listener {
             holder.inventory.setItem(slot, entries.get(i).icon());
             holder.actions.put(slot, entries.get(i).click());
         }
-        footer.forEach((slot, entry) -> { holder.inventory.setItem(slot, entry.icon()); holder.actions.put(slot, entry.click()); });
-        if (page > 0) { holder.inventory.setItem(PREVIOUS, button(p, Material.ARROW, "previous")); holder.actions.put(PREVIOUS, (v, r) -> reopen.accept(page - 1)); }
-        if (page + 1 < pages) { holder.inventory.setItem(NEXT, button(p, Material.ARROW, "next")); holder.actions.put(NEXT, (v, r) -> reopen.accept(page + 1)); }
+        Map<Integer, Entry> buttons = new java.util.TreeMap<>(footer);
+        if (page > 0) buttons.put(PREVIOUS, button(p, Material.ARROW, "previous", (v, r) -> reopen.accept(page - 1)));
+        if (page + 1 < pages) buttons.put(NEXT, button(p, Material.ARROW, "next", (v, r) -> reopen.accept(page + 1)));
+        buttons.forEach((slot, entry) -> { holder.inventory.setItem(slot, entry.icon()); holder.actions.put(slot, entry.click()); });
+        // 0.66.0: on a screen the page is a settings list (name, value, description), the footer slots a button bar
+        List<InventoryListLayout.Item> rows = new ArrayList<>();
+        for (int i = page * PER_PAGE, slot = 0; i < Math.min(entries.size(), (page + 1) * PER_PAGE); i++, slot++) {
+            Row row = entries.get(i).row();
+            if (row != null) rows.add(new InventoryListLayout.Item(slot, row.heading(), row.name(), row.value(), row.description()));
+        }
+        List<InventoryListLayout.Button> bar = new ArrayList<>();
+        buttons.forEach((slot, entry) -> bar.add(new InventoryListLayout.Button(slot, entry.row().name())));
+        String key = net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer.plainText().serialize(title) + "#" + page;
+        InventoryListLayout.show(holder.inventory, new InventoryListLayout.Spec(key, rows, bar));
         p.openInventory(holder.inventory);
     }
-    private ItemStack button(Player p, Material material, String key) {
-        return item(material, lang().component(p, "config-menu." + key), List.of(), false);
+    /** A footer button: item for the chest, label for the screen's button bar. */
+    private Entry button(Player p, Material material, String key, Click click) {
+        Component label = lang().component(p, "config-menu." + key);
+        return new Entry(item(material, label, List.of(), false), click, new Row(false, label, null, null));
     }
     private static List<Component> description(String text) {
         List<Component> out = new ArrayList<>();

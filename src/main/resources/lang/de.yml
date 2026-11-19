@@ -738,6 +738,7 @@ features:
   restart: "gilt nach einem Neustart"
   hint-overview: "<gray>Plugin anklicken · Mausrad: blättern · Seite {page}/{pages}"
   hint-plugin: "<gray>Zeile anklicken zum Umschalten · darüberfahren für Details · Seite {page}/{pages}"
+  hint-list: "<gray>Zeile anklicken zum Umschalten · Mausrad: blättern · {position}"
   none: "<gray>Kein Plugin hat Feature-Schalter, oder dir fehlt vystorm_core.config.<plugin>."
   unknown-plugin: "<red>{plugin} hat keine Feature-Schalter, oder du darfst es nicht einstellen."
   ingame-only: "<gray>Feature-Schalter öffnen sich im Spiel. Plugins: {plugins}"
@@ -1277,8 +1278,14 @@ setup-flow:
   done: "<green>{plugin} ist eingerichtet. Alle Werte bleiben unter <white>/vadmin config {plugin}</white> änderbar."
 
 screen:
+  list:
+    position: "{from} bis {to} von {total}"
+    help-number: "Linksklick: mehr · Rechtsklick: weniger"
+    help-choice: "Linksklick: nächste · Rechtsklick: vorige"
+    help-type: "Klicken, um einen Wert einzutippen"
   inventory:
     hint: "<gray>Klick: wie in der Kiste · Rechtsklick: Rechtsklick · Schleichen oder Schließen: verlassen"
+    list-hint: "<gray>Zeile anklicken · Rechtsklick: Rechtsklick · Mausrad: blättern · {position}"
     chest: "Kiste"
     chest-hint: "<gray>Dieses Menü als normale Kiste zeigen: zum Hineinlegen, Shift-Klicken oder Wegwerfen."
   settings:

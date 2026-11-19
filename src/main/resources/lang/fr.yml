@@ -745,6 +745,7 @@ features:
   restart: "s’applique après un redémarrage"
   hint-overview: "<gray>Cliquez sur un plugin · molette : défiler · page {page}/{pages}"
   hint-plugin: "<gray>Cliquez sur une ligne pour basculer · survolez pour les détails · page {page}/{pages}"
+  hint-list: "<gray>Cliquez sur une ligne pour basculer · molette : défiler · {position}"
   none: "<gray>Aucun plugin n’a d’interrupteurs de fonctions, ou il vous manque vystorm_core.config.<plugin>."
   unknown-plugin: "<red>{plugin} n’a pas d’interrupteurs de fonctions, ou vous ne pouvez pas le configurer."
   ingame-only: "<gray>Les interrupteurs de fonctions s’ouvrent en jeu. Plugins : {plugins}"
@@ -1289,8 +1290,14 @@ setup-flow:
   done: "<green>{plugin} est configuré. Tout reste modifiable via <white>/vadmin config {plugin}</white>."
 
 screen:
+  list:
+    position: "{from} à {to} sur {total}"
+    help-number: "Clic gauche : plus · clic droit : moins"
+    help-choice: "Clic gauche : suivant · clic droit : précédent"
+    help-type: "Cliquez pour saisir une valeur"
   inventory:
     hint: "<gray>Clic : comme dans le coffre · clic droit : clic droit · s'accroupir ou Fermer : quitter"
+    list-hint: "<gray>Cliquez sur une ligne · clic droit : clic droit · molette : défiler · {position}"
     chest: "Coffre"
     chest-hint: "<gray>Afficher ce menu comme un coffre normal : pour déposer des objets, maj-clic ou jeter."
   settings:

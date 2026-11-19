@@ -741,6 +741,7 @@ features:
   restart: "vale após reiniciar"
   hint-overview: "<gray>Clique em um plugin · roda do mouse: rolar · página {page}/{pages}"
   hint-plugin: "<gray>Clique em uma linha para alternar · passe o mouse para detalhes · página {page}/{pages}"
+  hint-list: "<gray>Clique em uma linha para alternar · roda do mouse: rolar · {position}"
   none: "<gray>Nenhum plugin tem chaves de recursos, ou falta vystorm_core.config.<plugin>."
   unknown-plugin: "<red>{plugin} não tem chaves de recursos, ou você não pode configurá-lo."
   ingame-only: "<gray>As chaves de recursos abrem no jogo. Plugins: {plugins}"
@@ -1280,8 +1281,14 @@ setup-flow:
   done: "<green>{plugin} está configurado. Tudo continua editável em <white>/vadmin config {plugin}</white>."
 
 screen:
+  list:
+    position: "{from} a {to} de {total}"
+    help-number: "Clique esquerdo: mais · clique direito: menos"
+    help-choice: "Clique esquerdo: próximo · clique direito: anterior"
+    help-type: "Clique para digitar um valor"
   inventory:
     hint: "<gray>Clique: como no baú · clique direito: clique direito · agachar ou Fechar: sair"
+    list-hint: "<gray>Clique em uma linha · clique direito: clique direito · roda do mouse: rolar · {position}"
     chest: "Baú"
     chest-hint: "<gray>Mostrar este menu como um baú normal: para colocar itens, shift-clique ou soltar."
   settings:

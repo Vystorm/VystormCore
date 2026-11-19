@@ -146,6 +146,16 @@ public final class Ui {
         Section(Object title) { super("section", null); text("title", title); }
         public Section variant(Variant v) { fields.put("variant", v.name().toLowerCase(Locale.ROOT)); return this; }
         public Section collapsible(boolean collapsed) { fields.put("collapsible", true); fields.put("collapsed", collapsed); return this; }
+        /**
+         * List layout for settings: on Vystorm Screens the section's title becomes a full-width heading row and every
+         * toggle, slider, number field, choice, text field and button in it one full-width row: the full name on the
+         * left, the current value on the right (ON/OFF in colour, the number, the chosen option, the text), the
+         * description or first tooltip line under the name, and the whole row as the click target (toggle: flip; choice:
+         * next, right click previous; slider: one step up, right click down; number and text field: typing dialog;
+         * button: its action). Other elements keep their normal look. The client mod and the web page show a normal
+         * section. Core's settings screen uses it for every section, also those of other plugins. @since 0.66.0
+         */
+        public Section list() { fields.put("layout", "list"); return this; }
     }
 
     public static final class Box extends Container<Box> {

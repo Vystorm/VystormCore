@@ -216,6 +216,61 @@ class SettingsPanelsTest {
         assertEquals("HUD", ((PanelNode.Toggle) after.find("s:example:display/hud")).label().plainText());
     }
 
+    /**
+     * 0.66.0: a section another plugin registered (here with Core's player preferences, as Chat and Winter do) is a
+     * settings list on screens without any change on the plugin side, and a click on its row saves through the same path.
+     */
+    @Test void givenContributedPrefsSection_whenLaidOutAsScreen_thenItIsAListAndARowClickSaves() {
+        Plugin chat = mock(Plugin.class);
+        when(chat.isEnabled()).thenReturn(true);
+        when(chat.getName()).thenReturn("VystormChat");
+        boolean[] bubbles = { true };
+        LinkedHashMap<String, String> sounds = new LinkedHashMap<>();
+        sounds.put("ping", "Ping");
+        sounds.put("bell", "Bell");
+        String[] sound = { "ping" };
+        registry.register(chat, SettingsSection.player("chat", "Chat", "Your chat",
+                List.of(Setting.toggle("bubbles", "Speech bubbles above your head", "Shows what you write above you for a few seconds", p -> bubbles[0], (p, v) -> { bubbles[0] = v; return null; }),
+                        Setting.choice("sound", "Mention sound", "Sound when someone writes your name", sounds, p -> sound[0], (p, v) -> { sound[0] = v; return null; }))));
+        PanelWriter.Written w = written("", new HashMap<>());
+        PanelDocument d = PanelSchema.document(w.document(), Deadline.NONE);
+        java.util.Set<String> lists = PanelScreenLayout.listIds(w.document());
+        assertEquals(2, lists.size(), "every section is a list: " + lists);
+        PanelScreenLayout.Result r = PanelScreenLayout.layout(d, new PanelScreenLayout.View(), PanelScreenLayout.metrics(d.root(), 2.49, 1.4, 1.0),
+                PanelScreenLayoutTest.TEXTS, List.of(), lists);
+        List<String> texts = r.layout().widgets().stream().map(x -> x.text() instanceof Component c ? PanelScreenLayout.plain(c) : String.valueOf(x.text())).toList();
+        for (String s : List.of("Chat", "Speech bubbles above your head", "ON", "Shows what you write above you for a few seconds", "Mention sound", "Ping", "Sound when someone writes your name"))
+            assertTrue(texts.contains(s), "shows " + s + " in " + texts);
+        String id = SettingsPanels.settingId("vystormchat:chat", "bubbles");
+        PanelScreenLayout.Act.Action click = r.acts().values().stream().filter(a -> a instanceof PanelScreenLayout.Act.Action x && x.elementId().equals(id))
+                .map(PanelScreenLayout.Act.Action.class::cast).findFirst().orElseThrow();
+        Object value = ActionCheck.check(d, click.elementId(), click.kind(), click.value());
+        assertTrue(w.handlers().get(id).handle(action(), value).success());
+        assertFalse(bubbles[0], "the row click switched it off through the plugin's own setter");
+        String soundId = SettingsPanels.settingId("vystormchat:chat", "sound");
+        PanelScreenLayout.Act.Action cycle = r.acts().values().stream().filter(a -> a instanceof PanelScreenLayout.Act.Action x && x.elementId().equals(soundId))
+                .map(PanelScreenLayout.Act.Action.class::cast).findFirst().orElseThrow();
+        assertTrue(w.handlers().get(soundId).handle(action(), ActionCheck.check(d, soundId, cycle.kind(), cycle.alt())).success());
+        assertEquals("bell", sound[0], "right click steps back to the last option");
+    }
+
+    @Test void givenScreenOpener_whenSettingsOpenedThroughTheApi_thenTheScreenComesFirstAndDialogsOnlyWithout() {
+        java.util.List<String> opened = new java.util.ArrayList<>();
+        boolean[] screen = { true };
+        registry.screenOpener((p, arg) -> { opened.add(arg); return screen[0]; });
+        registry.openOverview(player);
+        registry.openScope(player, Vystorm.vystorm_core._uiMethods.settings.SettingScope.SERVER);
+        assertTrue(registry.openSection(player, "display"));
+        assertEquals(List.of("", "server", "example:display"), opened);
+        screen[0] = false;
+        DialogInterface dialogs = mock(DialogInterface.class);
+        SettingsRegistry withDialogs = new SettingsRegistry(mock(Plugin.class), () -> dialogs, p -> { });
+        withDialogs.register(displayOwner, display);
+        withDialogs.screenOpener((p, arg) -> false);
+        assertTrue(withDialogs.openSection(player, "example:display"));
+        verify(dialogs).open(any(Plugin.class), eq(player), any(Vystorm.vystorm_core.compat.dialog.DialogRequest.class));
+    }
+
     @Test void givenUnfitKeys_whenIdBuilt_thenStableHashedIdWithinTheIdRules() {
         String a = SettingsPanels.settingId("Some Plugin:Weird Section", "camelCaseSetting");
         assertEquals(a, SettingsPanels.settingId("Some Plugin:Weird Section", "camelCaseSetting"));

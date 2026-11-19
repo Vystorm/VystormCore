@@ -63,6 +63,9 @@ public final class InventoryScreens implements Listener {
         InventoryScreenLayout.Result result;
         int hash;
         boolean leaving;
+        /** List view (0.66.0): first shown row and the key of the page it belongs to. */
+        int offset;
+        String listKey;
         Mirror(Player player) { this.player = player; }
     }
 
@@ -80,6 +83,8 @@ public final class InventoryScreens implements Listener {
     public static void keepAsChest(Inventory inventory) { if (inventory != null) synchronized (REAL) { REAL.add(inventory); } }
 
     static boolean keptAsChest(Inventory inventory) { synchronized (REAL) { return REAL.contains(inventory); } }
+
+    private static InventoryListLayout.Spec list(Inventory inventory) { return InventoryListLayout.of(inventory); }
 
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     public void onOpen(InventoryOpenEvent event) {
@@ -161,6 +166,12 @@ public final class InventoryScreens implements Listener {
                 if (InventoryScreenLayout.CHEST.equals(click.widgetId())) { if (isOpen(mirror)) leave(mirror, true); else mirror.screen.close(); return; }
                 int slot = InventoryScreenLayout.slotOf(click.widgetId());
                 if (slot >= 0) click(mirror, slot, click.right());
+            }
+            case ScreenInput.Scroll scroll -> {
+                InventoryListLayout.Spec spec = list(mirror.top);
+                if (spec == null || mirror.screen == null) return;
+                int next = InventoryListLayout.clamp(spec, Screens.of(core).profile(mirror.player), mirror.offset + scroll.delta() * 3);
+                if (next != mirror.offset) { mirror.offset = next; refresh(mirror, true); }
             }
             case ScreenInput.Hover hover -> {
                 if (mirror.result == null || mirror.screen == null) return;
@@ -280,6 +291,18 @@ public final class InventoryScreens implements Listener {
 
     private InventoryScreenLayout.Result layout(Mirror mirror) {
         Player player = mirror.player;
+        InventoryListLayout.Spec spec = list(mirror.top);
+        if (spec != null) {
+            var lang = Localization.get().core();
+            ScreenProfile profile = Screens.of(core).profile(player);
+            if (!spec.key().equals(mirror.listKey)) { mirror.offset = 0; mirror.listKey = spec.key(); }   // another page: from the top
+            mirror.offset = InventoryListLayout.clamp(spec, profile, mirror.offset);
+            return InventoryListLayout.layout(title(player), spec, profile, mirror.offset, lang.component(player, "menu.screen.close"),
+                    lang.component(player, "screen.inventory.chest"), lang.component(player, "screen.inventory.chest-hint"),
+                    (from, to, total) -> lang.component(player, "screen.list.position", "from", from, "to", to, "total", total),
+                    position -> lang.component(player, "screen.inventory.list-hint", "position", net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer.plainText().serialize(position)));
+        }
+        mirror.listKey = null;
         ItemStack[] contents = mirror.top.getContents();
         List<InventoryScreenLayout.Slot> slots = new ArrayList<>();
         for (int i = 0; i < contents.length; i++) slots.add(slot(i, contents[i]));
