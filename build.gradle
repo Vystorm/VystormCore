@@ -4,7 +4,7 @@ plugins {
 }
 
 group = 'Vystorm'
-version = '0.66.1-Vystorm-Core-26.2'
+version = '0.66.2-Vystorm-Core-26.2'
 
 sourceSets {
     main {

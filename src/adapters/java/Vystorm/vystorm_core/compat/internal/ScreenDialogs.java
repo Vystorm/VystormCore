@@ -58,6 +58,16 @@ public final class ScreenDialogs implements Vystorm.vystorm_core._uiMethods.dial
     @Override public void open(Plugin owner, Player player, Vystorm.vystorm_core._uiMethods.dialog.DialogRequest request) { delegate.open(owner, player, request); }
     @Override public void close(Player player) { closeScreen(player.getUniqueId()); delegate.close(player); }
     @Override public void removeAll(Plugin owner) { delegate.removeAll(owner); }
+    // 0.66.2: the inherited defaults build Paper dialog types (NoClassDefFoundError on Spigot and Paper 1.20.6); the
+    // wrapped handler knows the platform (native dialog or chat) and builds the same request as before on Paper.
+    @Override public void prompt(Plugin owner, Player player, String title, String question, String initial,
+                                 java.util.function.Consumer<String> submit, Runnable cancel, java.util.function.Predicate<Player> valid) {
+        delegate.prompt(owner, player, title, question, initial, submit, cancel, valid);
+    }
+    @Override public void confirm(Plugin owner, Player player, String title, String message,
+                                  Runnable submit, Runnable cancel, java.util.function.Predicate<Player> valid) {
+        delegate.confirm(owner, player, title, message, submit, cancel, valid);
+    }
     @Override public void clear() { for (UUID id : List.copyOf(open.keySet())) closeScreen(id); delegate.clear(); }
     @Override public void handle(Player player, net.kyori.adventure.key.Key key, io.papermc.paper.dialog.DialogResponseView response) { delegate.handle(player, key, response); }
 

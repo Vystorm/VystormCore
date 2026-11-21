@@ -55,11 +55,9 @@ public final class ScreenListener implements Listener {
     @EventHandler(priority = EventPriority.LOWEST)
     public void scroll(PlayerItemHeldEvent e) {
         if (!runtime().hasSession(e.getPlayer())) return;
-        int delta = e.getNewSlot() - e.getPreviousSlot();
-        if (delta > 4) delta -= 9;
-        if (delta < -4) delta += 9;
         e.setCancelled(true);
-        runtime().onScroll(e.getPlayer(), Integer.signum(delta));
+        // 0.66.2: the real number of notches (a fast spin jumps several slots), added up per tick in the runtime
+        runtime().onWheel(e.getPlayer(), e.getPreviousSlot(), e.getNewSlot());
     }
 
     @EventHandler(priority = EventPriority.LOWEST)

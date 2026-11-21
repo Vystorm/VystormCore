@@ -195,6 +195,8 @@ private void startScreens() {
             p -> PlayerPrefs.bool(this, p, "screen.classic", false),
             task -> getServer().getScheduler().runTaskLater(this, task, 2L));
     runtime.useMaps(new ScreenMapFrames.Packets());
+    // 0.66.2: the wheel notches of one tick become one Scroll and one relayout
+    runtime.coalesceWheel(task -> getServer().getScheduler().runTask(this, task));
     // 0.65.1: without Core's pack applied (declined, failed download or reload, not sent) screens fall back to the classic menu
     runtime.requirePack(main::packApplied);
     runtime.mapsDrawableFor(main::mapWidgetsDrawable);

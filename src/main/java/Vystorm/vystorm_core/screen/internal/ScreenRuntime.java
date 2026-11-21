@@ -497,9 +497,66 @@ public final class ScreenRuntime {
         if (clock.getAsLong() - session.lastRight > 80) session.click(false);
     }
 
+    // ---- mouse wheel (0.66.2: real notch count, one Scroll per tick) ---------------------------------------------
+
+    /** Most wheel notches one Scroll carries; one hotbar change can say at most 4 (nine slots, either way). */
+    static final int MAX_WHEEL_STEPS = 4;
+    /** Runs a task at the start of the next server tick; null delivers every wheel notch at once (tests, before 0.66.2). */
+    private java.util.function.Consumer<Runnable> nextTick;
+
+    /** Adds up the wheel notches of one tick and delivers them as one {@link ScreenInput.Scroll} on the next tick. */
+    public void coalesceWheel(java.util.function.Consumer<Runnable> nextTick) { this.nextTick = nextTick; }
+
+    /**
+     * A hotbar change while a screen is open ({@code serverSlot} stays put: the change is cancelled and the client is
+     * set back to it one round trip later). The notches are counted from the client's last report where the set-back
+     * cannot have arrived yet, else from the server slot (see {@link #wheelSteps}).
+     */
+    void onWheel(Player player, int serverSlot, int newSlot) {
+        Session session = sessions.get(player.getUniqueId());
+        if (session == null) return;
+        int steps = wheelSteps(serverSlot, newSlot, session.lastWheelSlot);
+        session.lastWheelSlot = newSlot;
+        onScroll(player, steps);
+    }
+
+    /**
+     * Wheel notches in one hotbar change. The client sends its slot once per client tick, so a fast spin arrives as a
+     * jump of several slots. Before the set-back reaches the client it counts on from its own last slot
+     * ({@code lastReported}), afterwards from {@code serverSlot}; the server cannot tell which, so: the smaller count of
+     * the two when both point the same way (never more notches than turned), the server-slot count when they disagree
+     * or the client is still on its last slot (it was set back), and none when the client reports the server slot (its
+     * answer to the set-back). {@code lastReported} -1: no report yet. Positive: towards higher slots (wheel down).
+     */
+    static int wheelSteps(int serverSlot, int newSlot, int lastReported) {
+        int fromServer = wrapSlots(newSlot - serverSlot);
+        if (fromServer == 0 || lastReported < 0) return fromServer;
+        int fromLast = wrapSlots(newSlot - lastReported);
+        if (fromLast == 0 || Integer.signum(fromLast) != Integer.signum(fromServer)) return fromServer;
+        return Integer.signum(fromServer) * Math.min(Math.abs(fromServer), Math.abs(fromLast));
+    }
+
+    private static int wrapSlots(int delta) {
+        if (delta > 4) delta -= 9;
+        if (delta < -4) delta += 9;
+        return delta;
+    }
+
     void onScroll(Player player, int delta) {
         Session session = sessions.get(player.getUniqueId());
-        if (session != null && delta != 0) session.deliver(new ScreenInput.Scroll(delta));
+        if (session == null || delta == 0) return;
+        if (nextTick == null) { session.deliver(new ScreenInput.Scroll(delta)); return; }
+        session.pendingScroll = Math.max(-MAX_WHEEL_STEPS, Math.min(MAX_WHEEL_STEPS, session.pendingScroll + delta));
+        if (session.scrollQueued) return;
+        session.scrollQueued = true;
+        Runnable flush = () -> {
+            session.scrollQueued = false;
+            int steps = session.pendingScroll;
+            session.pendingScroll = 0;
+            if (steps != 0 && session.open && sessions.get(player.getUniqueId()) == session) session.deliver(new ScreenInput.Scroll(steps));
+        };
+        try { nextTick.accept(flush); }
+        catch (RuntimeException schedulerGone) { flush.run(); }
     }
 
     /** Sneak: closes unless the screen claims SNEAK. Returns true when a screen handled it. */
@@ -569,16 +626,25 @@ public final class ScreenRuntime {
         double lastU, lastV;
         long lastRight = Long.MIN_VALUE / 2, lastLeft = Long.MIN_VALUE / 2;
         boolean closing, open = true;
+        /** Wheel notches waiting for the next tick, whether that tick's task is queued, the client's last hotbar slot. */
+        int pendingScroll, lastWheelSlot = -1;
+        boolean scrollQueued;
         /** True once the screen is drawn ({@link #buildVisuals}); the click box exists before that. */
         boolean built;
 
         /** Player state before the screen hid the first-person hand; restored in {@link #showHand}. */
         boolean wasInvisible; int savedSlot = -1; boolean handHidden;
+        /** True while the client was told its off hand is empty; the real item never left the off hand. */
+        boolean offHandHidden;
 
         /**
          * The client draws the empty arm (and a held item) over the bottom-right of every PINNED screen and clears depth
          * before it, so nothing can cover it. An invisible player draws no empty arm, and an empty hotbar slot no item;
          * clicks and head rotation stay as they are. Restored on close.
+         * <p>
+         * The off hand (0.66.2) is drawn over the bottom-left the same way. There is no empty slot to switch to, so only
+         * this player's client is told the off hand is empty (an equipment packet, like the hidden blocks); the server
+         * keeps the item where it is, so nothing can be lost or duplicated. {@link #showHand} sends the real item again.
          */
         void hideHand() {
             if (mode != ScreenSpec.Mode.PINNED || handHidden) return;
@@ -588,13 +654,14 @@ public final class ScreenRuntime {
                 if (inventory != null) {
                     int held = inventory.getHeldItemSlot();
                     org.bukkit.inventory.ItemStack item = inventory.getItem(held);
-                    if (item != null && !item.getType().isAir()) {
+                    if (!emptyStack(item)) {
                         for (int slot = 0; slot < 9; slot++) {
                             org.bukkit.inventory.ItemStack other = inventory.getItem(slot);
-                            if (other == null || other.getType().isAir()) { savedSlot = held; inventory.setHeldItemSlot(slot); break; }
+                            if (emptyStack(other)) { savedSlot = held; inventory.setHeldItemSlot(slot); break; }
                         }
                     }
                 }
+                hideOffHand();
                 player.setInvisible(true);
                 player.setPlayerWeather(org.bukkit.WeatherType.CLEAR);   // rain falls closer than the backdrop
                 handHidden = true;
@@ -604,6 +671,7 @@ public final class ScreenRuntime {
         }
 
         void showHand() {
+            showOffHand();   // first: also when hiding the main hand failed after the off hand was hidden
             if (!handHidden) return;
             handHidden = false;
             try {
@@ -612,6 +680,37 @@ public final class ScreenRuntime {
                 if (savedSlot >= 0 && player.getInventory() != null) player.getInventory().setHeldItemSlot(savedSlot);
             } catch (RuntimeException | LinkageError ignored) { }
             savedSlot = -1;
+        }
+
+        /** Tells only this player's client that its off hand is empty; the server-side item stays. */
+        private void hideOffHand() {
+            try {
+                var inventory = player.getInventory();
+                if (inventory == null) return;
+                org.bukkit.inventory.ItemStack off = inventory.getItemInOffHand();
+                if (emptyStack(off)) return;
+                player.sendEquipmentChange(player, org.bukkit.inventory.EquipmentSlot.OFF_HAND, new org.bukkit.inventory.ItemStack(Material.AIR));
+                offHandHidden = true;
+            } catch (RuntimeException | LinkageError failure) {
+                offHandHidden = false;
+            }
+        }
+
+        /** Sends the off-hand item the server has now (it may have changed meanwhile); nothing to do for a player who left. */
+        private void showOffHand() {
+            if (!offHandHidden) return;
+            offHandHidden = false;
+            try {
+                if (!player.isOnline() || player.getInventory() == null) return;
+                org.bukkit.inventory.ItemStack off = player.getInventory().getItemInOffHand();
+                player.sendEquipmentChange(player, org.bukkit.inventory.EquipmentSlot.OFF_HAND,
+                        off == null ? new org.bukkit.inventory.ItemStack(Material.AIR) : off);
+            } catch (RuntimeException | LinkageError ignored) { }
+        }
+
+        /** No item: null or air (an item stack is never cave or void air). */
+        private static boolean emptyStack(org.bukkit.inventory.ItemStack item) {
+            return item == null || item.getType() == Material.AIR;
         }
 
         /** How to reopen this screen for Back, or null. */
@@ -659,7 +758,7 @@ public final class ScreenRuntime {
             background = entities.text(player, panelLocation(), d -> placeBackground(d));
             spawnWidgets();
             if (mode == ScreenSpec.Mode.PINNED) pointer = entities.text(player, pointerLocation(), this::placePointer);
-            for (ScreenWidget widget : widgets.values()) draw(widget);
+            // 0.66.2: no draw() pass here: every widget is complete in its spawn, a second pass only wrote the same values
             built = true;
         }
 
@@ -799,13 +898,14 @@ public final class ScreenRuntime {
             if (th <= 0 || widget.height() > 2 * th) return 0;
             return Math.max(0, (widget.height() - th) / 2);
         }
-        private void place(TextDisplay d, ScreenWidget widget) {
+        /**
+         * Spawn setup of a label or button text (0.66.2): everything known at spawn time, the text included, so the spawn
+         * bundle the viewer gets first is complete. Before, the text came one tracker tick later, and a relayout showed
+         * the boxes without their texts for a moment.
+         */
+        private void placeContent(TextDisplay d, ScreenWidget widget) {
             common(d);
-            // Text height is capped, so a tall button (an icon tile) keeps a normal label at its bottom edge.
-            double scale = Math.max(0.05, (widget.textHeight() > 0 ? widget.textHeight() : Math.min(widget.height(), TEXT_MAX)) / LINE * 0.8);
-            double x = widget.u() + widget.width() / 2 - layout.width() / 2;
-            double bottom = layout.height() / 2 - (widget.v() + widget.height()) + textLift(widget);
-            d.setTransformation(transform(x, bottom, scale, 0, 1, contentLayer(widget)));
+            content(d, widget);
         }
 
         private void placePointer(TextDisplay d) {
@@ -830,7 +930,7 @@ public final class ScreenRuntime {
                 if (hasBox(widget)) boxes.put(widget.id(), entities.text(player, panelLocation(), d -> placeBox(d, widget)));
                 if (widget.kind() == ScreenWidget.Kind.ICON) icons.put(widget.id(), spawnIcon(widget));
                 else if (widget.kind() == ScreenWidget.Kind.MAP && showMap(widget)) continue;
-                else if (widget.kind() != ScreenWidget.Kind.FILL) displays.put(widget.id(), entities.text(player, panelLocation(), d -> place(d, widget)));
+                else if (widget.kind() != ScreenWidget.Kind.FILL) displays.put(widget.id(), entities.text(player, panelLocation(), d -> placeContent(d, widget)));
             }
         }
 
@@ -952,6 +1052,11 @@ public final class ScreenRuntime {
             if (widget.kind() == ScreenWidget.Kind.ICON || widget.kind() == ScreenWidget.Kind.FILL) return;
             TextDisplay d = displays.get(widget.id());
             if (d == null || !d.isValid()) return;
+            content(d, widget);
+        }
+
+        /** Text, colour for the hover/disabled state, and the size and place that fit the text into the widget box. */
+        private void content(TextDisplay d, ScreenWidget widget) {
             Component text = widget.text() instanceof Component c ? c : Component.text(String.valueOf(widget.text()));
             boolean lit = widget.selected() || (widget.id().equals(hovered) && widget.clickable());
             if (lit && widget.litIsBright()) text = text.color(TextColor.color(0x252A33));
@@ -1154,27 +1259,40 @@ public final class ScreenRuntime {
         @Override public void setLayout(ScreenLayout requested) {
             if (!open || requested == null) return;
             final ScreenLayout next = withBack(player, origin, requested);
-            for (Entity e : displays.values()) entities.remove(e);
-            for (Entity e : icons.values()) entities.remove(e);
-            for (Entity e : boxes.values()) entities.remove(e);
-            removeMaps();
+            // 0.66.2: new before old. The old set leaves the live maps at once (hover, clicks and draw() only ever see
+            // the new set), but its entities are removed only after the new set and the pointer were shown, so the
+            // client never has a frame with an empty panel body. Draw order on 26.2 (arrival order): the new set arrives
+            // after the old one, so while both exist it lies on top; once the old set is gone the remaining order is
+            // backdrop, background, new widgets in layout order, pointer: exactly the order of a fresh build. On 26.3 the
+            // layer distances (0.66.1) decide, recomputed for the new set in spawnWidgets.
+            List<Entity> old = new java.util.ArrayList<>(displays.size() + icons.size() + boxes.size());
+            old.addAll(displays.values());
+            old.addAll(icons.values());
+            old.addAll(boxes.values());
+            List<ScreenMapFrames.Handle> oldMaps = List.copyOf(mapFrames.values());
             displays.clear();
             icons.clear();
             boxes.clear();
+            mapFrames.clear();
             widgets.clear();
+            boolean resized = layout == null || layout.width() != next.width() || layout.height() != next.height();
             layout = next;
             mapPixels.keySet().removeIf(id -> next.widgets().stream().noneMatch(w -> w.id().equals(id) && w.kind() == ScreenWidget.Kind.MAP));
             for (ScreenWidget widget : next.widgets()) widgets.put(widget.id(), widget);
             hovered = null;
-            if (!built) return; // visuals not built yet: buildVisuals will spawn them
-            if (background != null && background.isValid()) placeBackground(background);
-            spawnWidgets();
-            // the pointer must stay the last (topmost) display, so it is spawned again after the new widgets
-            if (pointer != null) {
-                entities.remove(pointer);
-                pointer = entities.text(player, pointerLocation(), this::placePointer);
+            if (built) {
+                if (resized && background != null && background.isValid()) placeBackground(background);
+                spawnWidgets();
+                // the pointer must stay the last (topmost) display: the new one is shown after the new widgets, the
+                // old one goes with the old set (both draw the same glyph at the same place meanwhile)
+                if (pointer != null) {
+                    old.add(pointer);
+                    pointer = entities.text(player, pointerLocation(), this::placePointer);
+                }
             }
-            for (ScreenWidget widget : widgets.values()) draw(widget);
+            for (Entity e : old) entities.remove(e);
+            for (ScreenMapFrames.Handle handle : oldMaps) handle.remove();
+            if (!built) return; // visuals not built yet: buildVisuals will spawn them
             hover(player.getLocation().getYaw(), player.getLocation().getPitch());
         }
 

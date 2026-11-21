@@ -5217,7 +5217,7 @@ enabled buttons, inputs and map widgets are. Put an explicit button over an item
 
 - `Click(widgetId, u, v, right)`: widgetId is null when no enabled clickable widget is hit.
 - `Hover(widgetId)`: pointer target changed; null means no clickable widget.
-- `Scroll(delta)`: wheel input.
+- `Scroll(delta)`: wheel input, -1 or +1 per notch. Since 0.66.2 the notches of one server tick arrive added up in one `Scroll` (at most 4 either way): use `delta` as a number of steps.
 - `KeyInput(key, pressed)`: only keys requested with `ScreenSpec.Builder.claim(...)`; needs Paper 1.21.3+.
 - `Closed(reason)`: terminal session input; cancel consumer-owned animation/tasks here.
 

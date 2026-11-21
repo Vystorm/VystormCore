@@ -52,13 +52,56 @@ class ScreenRuntimeTest {
             return e;
         }
         @Override public Entity mount(Player viewer, Location at) { return entity(Entity.class); }
-        @Override public TextDisplay text(Player viewer, Location at, Consumer<TextDisplay> setup) { TextDisplay d = entity(TextDisplay.class); setup.accept(d); return d; }
+        /** Like the live one: the setup runs inside the spawn, then the entity is shown (its spawn bundle is written). */
+        @Override public TextDisplay text(Player viewer, Location at, Consumer<TextDisplay> setup) {
+            TextDisplay d = entity(TextDisplay.class);
+            setup.accept(d);
+            shown(d);
+            return d;
+        }
         @Override public Interaction interaction(Player viewer, Location at, float w, float h) { return entity(Interaction.class); }
-        @Override public org.bukkit.entity.ItemDisplay item(Player viewer, Location at, Consumer<org.bukkit.entity.ItemDisplay> setup) { org.bukkit.entity.ItemDisplay d = entity(org.bukkit.entity.ItemDisplay.class); return d; }
-        @Override public void remove(Entity entity) { removed.add(entity); }
+        @Override public org.bukkit.entity.ItemDisplay item(Player viewer, Location at, Consumer<org.bukkit.entity.ItemDisplay> setup) { org.bukkit.entity.ItemDisplay d = entity(org.bukkit.entity.ItemDisplay.class); shown(d); return d; }
+        @Override public void remove(Entity entity) { removed.add(entity); events.add(new Event("remove", entity)); }
     };
 
+    /** Spawns ("show", the moment the spawn bundle goes out) and removes in call order. */
+    record Event(String kind, Entity entity) {}
+    private final List<Event> events = new ArrayList<>();
+    /** Texts a display carried when it was shown, and how many values had been written to it by then. */
+    private final java.util.Map<Entity, List<String>> textsAtShow = new java.util.HashMap<>();
+    private final java.util.Map<Entity, Integer> writesAtShow = new java.util.HashMap<>();
+
+    private void shown(Entity e) {
+        events.add(new Event("show", e));
+        textsAtShow.put(e, texts(e));
+        writesAtShow.put(e, writes(e));
+    }
+
+    /** Every text set on a display so far, as plain text. */
+    private static List<String> texts(Entity e) {
+        return mockingDetails(e).getInvocations().stream()
+                .filter(i -> i.getMethod().getName().equals("text") && i.getArguments().length == 1)
+                .map(i -> net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer.plainText().serialize((net.kyori.adventure.text.Component) i.getArgument(0)))
+                .toList();
+    }
+
+    /** Values written to an entity (setters and {@code text}); each one is an entity-data update once it is shown. */
+    private static int writes(Entity e) {
+        return (int) mockingDetails(e).getInvocations().stream()
+                .filter(i -> i.getMethod().getName().startsWith("set") || i.getMethod().getName().equals("text")).count();
+    }
+
+    private List<Entity> shownAfter(int from) {
+        return events.subList(from, events.size()).stream().filter(ev -> ev.kind().equals("show")).map(Event::entity).toList();
+    }
+
+    /** {@code new ItemStack(AIR)} needs a running server; here it is a mock of type AIR. */
+    private org.mockito.MockedConstruction<org.bukkit.inventory.ItemStack> airStacks;
+
+    @org.junit.jupiter.api.AfterEach void closeAirStacks() { airStacks.close(); }
+
     @BeforeEach void setUp() {
+        airStacks = mockConstruction(org.bukkit.inventory.ItemStack.class, (stack, context) -> when(stack.getType()).thenReturn(Material.AIR));
         when(core.getName()).thenReturn("vystorm_core");
         when(core.getLogger()).thenReturn(Logger.getLogger("test"));
         Block air = mock(Block.class);
@@ -536,6 +579,199 @@ class ScreenRuntimeTest {
         assertTrue(removed.containsAll(fresh), "the new widgets are removed on close");
     }
 
+    // ---- 0.66.2: smooth relayouts ----
+
+    /** A label and a button away from the panel centre, so a player looking straight ahead hovers nothing. */
+    private ScreenLayout sideLayout(String label, String button) {
+        return new ScreenLayout(0.9, 0.55, List.of(
+                ScreenWidget.label("l." + label, 0.05, 0.02, 0.8, 0.08, label),
+                ScreenWidget.button("b." + button, 0.05, 0.40, 0.2, 0.08, button)));
+    }
+
+    /** Every text display shown since event {@code from} carried a text when it was shown, and nothing was written to it later. */
+    private void assertCompleteSpawns(int from, String... widgetTexts) {
+        List<Entity> fresh = shownAfter(from).stream().filter(e -> e instanceof TextDisplay).toList();
+        assertFalse(fresh.isEmpty());
+        for (Entity e : fresh) assertFalse(textsAtShow.get(e).isEmpty(), "a text display is shown only with its text");
+        for (String text : widgetTexts) {
+            Entity d = fresh.stream().filter(e -> textsAtShow.get(e).contains(text)).findFirst()
+                    .orElseThrow(() -> new AssertionError("no display was shown with \"" + text + "\""));
+            assertEquals(writesAtShow.get(d), writes(d), "\"" + text + "\" gets no second data update for unchanged values");
+        }
+    }
+
+    @Test void givenLabelsAndButtons_whenTheScreenOpens_thenEveryTextDisplayIsShownWithItsText() {
+        Player p = player(0, 0);
+        runtime.open(core, p, ScreenSpec.builder("test:side", sideLayout("Title", "Go")).onInput((s, i) -> inputs.add(i)).build());
+        assertCompleteSpawns(0, "Title", "Go");
+    }
+
+    @Test void givenOpenScreen_whenSetLayout_thenTheNewTextsArriveWithTheirSpawns() {
+        Player p = player(0, 0);
+        runtime.open(core, p, ScreenSpec.builder("test:side", sideLayout("Title", "Go")).onInput((s, i) -> inputs.add(i)).build());
+        int from = events.size();
+        runtime.session(p).orElseThrow().setLayout(sideLayout("Page two", "Next"));
+        assertCompleteSpawns(from, "Page two", "Next");
+    }
+
+    /** One button under the centre of the view, as on a tab change where the new page reuses the id for another widget. */
+    private static ScreenLayout centreButton(String text) {
+        return new ScreenLayout(0.9, 0.55, List.of(
+                ScreenWidget.label("t", 0.05, 0.02, 0.8, 0.08, "Tab " + text),
+                ScreenWidget.button("same", 0.35, 0.235, 0.2, 0.08, text)));
+    }
+
+    @Test void givenOpenScreen_whenSetLayout_thenTheNewSetAndThePointerAreShownBeforeTheOldSetIsRemoved() {
+        Player p = player(0, 0);
+        runtime.open(core, p, ScreenSpec.builder("test:tabs", centreButton("Old")).onInput((s, i) -> inputs.add(i)).build());
+        runtime.onRotate(p, 0f, 0f);
+        assertTrue(inputs.contains(new ScreenInput.Hover("same")));
+        int from = events.size();
+        List<Entity> before = List.copyOf(spawned);
+        runtime.session(p).orElseThrow().setLayout(centreButton("New"));
+        List<Event> relayout = List.copyOf(events.subList(from, events.size()));
+        int lastShow = -1, firstRemove = Integer.MAX_VALUE;
+        for (int i = 0; i < relayout.size(); i++) {
+            if (relayout.get(i).kind().equals("show")) lastShow = i;
+            else firstRemove = Math.min(firstRemove, i);
+        }
+        assertTrue(lastShow >= 0 && firstRemove < relayout.size(), "something was shown and something removed");
+        assertTrue(lastShow < firstRemove, "every old entity is removed after the whole new set is shown: " + relayout);
+        Entity newPointer = relayout.get(lastShow).entity();
+        assertTrue(textsAtShow.get(newPointer).contains(ScreenShader.POINTER), "the pointer is shown last, on top of the new set");
+        assertTrue(relayout.stream().filter(ev -> ev.kind().equals("remove")).allMatch(ev -> before.contains(ev.entity())), "only old entities are removed");
+        assertEquals(4, relayout.stream().filter(ev -> ev.kind().equals("remove")).count(), "label, button box, button text and the old pointer");
+
+        // hover and clicks belong to the new set: the old entities are never written again
+        java.util.Map<Entity, Integer> oldWrites = new java.util.HashMap<>();
+        for (Entity e : before) oldWrites.put(e, writes(e));
+        Entity newBox = shownAfter(from).stream().filter(e -> textsAtShow.get(e).contains(ScreenShader.SOLID)).findFirst().orElseThrow();
+        int boxWrites = writes(newBox);
+        inputs.clear();
+        runtime.onRotate(p, 0f, -30f);
+        runtime.onRotate(p, 0f, 0f);
+        assertEquals(List.of(new ScreenInput.Hover(null), new ScreenInput.Hover("same")), inputs);
+        assertTrue(writes(newBox) > boxWrites, "the hover colour goes to the new box");
+        for (Entity e : before) assertEquals(oldWrites.get(e), writes(e), "an old entity is not drawn after the relayout");
+        runtime.onClick(p, box(), false);
+        assertEquals("same", ((ScreenInput.Click) inputs.get(inputs.size() - 1)).widgetId());
+    }
+
+    @Test void givenShownMap_whenSetLayout_thenTheOldFramesGoAfterTheNewOnesAreShown() {
+        List<String> order = new ArrayList<>();
+        runtime.useMaps(new ScreenMapFrames() {
+            int shown;
+            @Override public boolean supported() { return true; }
+            @Override public Handle show(Player viewer, ScreenMapCodec.Placement at, List<byte[]> tiles) {
+                int n = ++shown;
+                order.add("show " + n);
+                return new Handle() {
+                    @Override public void pixels(int tile, byte[] colours) { }
+                    @Override public void remove() { order.add("remove " + n); }
+                };
+            }
+        });
+        Player p = player(0, 0);
+        runtime.open(core, p, mapSpec());
+        runtime.session(p).orElseThrow().setLayout(mapSpec().layout());
+        assertEquals(List.of("show 1", "show 2", "remove 1"), order);
+    }
+
+    // wheel coalescing
+
+    /** A list that scrolls by whole rows like MenuScreen: offset += delta, and a full relayout for every Scroll. */
+    private final int[] offset = {0};
+    private int relayouts;
+
+    private ScreenSpec rowList() {
+        return ScreenSpec.builder("test:rows", sideLayout("Row 0", "Go")).onInput((s, i) -> {
+            inputs.add(i);
+            if (i instanceof ScreenInput.Scroll scroll) {
+                offset[0] += scroll.delta();
+                relayouts++;
+                s.setLayout(sideLayout("Row " + offset[0], "Go"));
+            }
+        }).build();
+    }
+
+    private List<ScreenInput.Scroll> scrolls() {
+        return inputs.stream().filter(i -> i instanceof ScreenInput.Scroll).map(i -> (ScreenInput.Scroll) i).toList();
+    }
+
+    @Test void givenThreeWheelNotchesInOneTick_whenTheTickEnds_thenOneRelayoutByThreeRows() {
+        List<Runnable> tick = new ArrayList<>();
+        runtime.coalesceWheel(tick::add);
+        Player p = player(0, 0);
+        runtime.open(core, p, rowList());
+        int removedBefore = removed.size();
+        // the cancelled slot change is set back on the client one round trip later, so the server slot stays 4
+        runtime.onWheel(p, 4, 5);
+        runtime.onWheel(p, 4, 6);
+        runtime.onWheel(p, 4, 7);
+        assertEquals(0, relayouts, "nothing is rebuilt during the tick");
+        assertEquals(removedBefore, removed.size());
+        assertEquals(1, tick.size(), "one task for the whole tick");
+        tick.remove(0).run();
+        assertEquals(List.of(new ScreenInput.Scroll(3)), scrolls());
+        assertEquals(1, relayouts);
+        assertEquals(3, offset[0], "three notches move three rows");
+    }
+
+    @Test void givenNotchesInDifferentTicks_whenEachTickEnds_thenOneRelayoutEach() {
+        List<Runnable> tick = new ArrayList<>();
+        runtime.coalesceWheel(tick::add);
+        Player p = player(0, 0);
+        runtime.open(core, p, rowList());
+        runtime.onWheel(p, 4, 5);
+        tick.remove(0).run();
+        runtime.onWheel(p, 4, 3);   // the client was set back to 4 meanwhile, then one notch up
+        tick.remove(0).run();
+        runtime.onWheel(p, 4, 3);
+        tick.remove(0).run();
+        assertEquals(List.of(new ScreenInput.Scroll(1), new ScreenInput.Scroll(-1), new ScreenInput.Scroll(-1)), scrolls());
+        assertEquals(3, relayouts);
+        assertEquals(-1, offset[0]);
+    }
+
+    @Test void givenAWildSpin_whenTheTickEnds_thenTheStepsAreCapped() {
+        List<Runnable> tick = new ArrayList<>();
+        runtime.coalesceWheel(tick::add);
+        Player p = player(0, 0);
+        runtime.open(core, p, rowList());
+        for (int i = 0; i < 6; i++) runtime.onScroll(p, 4);
+        tick.remove(0).run();
+        assertEquals(List.of(new ScreenInput.Scroll(ScreenRuntime.MAX_WHEEL_STEPS)), scrolls());
+    }
+
+    @Test void givenWheelNotchesPending_whenTheScreenClosesFirst_thenNothingIsDelivered() {
+        List<Runnable> tick = new ArrayList<>();
+        runtime.coalesceWheel(tick::add);
+        Player p = player(0, 0);
+        runtime.open(core, p, rowList());
+        runtime.onWheel(p, 4, 5);
+        runtime.close(p, ScreenInput.Reason.PLAYER);
+        tick.remove(0).run();
+        assertTrue(scrolls().isEmpty());
+    }
+
+    @Test void givenSlotJumps_whenCountingWheelNotches_thenTheSetBackSlotIsAllowedFor() {
+        // first report: the jump from the server slot
+        assertEquals(1, ScreenRuntime.wheelSteps(4, 5, -1));
+        assertEquals(3, ScreenRuntime.wheelSteps(4, 7, -1), "three notches within one client tick");
+        assertEquals(-1, ScreenRuntime.wheelSteps(0, 8, -1), "wrap-around: slot 0 up to slot 8 is one notch");
+        assertEquals(1, ScreenRuntime.wheelSteps(8, 0, -1));
+        // the client has not got the set-back yet: count from its last report
+        assertEquals(1, ScreenRuntime.wheelSteps(4, 6, 5));
+        assertEquals(2, ScreenRuntime.wheelSteps(4, 8, 6));
+        assertEquals(1, ScreenRuntime.wheelSteps(8, 1, 0), "wrap-around while the set-back is on its way");
+        // the client was set back to the server slot: count from there
+        assertEquals(1, ScreenRuntime.wheelSteps(4, 5, 5));
+        assertEquals(1, ScreenRuntime.wheelSteps(4, 5, 6), "after a set-back the direction comes from the server slot");
+        assertEquals(-1, ScreenRuntime.wheelSteps(4, 3, 6));
+        // the client tells the server it is back on the server slot: no notch
+        assertEquals(0, ScreenRuntime.wheelSteps(4, 4, 6));
+    }
+
     // ---- map widgets (0.59.0) ----
 
     private final List<List<byte[]>> shownTiles = new ArrayList<>();
@@ -692,5 +928,109 @@ class ScreenRuntimeTest {
         assertEquals(List.of(p), asked);
         TextDisplay pointer = (TextDisplay) spawned.get(spawned.size() - 1);
         verify(pointer).setSeeThrough(true);
+    }
+
+    // ---- hands under a PINNED screen -----------------------------------------------------------------------------
+
+    private static org.bukkit.inventory.ItemStack stack(Material type) {
+        org.bukkit.inventory.ItemStack item = mock(org.bukkit.inventory.ItemStack.class);
+        when(item.getType()).thenReturn(type);
+        return item;
+    }
+
+    /** A player holding a sword in hotbar slot 0 (slots 1-8 empty) and {@code offHand} in the off hand. */
+    private org.bukkit.inventory.PlayerInventory hands(Player p, org.bukkit.inventory.ItemStack offHand) {
+        org.bukkit.inventory.PlayerInventory inventory = mock(org.bukkit.inventory.PlayerInventory.class);
+        org.bukkit.inventory.ItemStack sword = stack(Material.DIAMOND_SWORD);
+        when(inventory.getHeldItemSlot()).thenReturn(0);
+        when(inventory.getItem(anyInt())).thenAnswer(inv -> (int) inv.getArgument(0) == 0 ? sword : null);
+        when(inventory.getItemInOffHand()).thenReturn(offHand);
+        when(p.getInventory()).thenReturn(inventory);
+        return inventory;
+    }
+
+    private static org.bukkit.inventory.ItemStack isAir() {
+        return argThat(item -> item != null && item.getType() == Material.AIR);
+    }
+
+    @Test void givenSwordInMainHand_whenPinnedOpensAndCloses_thenAnEmptySlotIsHeldMeanwhileAndTheSwordAgainAfter() {
+        Player p = player(0, 0);
+        org.bukkit.inventory.PlayerInventory inventory = hands(p, null);
+        assertTrue(runtime.open(core, p, spec(new AtomicBoolean())).opened());
+        verify(inventory).setHeldItemSlot(1);
+        verify(p).setInvisible(true);
+        runtime.close(p, ScreenInput.Reason.PLAYER);
+        verify(inventory).setHeldItemSlot(0);
+        verify(p).setInvisible(false);
+    }
+
+    @Test void givenShieldInOffHand_whenPinnedOpens_thenOnlyTheClientIsToldTheOffHandIsEmpty() {
+        Player p = player(0, 0);
+        org.bukkit.inventory.ItemStack shield = stack(Material.SHIELD);
+        org.bukkit.inventory.PlayerInventory inventory = hands(p, shield);
+        assertTrue(runtime.open(core, p, spec(new AtomicBoolean())).opened());
+        verify(p).sendEquipmentChange(eq(p), eq(org.bukkit.inventory.EquipmentSlot.OFF_HAND), isAir());
+        verify(inventory, never()).setItemInOffHand(any());
+        verify(inventory, never()).setItem(any(org.bukkit.inventory.EquipmentSlot.class), any());
+        verify(inventory, never()).setItem(anyInt(), any());
+        verify(p, never()).sendEquipmentChange(any(), eq(org.bukkit.inventory.EquipmentSlot.OFF_HAND), eq(shield));
+    }
+
+    @Test void givenHiddenOffHand_whenTheScreenCloses_thenTheClientGetsTheRealItemBack() {
+        Player p = player(0, 0);
+        org.bukkit.inventory.ItemStack shield = stack(Material.SHIELD);
+        org.bukkit.inventory.PlayerInventory inventory = hands(p, shield);
+        runtime.open(core, p, spec(new AtomicBoolean()));
+        runtime.close(p, ScreenInput.Reason.PLAYER);
+        verify(p).sendEquipmentChange(p, org.bukkit.inventory.EquipmentSlot.OFF_HAND, shield);
+        verify(inventory, never()).setItemInOffHand(any());
+    }
+
+    @Test void givenHiddenOffHand_whenTheItemChangedMeanwhile_thenTheClosingSendsWhatTheServerHasNow() {
+        Player p = player(0, 0);
+        org.bukkit.inventory.PlayerInventory inventory = hands(p, stack(Material.SHIELD));
+        runtime.open(core, p, spec(new AtomicBoolean()));
+        org.bukkit.inventory.ItemStack totem = stack(Material.TOTEM_OF_UNDYING);
+        when(inventory.getItemInOffHand()).thenReturn(totem);
+        runtime.close(p, ScreenInput.Reason.PLAYER);
+        verify(p).sendEquipmentChange(p, org.bukkit.inventory.EquipmentSlot.OFF_HAND, totem);
+    }
+
+    @Test void givenHiddenOffHand_whenThePluginIsDisabled_thenTheRealItemIsShownAgain() {
+        Player p = player(0, 0);
+        org.bukkit.inventory.ItemStack shield = stack(Material.SHIELD);
+        hands(p, shield);
+        runtime.open(core, p, spec(new AtomicBoolean()));
+        runtime.release(core);
+        assertFalse(runtime.hasSession(p));
+        verify(p).sendEquipmentChange(p, org.bukkit.inventory.EquipmentSlot.OFF_HAND, shield);
+    }
+
+    @Test void givenHiddenOffHand_whenThePlayerHasLeft_thenNothingIsSentAndTheItemIsUntouched() {
+        Player p = player(0, 0);
+        org.bukkit.inventory.ItemStack shield = stack(Material.SHIELD);
+        org.bukkit.inventory.PlayerInventory inventory = hands(p, shield);
+        runtime.open(core, p, spec(new AtomicBoolean()));
+        when(p.isOnline()).thenReturn(false);
+        runtime.close(p, ScreenInput.Reason.QUIT);
+        verify(p, never()).sendEquipmentChange(any(), eq(org.bukkit.inventory.EquipmentSlot.OFF_HAND), eq(shield));
+        verify(inventory, never()).setItemInOffHand(any());
+    }
+
+    @Test void givenEmptyOffHand_whenPinnedOpensAndCloses_thenNoEquipmentPacket() {
+        Player p = player(0, 0);
+        hands(p, stack(Material.AIR));
+        runtime.open(core, p, spec(new AtomicBoolean()));
+        runtime.close(p, ScreenInput.Reason.PLAYER);
+        verify(p, never()).sendEquipmentChange(any(), any(org.bukkit.inventory.EquipmentSlot.class), any(org.bukkit.inventory.ItemStack.class));
+    }
+
+    @Test void givenFloatingScreen_whenOpened_thenTheOffHandStaysVisible() {
+        pack = false;
+        Player p = player(0, 0);
+        hands(p, stack(Material.SHIELD));
+        assertEquals(ScreenSpec.Mode.FLOATING, runtime.open(core, p, spec(new AtomicBoolean())).mode());
+        runtime.close(p, ScreenInput.Reason.PLAYER);
+        verify(p, never()).sendEquipmentChange(any(), any(org.bukkit.inventory.EquipmentSlot.class), any(org.bukkit.inventory.ItemStack.class));
     }
 }
