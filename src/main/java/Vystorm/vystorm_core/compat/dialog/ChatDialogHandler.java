@@ -129,7 +129,7 @@ public final class ChatDialogHandler implements DialogInterface, Listener {
     @Override public void clear() { requireThread(); for (Session s : List.copyOf(sessions.values())) close(s.player); }
     private static void requireThread() { if (!Bukkit.isPrimaryThread()) throw new IllegalStateException("Dialogs require the server thread"); }
     private static void callback(Session s, Runnable action) {
-        try { action.run(); }
+        try { Vystorm.vystorm_core.screen.internal.ScreenDispatch.run(action); }   // 0.66.1: plugin code, not player input
         catch (RuntimeException failure) { ProviderFailures.report("Dialog", s.owner.getName(), "callback", failure); }
     }
     private static boolean valid(Session s) {

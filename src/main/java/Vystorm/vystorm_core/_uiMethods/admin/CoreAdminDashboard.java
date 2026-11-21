@@ -198,6 +198,7 @@ public final class CoreAdminDashboard implements TabExecutor {
         if (args.length >= 3 && (
                 args[1].equalsIgnoreCase("on") || args[1].equalsIgnoreCase("off") || args[1].equalsIgnoreCase("all"))) {
             String name = String.join(" ", java.util.Arrays.copyOfRange(args, 2, args.length)).trim();
+            if (Vystorm.vystorm_core.config.YamlProblems.refusedSave(sender, core)) return;
             if (args[1].equalsIgnoreCase("all")) {
                 if (!name.equalsIgnoreCase("on") && !name.equalsIgnoreCase("off")) {
                     lang().send(sender, "screens-admin.usage");

@@ -102,6 +102,20 @@ class FeatureSwitchesTest {
         assertEquals("Protect containers when they are placed", features.get(3).description());
     }
 
+    @Test void givenALabel_whenDeclaredAgainWithANullLabel_thenTheEarlierNameAndDescriptionStay() throws Exception {
+        // 0.66.1: feature(owner, path, null, description) after label(...) wiped the readable name in several plugins
+        var owner = plugin(); var s = service(owner); var st = s.visible(admin()).getFirst();
+        s.label(owner, "trains.enabled", "Cart trains", "Several carts as one train");
+        s.label(owner, "trains.enabled", null, null);
+        s.label(owner, "travel-gates.enabled", "Gates", "Old text");
+        s.label(owner, "travel-gates.enabled", null, "New text");
+        var features = s.features(st);
+        assertEquals("Cart trains", features.get(0).label());
+        assertEquals("Several carts as one train", features.get(0).description());
+        assertEquals("Gates", features.get(1).label());
+        assertEquals("New text", features.get(1).description(), "a new description still replaces the old one");
+    }
+
     @Test void givenFeatureWhenToggledThenFileAndReloadHookFollow() throws Exception {
         var owner = plugin(); var s = service(owner); var p = admin(); var st = s.visible(p).getFirst();
         var energy = s.features(st).get(2);

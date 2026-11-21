@@ -696,15 +696,41 @@ public final class ScreenRuntime {
             return at;
         }
 
-        /** Panel units → offset in the display's local frame; FLOATING scales by distance so both modes look equal. */
-        private Transformation transform(double x, double bottomY, double scale) {
+        /**
+         * Panel units → offset in the display's local frame; FLOATING scales by distance so both modes look equal.
+         * PINNED: moved along the view ray to the sort distance of its stacking {@code layer} (see
+         * {@link ScreenGeometry#layerScale}); {@code widthPx} and {@code lines} estimate the text block for that.
+         */
+        private Transformation transform(double x, double bottomY, double scale, double widthPx, int lines, int layer) {
             boolean pinned = mode == ScreenSpec.Mode.PINNED;
             double k = pinned ? 1.0 : FLOATING_DISTANCE;
-            Vector3f translation = pinned
-                    ? new Vector3f((float) x, (float) bottomY, (float) -PINNED_DISTANCE)
-                    : new Vector3f((float) (x * k), (float) (bottomY * k), 0f);
+            if (pinned) {
+                double[] o = ScreenGeometry.textOrigin(x, bottomY, scale, scale, widthPx, lines);
+                double f = ScreenGeometry.layerScale(o[0], o[1], PINNED_DISTANCE, layer, PINNED_DISTANCE);
+                float s = (float) (scale * f);
+                return new Transformation(new Vector3f((float) (x * f), (float) (bottomY * f), (float) (-PINNED_DISTANCE * f)),
+                        new Quaternionf(), new Vector3f(s, s, s), new Quaternionf());
+            }
+            Vector3f translation = new Vector3f((float) (x * k), (float) (bottomY * k), 0f);
             float s = (float) (scale * k);
             return new Transformation(translation, new Quaternionf(), new Vector3f(s, s, s), new Quaternionf());
+        }
+
+        /** Stacking layers {box, content} per widget id (PINNED draw order on 26.3 clients), set in {@link #spawnWidgets}. */
+        final Map<String, int[]> layerOf = new HashMap<>();
+
+        private int boxLayer(ScreenWidget widget) { int[] l = layerOf.get(widget.id()); return l == null ? 1 : l[0]; }
+
+        private int contentLayer(ScreenWidget widget) { int[] l = layerOf.get(widget.id()); return l == null ? 2 : l[1]; }
+
+        private void computeLayers() {
+            List<ScreenWidget> list = List.copyOf(widgets.values());
+            List<double[]> rects = new java.util.ArrayList<>(list.size());
+            List<Boolean> boxed = new java.util.ArrayList<>(list.size());
+            for (ScreenWidget w : list) { rects.add(new double[] { w.u(), w.v(), w.width(), w.height() }); boxed.add(hasBox(w)); }
+            int[][] layers = ScreenGeometry.layers(rects, boxed);
+            layerOf.clear();
+            for (int i = 0; i < list.size(); i++) layerOf.put(list.get(i).id(), layers[i]);
         }
 
         private void common(TextDisplay d) {
@@ -716,7 +742,7 @@ public final class ScreenRuntime {
 
         private void placeBackground(TextDisplay d) {
             common(d);
-            solid(d, layout.width() + PANEL_BORDER, layout.height() + PANEL_BORDER, mode == ScreenSpec.Mode.PINNED ? 0 : 0.008, 0x1B1F27, 235);
+            solidAt(d, 0, 0, layout.width() + PANEL_BORDER, layout.height() + PANEL_BORDER, mode == ScreenSpec.Mode.PINNED ? 0 : 0.008, 0x1B1F27, 235, 0);
         }
 
         /** PINNED only: a dim, screen-filling backdrop behind the panel, like the dark background of vanilla menus. */
@@ -733,11 +759,14 @@ public final class ScreenRuntime {
          * centre, {@code depth} panel units behind it. The 8 px glyph sits 1 px above the text block's bottom edge.
          */
         private void solid(TextDisplay d, double width, double height, double depth, int rgb, int opacity) {
-            solidAt(d, 0, 0, width, height, depth, rgb, opacity);
+            solidAt(d, 0, 0, width, height, depth, rgb, opacity, -1);
         }
 
-        /** Like {@link #solid} but centred on {@code (cx, cy)} (panel units from the panel centre, x right, y up). */
-        private void solidAt(TextDisplay d, double cx, double cy, double width, double height, double depth, int rgb, int opacity) {
+        /**
+         * Like {@link #solid} but centred on {@code (cx, cy)} (panel units from the panel centre, x right, y up). PINNED
+         * with {@code layer >= 0}: moved along the view ray to that stacking layer's sort distance; -1 keeps the place.
+         */
+        private void solidAt(TextDisplay d, double cx, double cy, double width, double height, double depth, int rgb, int opacity, int layer) {
             PlatformCompat.text(d, opacity <= 0 ? Component.empty() : Component.text(ScreenShader.SOLID).font(Key.key(ScreenShader.FONT)).color(TextColor.color(rgb & 0xFFFFFF)));
             d.setBackgroundColor(Color.fromARGB(0, 0, 0, 0));
             d.setTextOpacity((byte) Math.max(26, Math.min(255, opacity)));
@@ -748,6 +777,14 @@ public final class ScreenRuntime {
             // A bitmap glyph advances one pixel more than it draws (9 vs 8 px), so the centred line puts the 8 px glyph half a
             // pixel right of centre: at this stretch that is width / 16. Measured in a real 26.2 client (2026-11-15).
             float x = (float) ((cx - width / 16) * k);
+            if (pinned && layer >= 0) {
+                // the glyph line is 9 px wide (8 px drawn + 1 advance): its sort origin is the box's top-left corner
+                double[] o = ScreenGeometry.textOrigin(x, y, sx, sy, 9, 1);
+                double z = PINNED_DISTANCE + depth;
+                float f = (float) ScreenGeometry.layerScale(o[0], o[1], z, layer, PINNED_DISTANCE);
+                d.setTransformation(new Transformation(new Vector3f(x * f, y * f, (float) (-z * f)), new Quaternionf(), new Vector3f(sx * f, sy * f, f), new Quaternionf()));
+                return;
+            }
             Vector3f translation = pinned ? new Vector3f(x, y, (float) -(PINNED_DISTANCE + depth)) : new Vector3f(x, y, (float) (-depth * k));
             d.setTransformation(new Transformation(translation, new Quaternionf(), new Vector3f(sx, sy, 1f), new Quaternionf()));
         }
@@ -768,7 +805,7 @@ public final class ScreenRuntime {
             double scale = Math.max(0.05, (widget.textHeight() > 0 ? widget.textHeight() : Math.min(widget.height(), TEXT_MAX)) / LINE * 0.8);
             double x = widget.u() + widget.width() / 2 - layout.width() / 2;
             double bottom = layout.height() / 2 - (widget.v() + widget.height()) + textLift(widget);
-            d.setTransformation(transform(x, bottom, scale));
+            d.setTransformation(transform(x, bottom, scale, 0, 1, contentLayer(widget)));
         }
 
         private void placePointer(TextDisplay d) {
@@ -788,6 +825,7 @@ public final class ScreenRuntime {
 
         /** In drawing order: a widget's box first, then its text or icon, so later widgets lie on top. */
         private void spawnWidgets() {
+            computeLayers();
             for (ScreenWidget widget : widgets.values()) {
                 if (hasBox(widget)) boxes.put(widget.id(), entities.text(player, panelLocation(), d -> placeBox(d, widget)));
                 if (widget.kind() == ScreenWidget.Kind.ICON) icons.put(widget.id(), spawnIcon(widget));
@@ -850,7 +888,7 @@ public final class ScreenRuntime {
             int argb = lit ? widget.litFill() : widget.restingFill();
             double cx = widget.u() + widget.width() / 2 - layout.width() / 2;
             double cy = layout.height() / 2 - (widget.v() + widget.height() / 2);
-            solidAt(d, cx, cy, widget.width(), widget.height(), mode == ScreenSpec.Mode.PINNED ? 0 : 0.004, argb, argb >>> 24);
+            solidAt(d, cx, cy, widget.width(), widget.height(), mode == ScreenSpec.Mode.PINNED ? 0 : 0.004, argb, argb >>> 24, boxLayer(widget));
         }
 
         /** Item icon centred in the widget box, as large as the box's smaller side. */
@@ -884,7 +922,14 @@ public final class ScreenRuntime {
             double x = widget.u() + widget.width() / 2 - layout.width() / 2;
             double bottom = layout.height() / 2 - (widget.v() + widget.height() / 2) - size / 2;
             float y = (float) (bottom * k - s * PIXEL);
-            Vector3f translation = pinned ? new Vector3f((float) x, y, (float) -PINNED_DISTANCE) : new Vector3f((float) (x * k), y, 0f);
+            if (pinned) {
+                // a sprite glyph line is about 9 px wide (8 px + 1 advance)
+                double[] o = ScreenGeometry.textOrigin(x, y, s, s, 9, 1);
+                float f = (float) ScreenGeometry.layerScale(o[0], o[1], PINNED_DISTANCE, contentLayer(widget), PINNED_DISTANCE);
+                d.setTransformation(new Transformation(new Vector3f((float) x * f, y * f, (float) -PINNED_DISTANCE * f), new Quaternionf(), new Vector3f(s * f, s * f, s * f), new Quaternionf()));
+                return;
+            }
+            Vector3f translation = new Vector3f((float) (x * k), y, 0f);
             d.setTransformation(new Transformation(translation, new Quaternionf(), new Vector3f(s, s, s), new Quaternionf()));
         }
 
@@ -927,7 +972,10 @@ public final class ScreenRuntime {
             if (widget.align() == ScreenWidget.Align.START) x = widget.u() + pad + shown / 2 - layout.width() / 2;
             else if (widget.align() == ScreenWidget.Align.END) x = widget.u() + widget.width() - pad - shown / 2 - layout.width() / 2;
             double bottom = layout.height() / 2 - (widget.v() + widget.height()) + textLift(widget);
-            d.setTransformation(transform(x, bottom, scale));
+            String[] lines = plain.split("\n", -1);
+            int widest = 0;
+            for (String line : lines) widest = Math.max(widest, textWidth(line) - 2); // textWidth adds 2 px background padding
+            d.setTransformation(transform(x, bottom, scale, widest, lines.length, contentLayer(widget)));
         }
 
         // -- input --
@@ -974,7 +1022,12 @@ public final class ScreenRuntime {
                 ScreenWidget hit = hovered == null ? null : widgets.get(hovered);
                 // Core's Back button: go to the parent screen; a screen with its own "back" of that id still gets the click
                 // when there is no parent
-                if (hit != null && hit.clickable() && BACK_ID.equals(hit.id()) && back(player)) return;
+                // 0.66.1: Back reopens the parent through plugin code: a handler run, not player input
+                if (hit != null && hit.clickable() && BACK_ID.equals(hit.id())) {
+                    boolean[] wentBack = {false};
+                    ScreenDispatch.run(() -> wentBack[0] = back(player));
+                    if (wentBack[0]) return;
+                }
                 deliver(new ScreenInput.Click(hit == null || !hit.clickable() ? null : hit.id(), lastU, lastV, right));
             } finally {
                 // 0.65.0: the two halves of a click are told apart by time, and the second half waits in the server's
@@ -995,7 +1048,8 @@ public final class ScreenRuntime {
         }
 
         void deliver(ScreenInput input) {
-            try { spec.onInput().accept(this, input); }
+            // 0.66.1: world events the handler fires (protection probes) are plugin-made; ScreenWorldGuard lets them through
+            try { ScreenDispatch.run(() -> spec.onInput().accept(this, input)); }
             catch (RuntimeException failure) {
                 core.getLogger().warning("[Screens] " + owner.getName() + " screen " + spec.id() + " failed on " + input.getClass().getSimpleName() + ": " + failure);
             }

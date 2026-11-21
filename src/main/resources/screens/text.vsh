@@ -85,13 +85,25 @@ void main() {
     // a map draw it depth-tested there, so the map, which is drawn after all text, cannot cover it.
 #ifndef IS_GUI
     if (all(equal(ivec3(round(Color.rgb * 255.0)), ivec3(254, 254, 254)))) {
+        // Since 0.66.1 linear in the view angle (ScreenGeometry.pinnedPoint uses the same formula): the pointer sits at
+        // (turn, -nod) in radians, the head's yaw and pitch minus those of this glyph vertex, at depth 1. Equal mouse
+        // movements move it by equal steps, the same horizontally and vertically, over the whole panel. Before, the view
+        // position was mirrored to (-x, -y): a perspective projection that sped up towards the edges (1/cos²).
         vec4 view = ModelViewMat * vec4(Position, 1.0);
-        view.xy = -view.xy;
+        mat3 rot = mat3(ModelViewMat);
+        vec3 p = transpose(rot) * view.xyz;                   // this vertex relative to the camera, in the world
+        vec3 forward = -vec3(rot[0][2], rot[1][2], rot[2][2]); // camera forward in the world
+        vec3 right = vec3(rot[0][0], rot[1][0], rot[2][0]);    // camera right in the world (never tilted)
+        float camYaw = atan(-right.z, -right.x);
+        float camPitch = asin(clamp(-forward.y, -1.0, 1.0));
+        float turn = camYaw - atan(-p.x, p.z);
+        turn -= 6.2831853 * floor((turn + 3.1415927) / 6.2831853);
+        float nod = camPitch - atan(-p.y, length(p.xz));
         // Hotspot: the arrow tip sat 0.023 left of and 0.016 above the click point (measured in vanilla and Fabric clients,
         // 2026-11-15); move the glyph so the tip is exactly where clicks land.
-        view.xy += vec2(0.023, -0.0164) * -view.z;
-        if (view.z < -0.0001) view.xyz *= 0.1 / -view.z;
-        gl_Position = ProjMat * view;
+        vec2 at = vec2(turn, -nod) + vec2(0.023, -0.0164);
+        // pulled to 0.1 blocks in front of the camera (same place on the screen)
+        gl_Position = ProjMat * vec4(at * 0.1, -0.1, 1.0);
         vertexColor = vec4(1.0);
     }
 #endif

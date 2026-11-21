@@ -353,10 +353,11 @@ private void applyStartSwitches() {
  */
 private void declareSwitches() {
         var lang = Vystorm.vystorm_core.lang.Localization.get().core();
-        for (var feature : Vystorm.vystorm_core.lifecycle.CoreSwitches.Switch.values())
-                ConfigEditor.feature(this, feature.path, null, lang.ref(feature.description()));
-        for (String[] declared : Vystorm.vystorm_core.lifecycle.CoreSwitches.DECLARED)
-                ConfigEditor.feature(this, declared[0], null, lang.ref(declared[1]));
+        // 0.66.1: with readable names in all languages (before, the names came from the key paths)
+        Vystorm.vystorm_core.lifecycle.CoreSwitches.declare(lang::ref, (path, label, description, declared) -> {
+                if (declared) ConfigEditor.feature(this, path, label, description);
+                else ConfigEditor.label(this, path, label, description);
+        });
         ConfigEditor.activation(this, "metrics", SettingPolicy.Activation.RESTART);
 }
 

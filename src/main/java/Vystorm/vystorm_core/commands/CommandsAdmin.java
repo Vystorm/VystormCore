@@ -39,6 +39,7 @@ public final class CommandsAdmin {
         if (args.length >= 3 && args[1].equalsIgnoreCase("mode")) {
             AliasPolicy policy = AliasPolicy.parse(args[2], null);
             if (policy == null) { lang.send(sender, "command.admin.usage"); return; }
+            if (Vystorm.vystorm_core.config.YamlProblems.refusedSave(sender, core)) return;
             core.getConfig().set("commands.localized-aliases", policy.key());
             save(core);
             lang.send(sender, "command.admin.mode-set", "mode", policy.key());
@@ -48,6 +49,7 @@ public final class CommandsAdmin {
             String alias = args[2].toLowerCase(Locale.ROOT);
             boolean on = AliasPolicy.parse(args[3], AliasPolicy.NONE) == AliasPolicy.ALL;
             if (!known(alias)) { lang.send(sender, "command.admin.alias-unknown", "alias", alias); return; }
+            if (Vystorm.vystorm_core.config.YamlProblems.refusedSave(sender, core)) return;
             Set<String> disabled = new LinkedHashSet<>(core.getConfig().getStringList("commands.disabled-aliases"));
             disabled.removeIf(s -> s.equalsIgnoreCase(alias) || s.toLowerCase(Locale.ROOT).endsWith(":" + alias));
             if (!on) disabled.add(alias);

@@ -60,6 +60,50 @@ public final class CoreSwitches {
             new String[] {"update-check.enabled", "switches.update-check"},
             new String[] {"review-reminder.enabled", "switches.review-reminder"});
 
+    /**
+     * 0.66.1: the older {@code enabled} keys that {@code /vadmin features} lists by themselves, with the id of their
+     * texts. Before, they were shown with names made from the key path ("Web › Client › Ui") and the config comment.
+     */
+    public static final List<String[]> LISTED = List.of(
+            new String[] {"database.shared.enabled", "shared-database"},
+            new String[] {"web.enabled", "web"},
+            new String[] {"web.client.enabled", "web-client"},
+            new String[] {"web.client.ui.enabled", "web-client-ui"},
+            new String[] {"web.client.panels.enabled", "web-client-panels"},
+            new String[] {"web.audit.enabled", "web-audit"},
+            new String[] {"player-menu.enabled", "player-menu"},
+            new String[] {"news.enabled", "news"},
+            new String[] {"profile.enabled", "profile"},
+            new String[] {"inbox.enabled", "inbox"},
+            new String[] {"config-history.enabled", "config-history"},
+            new String[] {"polls.enabled", "polls"},
+            new String[] {"screens.enabled", "screens"},
+            new String[] {"menus.enabled", "file-menus"});
+
+    /** Receives one switch of Core: its path, the readable name and the description (language references). */
+    @FunctionalInterface
+    public interface Declaration {
+        /** {@code declared}: a key the feature screen would not list by itself (it is declared as a feature). */
+        void accept(String path, String labelRef, String descriptionRef, boolean declared);
+    }
+
+    /**
+     * 0.66.1: every switch of Core with its name ({@code switch-names.<id>}) and description ({@code switches.<id>})
+     * in all seven languages, so {@code /vadmin features vystorm_core} shows no key paths. {@code ref} turns a key of
+     * Core's language bundle into a reference ({@code Lang.ref}).
+     */
+    public static void declare(java.util.function.UnaryOperator<String> ref, Declaration out) {
+        for (Switch s : Switch.values()) {
+            String id = s.description().substring("switches.".length());
+            out.accept(s.path, ref.apply("switch-names." + id), ref.apply(s.description()), true);
+        }
+        for (String[] declared : DECLARED) {
+            String id = declared[1].substring("switches.".length());
+            out.accept(declared[0], ref.apply("switch-names." + id), ref.apply(declared[1]), true);
+        }
+        for (String[] listed : LISTED) out.accept(listed[0], ref.apply("switch-names." + listed[1]), ref.apply("switches." + listed[1]), false);
+    }
+
     private static volatile Set<Switch> off = EnumSet.noneOf(Switch.class);
 
     private CoreSwitches() {}

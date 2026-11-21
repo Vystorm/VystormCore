@@ -21,6 +21,10 @@ import org.bukkit.plugin.Plugin;
  * a short guard time after such a click ({@link ScreenRuntime#stopsWorldAction}), these actions of the player are
  * cancelled: block break, start of mining, use of a block or item, use of and hits on entities.
  * <p>
+ * Since 0.66.1 events that fire while Core runs a screen or dialog input handler ({@link ScreenDispatch#active()}) are
+ * never stopped: they come from plugin code, for example a synthetic interact or break event a plugin fires to ask the
+ * protection plugins, not from the player's input.
+ * <p>
  * Registered through Core's event stages at {@link EventStage#PROTECT}, so plugins that act on these events in later
  * stages never see the stray click. Clicks on the screen's own click box are handled by {@link ScreenListener}.
  */
@@ -62,6 +66,9 @@ public final class ScreenWorldGuard {
     }
 
     private static boolean stops(Supplier<ScreenRuntime> runtime, Player player, boolean buttonDown) {
+        // 0.66.1: an event fired while Core runs a screen or dialog handler was made by a plugin (a protection probe
+        // such as Gallery's ProtectionProbe), never by the player's own input: let it through
+        if (ScreenDispatch.active()) return false;
         ScreenRuntime screens = running(runtime);
         return screens != null && player != null && screens.stopsWorldAction(player, buttonDown);
     }

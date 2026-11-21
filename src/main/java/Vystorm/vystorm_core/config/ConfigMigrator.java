@@ -52,6 +52,14 @@ public final class ConfigMigrator {
     /** Also supports lifecycle-owned modules with isolated config/resources. */
     public int migrate(org.bukkit.plugin.Plugin plugin) throws IOException {
         plugin.saveDefaultConfig();
+        // 0.66.1: a config.yml with a YAML error loads as an empty config; migrating and saving it would replace the
+        // admin's file with the defaults. Leave the file alone and say where the error is.
+        String broken = YamlProblems.problem(new File(plugin.getDataFolder(), "config.yml"));
+        if (broken != null) {
+            plugin.getLogger().severe("config.yml could not be read (" + broken + "). It is left unchanged and not migrated; "
+                    + "the defaults are used until the error is fixed.");
+            return current;
+        }
         FileConfiguration config = plugin.getConfig();
         String before = config.saveToString();
         int from = migrate(config);

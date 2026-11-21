@@ -25,6 +25,8 @@ import java.util.function.Supplier;
 public final class ConfigSettings {
     private final Supplier<FileConfiguration> config;
     private final Runnable save;
+    /** 0.66.1: the plugin whose config.yml {@link #of(Plugin)} saves; a broken file is then never saved over. */
+    private org.bukkit.plugin.Plugin owner;
     private final List<Setting> settings = new ArrayList<>();
 
     private ConfigSettings(Supplier<FileConfiguration> config, Runnable save) {
@@ -32,7 +34,11 @@ public final class ConfigSettings {
     }
 
     /** Binds to the plugin's config.yml ({@code getConfig()} / {@code saveConfig()}). */
-    public static ConfigSettings of(Plugin plugin) { return new ConfigSettings(plugin::getConfig, plugin::saveConfig); }
+    public static ConfigSettings of(Plugin plugin) {
+        ConfigSettings settings = new ConfigSettings(plugin::getConfig, plugin::saveConfig);
+        settings.owner = plugin;
+        return settings;
+    }
 
     /** Binds to any configuration, e.g. a secondary YAML file, with its own save action. */
     public static ConfigSettings of(Supplier<FileConfiguration> config, Runnable save) { return new ConfigSettings(config, save); }
@@ -112,7 +118,12 @@ public final class ConfigSettings {
 
     public SettingsSection section(String id, String title, String description, String permission, Consumer<Player> reload) {
         Consumer<Player> apply = reload == null ? p -> {} : reload;
-        return SettingsSection.server(id, title, description, permission, settings, p -> { save.run(); apply.accept(p); });
+        return SettingsSection.server(id, title, description, permission, settings, p -> {
+            // 0.66.1: a config.yml with a YAML error loaded as almost empty; saving it would replace the admin's file
+            if (owner != null && Vystorm.vystorm_core.config.YamlProblems.refusedSave(p, owner)) return;
+            save.run();
+            apply.accept(p);
+        });
     }
 
     private static double round(double v) { return Math.round(v * 1_000_000d) / 1_000_000d; }

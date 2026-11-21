@@ -347,7 +347,12 @@ final class ConfigEditorService {
     void reloadHook(Plugin owner, Runnable reload) { state(owner).reloadHook = reload; }
 
     void label(Plugin owner, String path, String label, String description) {
-        Meta m = meta(owner, path); m.label = label; m.description = description; changed(owner);
+        // 0.66.1: null keeps what was set before. feature(owner, path, null, description) after label(...) used to wipe
+        // the readable name, and /vadmin features showed the key path again.
+        Meta m = meta(owner, path);
+        if (label != null) m.label = label;
+        if (description != null) m.description = description;
+        changed(owner);
     }
 
     void range(Plugin owner, String path, double min, double max, double step) {

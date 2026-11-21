@@ -74,6 +74,25 @@ class ScreenListLayoutTest {
     }
 
     @Test
+    void givenLongDescription_whenWrappedToTwoLines_thenNoWordIsCutInTheMiddle() {
+        // 0.66.1: /vadmin features showed "… opens the main me…": the last line now ends after a whole word
+        String text = "Sneak and left-click twice quickly into the air opens the main menu while you build, mine or fight on the server. ".repeat(3).strip();
+        java.util.Set<String> words = new java.util.HashSet<>(List.of(text.split(" ")));
+        for (double w : new double[] {0.4, 0.5, 0.6, 0.8}) {
+            List<String> lines = ScreenListLayout.wrap(text, w, Z.small(), 2);
+            assertEquals(2, lines.size(), "w=" + w);
+            assertTrue(lines.get(1).endsWith("…"), lines.toString());
+            for (String line : lines) {
+                assertTrue(ScreenListLayout.textW(line, Z.small()) <= w + 1e-9, "fits: " + line);
+                for (String word : line.replace("…", "").split(" ")) assertTrue(words.contains(word), "whole word '" + word + "' in " + lines);
+            }
+        }
+        List<String> chinese = ScreenListLayout.wrap("潜行并空手右键其他玩家打开玩家菜单".repeat(6), 0.6, Z.small(), 2);
+        assertEquals(2, chinese.size());
+        assertTrue(chinese.get(1).endsWith("…") && ScreenListLayout.textW(chinese.get(1), Z.small()) <= 0.6 + 1e-9, "text without spaces is cut by characters");
+    }
+
+    @Test
     void givenLongValue_whenPlaced_thenValueColumnIsCappedAndCut() {
         ScreenListLayout.Row row = ScreenListLayout.Row.entry("r", null, Component.text("Join message"),
                 Component.text("\"Welcome to our wonderful server, have fun and be nice to the others in the chat\""), null, true);

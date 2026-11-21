@@ -120,7 +120,7 @@ final class FeatureScreen {
         for (ConfigEditorService.PluginState state : only != null ? List.of(only) : plugins(service, player)) {
             List<ConfigEditorService.FeatureView> list = service.features(state);
             long on = list.stream().filter(ConfigEditorService.FeatureView::on).count();
-            rows.add(ScreenListLayout.Row.heading("r" + rows.size(), Component.text(state.owner.getName()),
+            rows.add(ScreenListLayout.Row.heading("r" + rows.size(), Component.text(displayName(state.owner)),
                     lang().component(player, "features.count", "on", on, "total", list.size()), false));
             owners.add(null);
             features.add(null);
@@ -148,7 +148,7 @@ final class FeatureScreen {
         List<ScreenWidget> widgets = new ArrayList<>();
         int buttons = only == null ? 1 : 2;
         Component title = only == null ? lang().component(player, "features.title")
-                : lang().component(player, "features.title-plugin", "plugin", only.owner.getName());
+                : lang().component(player, "features.title-plugin", "plugin", displayName(only.owner));
         widgets.add(ScreenWidget.label("title", MARGIN, 0.03 * s, w - 2 * MARGIN - buttons * (button + gap), 0.08 * s, title).withAlign(ScreenWidget.Align.START));
         if (only != null) widgets.add(ScreenWidget.button(BACK, w - MARGIN - 2 * button - gap, 0.03 * s, button, 0.07 * s, lang().component(player, "menu.back")));
         widgets.add(ScreenWidget.button("close", w - MARGIN - button, 0.03 * s, button, 0.07 * s, lang().component(player, "menu.screen.close")));
@@ -200,11 +200,36 @@ final class FeatureScreen {
     static Component describe(Player player, ConfigEditorService.FeatureView feature) {
         String description = Localization.get().resolve(player, feature.description());
         // The footer is one line; longer texts would be shrunk until nobody can read them (the row shows two lines).
-        if (description != null && description.length() > MAX_DESCRIPTION) description = description.substring(0, MAX_DESCRIPTION - 1).stripTrailing() + "…";
+        if (description != null && description.length() > MAX_DESCRIPTION) description = shorten(description, MAX_DESCRIPTION);
         Component text = Component.text(Localization.get().resolve(player, feature.label()) + ": ")
                 .append(lang().component(player, feature.on() ? "features.state-on" : "features.state-off"));
         if (feature.activation() == SettingPolicy.Activation.RESTART) text = text.append(Component.text(" · ")).append(lang().component(player, "features.restart"));
         return description == null || description.isBlank() ? text : text.append(Component.text(" – " + description, NamedTextColor.GRAY));
+    }
+
+    /** {@code text} in at most {@code max} characters, ending after a whole word with "…" (0.66.1; text without spaces is cut by characters). */
+    static String shorten(String text, int max) {
+        if (text.length() <= max) return text;
+        String head = text.substring(0, max - 1);
+        int space = head.lastIndexOf(' ');
+        if (space > max / 2) head = head.substring(0, space);
+        return head.stripTrailing() + "…";
+    }
+
+    /**
+     * The name of a plugin as people write it (0.66.1): Core's {@code vystorm_core} is "Vystorm Core"; other names with
+     * underscores get spaces and capitals the same way; names such as {@code VystormChat} stay as they are.
+     */
+    static String displayName(org.bukkit.plugin.Plugin plugin) {
+        String name = plugin.getName();
+        if (name == null || name.indexOf('_') < 0) return name;
+        StringBuilder out = new StringBuilder();
+        for (String part : name.split("_+")) {
+            if (part.isEmpty()) continue;
+            if (!out.isEmpty()) out.append(' ');
+            out.append(Character.toUpperCase(part.charAt(0))).append(part.substring(1));
+        }
+        return out.isEmpty() ? name : out.toString();
     }
 
     /** Index of a row widget id ({@code r12}) in the model, or -1. */

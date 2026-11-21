@@ -140,7 +140,7 @@ public final class ConfigEditor {
      */
     public static void feature(Plugin owner, String path) { service().feature(owner, path, true); }
 
-    /** {@link #feature(Plugin, String)} with a label and description (both may be {@code Lang.ref} references; null keeps the derived text). @since 0.60.0 */
+    /** {@link #feature(Plugin, String)} with a label and description (both may be {@code Lang.ref} references; null keeps the text set before, else the derived one; since 0.66.1 a null no longer removes an earlier label). @since 0.60.0 */
     public static void feature(Plugin owner, String path, String labelOrLangRef, String descriptionRef) {
         service().feature(owner, path, true);
         if (labelOrLangRef != null || descriptionRef != null) service().label(owner, path, labelOrLangRef, descriptionRef);

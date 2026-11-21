@@ -12,7 +12,7 @@ class ScreenGeometryTest {
     @Test void givenLookRight_whenPinned_thenPointerMovesRight() {
         double[] p = ScreenGeometry.pinnedPoint(0f, 0f, 10f, 0f, 1.0).orElseThrow();
         assertTrue(p[0] > 0);
-        assertEquals(Math.tan(Math.toRadians(10)), p[0], 1e-6);
+        assertEquals(Math.toRadians(10), p[0], 1e-6, "0.66.1: linear in the angle, not tan");
         assertEquals(0, p[1], 1e-6);
     }
     @Test void givenLookUp_whenPinned_thenPointerMovesUp() {

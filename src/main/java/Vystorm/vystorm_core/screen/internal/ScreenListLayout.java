@@ -202,12 +202,27 @@ public final class ScreenListLayout {
             if (out.size() == maxLines) {
                 StringBuilder rest = new StringBuilder(line);
                 for (int j = i; j < words.length; j++) rest.append(rest.isEmpty() ? "" : " ").append(words[j]);
-                if (!rest.isEmpty()) out.set(maxLines - 1, cut(out.get(maxLines - 1) + " " + rest, w, h));
+                // 0.66.1: the last line keeps whole words and ends with "…" (it used to stop in the middle of a word)
+                if (!rest.isEmpty()) out.set(maxLines - 1, cutAtWord(out.get(maxLines - 1), w, h));
                 return out;
             }
         }
         if (!line.isEmpty()) out.add(line.toString());
         return out;
+    }
+
+    /**
+     * {@code line} followed by "…" within width {@code w}, dropping whole words from its end until it fits (0.66.1). A
+     * line of a single word (or text without spaces, such as Chinese) is cut by characters.
+     */
+    static String cutAtWord(String line, double w, double h) {
+        String base = line.stripTrailing();
+        while (textW(base + ELLIPSIS, h) > w) {
+            int space = base.lastIndexOf(' ');
+            if (space <= 0) return cut(base + ELLIPSIS, w, h);   // nothing left to drop: cut by characters
+            base = base.substring(0, space).stripTrailing();
+        }
+        return base + ELLIPSIS;
     }
 
     /** {@code text} cut to width {@code w} with "…" at the end when it does not fit. */

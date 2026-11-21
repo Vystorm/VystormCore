@@ -157,8 +157,9 @@ public final class DefaultDialogHandler implements DialogInterface {
             sessions.remove(session.player, session);
             player.closeDialog();
             try {
-                if (index < 0) session.request.cancel().run();
-                else session.request.buttons().get(index).action().accept(player, response);
+                // 0.66.1: plugin code, not player input: world events it fires pass the screen guard (ScreenDispatch)
+                if (index < 0) Vystorm.vystorm_core.screen.internal.ScreenDispatch.run(session.request.cancel());
+                else Vystorm.vystorm_core.screen.internal.ScreenDispatch.run(() -> session.request.buttons().get(index).action().accept(player, response));
             } catch (RuntimeException ex) { failure("Dialog callback failed", ex); }
         });
     }
