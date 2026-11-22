@@ -27,7 +27,10 @@ class ManagerLoadingTest {
             "_advancedMethods.placeholderHandler.PlaceholderValue", "_advancedMethods.placeholderHandler.PlaceholderContext",
             "_advancedMethods.placeholderHandler.PlaceholderBridge", "_advancedMethods.placeholderHandler.internal.PlaceholderApiBridge",
             "_advancedMethods.placeholderHandler.internal.CorePlaceholders", "_advancedMethods.placeholderHandler.internal.PlaceholdersAdmin",
-            "_advancedMethods.placeholderHandler.internal.PlaceholderRuntime");
+            "_advancedMethods.placeholderHandler.internal.PlaceholderRuntime",
+            "_advancedMethods.placeholderHandler.RankingInfo", "_advancedMethods.placeholderHandler.RankingInfo$Format",
+            "_advancedMethods.placeholderHandler.RankingSource", "_advancedMethods.placeholderHandler.RankingSource$Row",
+            "_advancedMethods.placeholderHandler.PlaceholderRanking");
 
     private static void add(List<URL> urls, Class<?> anchor) {
         urls.add(anchor.getProtectionDomain().getCodeSource().getLocation());

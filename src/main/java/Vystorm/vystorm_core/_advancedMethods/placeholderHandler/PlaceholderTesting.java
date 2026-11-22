@@ -3,8 +3,12 @@ package Vystorm.vystorm_core._advancedMethods.placeholderHandler;
 import Vystorm.vystorm_core._coreMethods.eventRegulator.EventStageTesting;
 import java.lang.reflect.Proxy;
 import java.nio.charset.StandardCharsets;
+import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import net.kyori.adventure.text.Component;
@@ -32,6 +36,15 @@ import org.bukkit.plugin.Plugin;
  * when(core.placeholders()).thenReturn(placeholders.placeholders());
  * }</pre>
  *
+ * Rankings (0.67.0) are asserted the same way:
+ *
+ * <pre>{@code
+ * myPlugin.registerRankings(placeholders.placeholders());
+ * assertEquals(List.of("veins:mined"), placeholders.rankings().stream().map(PlaceholderRanking::id).toList());
+ * assertEquals("Alex", placeholders.resolve(null, "%vystorm_veins_top_mined_1_name%"));
+ * assertEquals("1.234", placeholders.language("de").resolve(null, "%vystorm_veins_top_mined_1_value%"));
+ * }</pre>
+ *
  * The thread that calls {@link #detached()} is the "server thread" of this registry; {@link #resolveOffThread}
  * resolves from another one, where only async-safe values answer. Not meant for production code.
  *
@@ -42,7 +55,14 @@ public final class PlaceholderTesting {
     private final AtomicLong tick = new AtomicLong();
     private final PlaceholderHandler handler = new PlaceholderHandler(() -> Thread.currentThread() == server, tick::get);
 
-    private PlaceholderTesting() {}
+    private final List<String> warnings = new CopyOnWriteArrayList<>();
+    private final ConcurrentLinkedQueue<Runnable> queued = new ConcurrentLinkedQueue<>();
+
+    private PlaceholderTesting() {
+        handler.language(viewer -> "en");
+        handler.warnings(warnings::add);
+        handler.serverExecutor(queued::add);
+    }
 
     /** A new, empty registry without a server, without Core's own values and without bridges. */
     public static PlaceholderTesting detached() { return new PlaceholderTesting(); }
@@ -119,6 +139,40 @@ public final class PlaceholderTesting {
     public PlaceholderTesting bridge(PlaceholderBridge bridge) {
         handler.bridge(plugin("BridgeOwner"), bridge);
         return this;
+    }
+
+    // ------------------------------------------------------------------ rankings (0.67.0)
+
+    /** The rankings declared in this registry; same as {@link PlaceholderInterface#rankings()}. @since 0.67.0 */
+    public List<PlaceholderRanking> rankings() { return handler.rankings(); }
+
+    /** A declared ranking by id {@code <namespace>:<key>}. @since 0.67.0 */
+    public Optional<PlaceholderRanking> ranking(String id) { return handler.ranking(id); }
+
+    /** The rows Core makes of a ranking (sorted, cleaned, capped at 100); same as {@link PlaceholderInterface#top}. @since 0.67.0 */
+    public List<RankingSource.Row> top(String id, int n) { return handler.top(id, n); }
+
+    /**
+     * The language code of every viewer for formatted ranking values ({@code en} unless set), e.g. {@code "de"} to see
+     * {@code 1.234}. Returns this. @since 0.67.0
+     */
+    public PlaceholderTesting language(String code) {
+        Objects.requireNonNull(code, "code");
+        handler.language(viewer -> code);
+        return this;
+    }
+
+    /** The lines Core logged about failing ranking sources (once per ranking). @since 0.67.0 */
+    public List<String> warnings() { return List.copyOf(warnings); }
+
+    /**
+     * Runs the work that {@link PlaceholderInterface#topAsync} queued from other threads, here on the test's "server
+     * thread", as the server would in its next tick. Returns how many tasks ran. @since 0.67.0
+     */
+    public int runServerTasks() {
+        int ran = 0;
+        for (Runnable task; (task = queued.poll()) != null; ran++) task.run();
+        return ran;
     }
 
     /** Moves the server tick forward, for values with {@link PlaceholderValue#cacheTicks(int)}. Returns this. */

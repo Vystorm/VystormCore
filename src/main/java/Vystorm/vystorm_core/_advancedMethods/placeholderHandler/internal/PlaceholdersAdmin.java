@@ -3,7 +3,10 @@ package Vystorm.vystorm_core._advancedMethods.placeholderHandler.internal;
 import Vystorm.vystorm_core._advancedMethods.placeholderHandler.PlaceholderBridge;
 import Vystorm.vystorm_core._advancedMethods.placeholderHandler.PlaceholderInterface;
 import Vystorm.vystorm_core._advancedMethods.placeholderHandler.PlaceholderNamespace;
+import Vystorm.vystorm_core._advancedMethods.placeholderHandler.PlaceholderRanking;
 import Vystorm.vystorm_core._advancedMethods.placeholderHandler.PlaceholderValue;
+import Vystorm.vystorm_core._advancedMethods.placeholderHandler.RankingInfo;
+import Vystorm.vystorm_core._advancedMethods.placeholderHandler.RankingSource;
 import Vystorm.vystorm_core.compat.PlatformCompat;
 import Vystorm.vystorm_core.lang.Lang;
 import Vystorm.vystorm_core.lang.Localization;
@@ -38,6 +41,11 @@ public final class PlaceholdersAdmin {
         Lang lang = Localization.get().core();
         if (args.length >= 2 && args[1].equalsIgnoreCase("test")) {
             test(sender, placeholders, lang, args);
+            return;
+        }
+        if (args.length >= 2 && args[1].equalsIgnoreCase("rankings")) {
+            if (args.length > 3) { lang.send(sender, "placeholders.rankings-usage"); return; }
+            rankings(sender, placeholders, lang, args.length == 3 ? args[2] : null);
             return;
         }
         if (args.length == 1) {
@@ -84,7 +92,59 @@ public final class PlaceholdersAdmin {
                     : bridge.providing() ? "placeholders.bridge-connected" : "placeholders.bridge-consume-only";
             lang.send(sender, "placeholders.bridge-line", "bridge", bridge.name(), "state", lang.component(sender, state));
         }
+        int rankings = placeholders.rankings().size();
+        if (rankings > 0)
+            PlatformCompat.sendMessage(sender, lang.component(sender, "placeholders.rankings-hint", "count", rankings)
+                    .clickEvent(ClickEvent.runCommand("/vadmin placeholders rankings")));
         lang.send(sender, "placeholders.usage");
+    }
+
+    /** Rows shown per ranking in {@code /vadmin placeholders rankings}. */
+    static final int TOP_SHOWN = 3;
+
+    /** {@code /vadmin placeholders rankings [namespace]}: every declared ranking with its best three rows. */
+    private static void rankings(CommandSender sender, PlaceholderInterface placeholders, Lang lang, String namespace) {
+        List<PlaceholderRanking> all = placeholders.rankings();
+        List<PlaceholderRanking> shown = namespace == null ? all
+                : all.stream().filter(ranking -> ranking.namespace().equalsIgnoreCase(namespace)).toList();
+        if (namespace != null && shown.isEmpty()) {
+            lang.send(sender, "placeholders.rankings-unknown", "namespace", namespace, "namespaces",
+                    String.join(", ", all.stream().map(PlaceholderRanking::namespace).distinct().toList()));
+            return;
+        }
+        long namespaces = shown.stream().map(PlaceholderRanking::namespace).distinct().count();
+        lang.send(sender, "placeholders.rankings-header", "count", shown.size(), "namespaces", namespaces);
+        if (shown.isEmpty()) {
+            lang.send(sender, "placeholders.rankings-none");
+            return;
+        }
+        String language = lang.language(sender);
+        for (PlaceholderRanking ranking : shown) {
+            List<RankingSource.Row> rows = placeholders.top(ranking.id(), PlaceholderInterface.RANKING_MAX_ROWS);
+            String entries = rows.size() >= PlaceholderInterface.RANKING_MAX_ROWS ? rows.size() + "+" : Integer.toString(rows.size());
+            RankingInfo info = ranking.info();
+            String description = info.description().isEmpty() ? "" : Localization.get().resolve(sender, info.description());
+            Component line = lang.component(sender, "placeholders.rankings-line", "id", ranking.id(),
+                            "label", Localization.get().resolve(sender, info.label()), "entries", entries, "plugin", ranking.owner().getName(),
+                            "order", lang.component(sender, info.order() == RankingInfo.Order.ASCENDING
+                                    ? "placeholders.rankings-ascending" : "placeholders.rankings-descending"))
+                    .hoverEvent(HoverEvent.showText(lang.component(sender, "placeholders.rankings-hover",
+                            "top", ranking.topPlaceholder(1, "name"), "value", ranking.topPlaceholder(1, "value"),
+                            "rank", ranking.rankPlaceholder(), "mine", ranking.valuePlaceholder())));
+            PlatformCompat.sendMessage(sender, line);
+            if (!description.isEmpty()) lang.send(sender, "placeholders.rankings-description", "description", description);
+            if (rows.isEmpty()) {
+                lang.send(sender, "placeholders.rankings-empty");
+                continue;
+            }
+            String unit = info.unit().isEmpty() ? "" : " " + Localization.get().resolve(sender, info.unit());
+            for (int i = 0; i < Math.min(TOP_SHOWN, rows.size()); i++) {
+                RankingSource.Row row = rows.get(i);
+                lang.send(sender, "placeholders.rankings-row", "rank", i + 1, "name", row.name(),
+                        "value", info.format().format(row.value(), language) + unit);
+            }
+        }
+        lang.send(sender, "placeholders.rankings-syntax");
     }
 
     private static void values(CommandSender sender, PlaceholderNamespace namespace, Lang lang, int requested) {
@@ -138,7 +198,10 @@ public final class PlaceholdersAdmin {
         List<String> out = new ArrayList<>();
         if (args.length == 2) {
             out.add("test");
+            if (!placeholders.rankings().isEmpty()) out.add("rankings");
             out.addAll(names(placeholders));
+        } else if (args.length == 3 && args[1].equalsIgnoreCase("rankings")) {
+            placeholders.rankings().stream().map(PlaceholderRanking::namespace).distinct().forEach(out::add);
         } else if (args.length >= 3 && args[1].equalsIgnoreCase("test")) {
             // the namespaces as ready-made placeholder beginnings
             String typed = args[args.length - 1];

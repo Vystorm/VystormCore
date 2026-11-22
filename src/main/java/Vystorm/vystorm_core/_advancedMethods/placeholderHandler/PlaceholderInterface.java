@@ -2,6 +2,10 @@ package Vystorm.vystorm_core._advancedMethods.placeholderHandler;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.OptionalDouble;
+import java.util.OptionalInt;
+import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.minimessage.tag.resolver.TagResolver;
@@ -176,6 +180,44 @@ public interface PlaceholderInterface {
     default String value(OfflinePlayer viewer, String namespace, String key, String... arguments) {
         return PlaceholderHandler.shared().value(viewer, namespace, key, arguments);
     }
+
+    // ------------------------------------------------------------------ rankings (0.67.0)
+
+    /** Most rows a ranking gives; a larger {@code n} is capped to this. @since 0.67.0 */
+    int RANKING_MAX_ROWS = 100;
+
+    /**
+     * Every declared ranking ({@link PlaceholderNamespace#ranking}), by namespace and then in declaration order.
+     * Any thread. Capability {@code placeholder-rankings}. @since 0.67.0
+     */
+    default List<PlaceholderRanking> rankings() { return PlaceholderHandler.shared().rankings(); }
+
+    /** A declared ranking by id {@code <namespace>:<key>} (any case). Any thread. @since 0.67.0 */
+    default Optional<PlaceholderRanking> ranking(String id) { return PlaceholderHandler.shared().ranking(id); }
+
+    /**
+     * The best {@code n} rows of a ranking, best first, with the players' UUIDs; {@code n} is capped at
+     * {@link #RANKING_MAX_ROWS}. An unknown id, a disabled plugin or a source that throws gives an empty list.
+     *
+     * @throws IllegalStateException off the server thread: use {@link #topAsync}
+     * @since 0.67.0
+     */
+    default List<RankingSource.Row> top(String id, int n) { return PlaceholderHandler.shared().top(id, n); }
+
+    /**
+     * {@link #top} for callers off the server thread: the work runs on the server thread (in the next tick) and the
+     * future completes there. On the server thread it is complete at once. @since 0.67.0
+     */
+    default CompletableFuture<List<RankingSource.Row>> topAsync(String id, int n) { return PlaceholderHandler.shared().topAsync(id, n); }
+
+    /**
+     * The rank of a player (1 = best): the source's own answer, else his place in the best 100. Server thread.
+     * @since 0.67.0
+     */
+    default OptionalInt rank(String id, UUID player) { return PlaceholderHandler.shared().rank(id, player); }
+
+    /** The raw value of a player in a ranking: the source's own answer, else from the best 100. Server thread. @since 0.67.0 */
+    default OptionalDouble rankingValue(String id, UUID player) { return PlaceholderHandler.shared().rankingValue(id, player); }
 
     // ------------------------------------------------------------------ bridges
 

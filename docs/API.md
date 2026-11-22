@@ -526,7 +526,7 @@ Minecraft clock of a world (tick 0 is 06:00).
 `/vadmin placeholders` lists the namespaces with their plugin and the state of the bridges;
 `/vadmin placeholders <namespace> [page]` lists the values of a namespace in both forms with their descriptions and
 marks the ones that only answer on the server thread; `/vadmin placeholders test <text>` shows the text resolved
-for you. Permission `vystorm_core.admin`.
+for you; `/vadmin placeholders rankings [namespace]` lists the declared rankings (0.67.0, see below). Permission `vystorm_core.admin`.
 
 ### Testing without a server
 
@@ -553,6 +553,148 @@ If the plugin asks the hub itself, stub it: `when(core.placeholders()).thenRetur
 | `String resolveOffThread(OfflinePlayer viewer, String text)` | Resolves on another thread and waits: only async-safe values answer. |
 | `int disable(Plugin owner)` | What Core does when a plugin is disabled. |
 | `PlaceholderTesting bridge(PlaceholderBridge bridge)` / `advanceTicks(long ticks)` | Adds a bridge; moves the tick forward for values with `cacheTicks`. |
+| `rankings()`, `ranking(id)`, `top(id, n)` | The declared rankings and their rows (0.67.0). |
+| `PlaceholderTesting language(String code)` | The language of every viewer for formatted ranking values (`en` unless set). |
+| `List<String> warnings()` | The lines logged about failing ranking sources. |
+| `int runServerTasks()` | Runs what `topAsync` queued from other threads, as the server's next tick would. |
+
+### Rankings as placeholders (0.67.0)
+
+Capability `CoreApi.Capability.PLACEHOLDER_RANKINGS` (`placeholder-rankings`, since `0.67.0`).
+
+A ranking is a family of placeholders that a plugin declares with one call in its namespace. Everything that
+understands placeholders can then show it: Vystorm Boards (`{type: top, source: "veins:mined"}`), Core's texts and
+screens, and through the PlaceholderAPI bridge any scoreboard or hologram plugin. Consumers that need more than text
+(Boards draws heads and highlights the viewer) read the rows with their UUIDs from `api.placeholders().top(id, n)`.
+
+**The check.** Rankings must not raise your plugin's minimum Core version. Declare them only when the Core on the
+server has them, and keep the declaring code in a class of its own that is only loaded after the check (an older
+Core does not have `RankingInfo`, so a class that mentions it fails to load there):
+
+```java
+if (CoreApi.has("placeholder-rankings")) MyRankings.declare(this, core.placeholders());   // older Core: no rankings, all else as before
+```
+
+Write the name as a string (or `CoreApi.Capability.PLACEHOLDER_RANKINGS`, which the compiler copies into your class as
+the same string). `CoreApi.has` exists since 0.11.0.
+
+**A complete small example** (a plugin with an in-memory map of wins):
+
+```java
+import Vystorm.vystorm_core._advancedMethods.placeholderHandler.PlaceholderInterface;
+import Vystorm.vystorm_core._advancedMethods.placeholderHandler.RankingInfo;
+import Vystorm.vystorm_core._advancedMethods.placeholderHandler.RankingSource;
+import java.util.Comparator;
+import java.util.Map;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
+import org.bukkit.plugin.Plugin;
+
+final class MyRankings {
+    record Entry(String name, int wins) {}
+    static final Map<UUID, Entry> WINS = new ConcurrentHashMap<>();   // filled and saved by the plugin as before
+
+    static void declare(Plugin plugin, PlaceholderInterface placeholders) {
+        placeholders.register(plugin, "paddock").ranking("race-wins",
+                RankingInfo.of("Race wins", "Races won on the paddock track"),   // or lang.ref("rankings.race-wins.label")
+                n -> WINS.entrySet().stream()
+                        .sorted(Comparator.comparingInt((Map.Entry<UUID, Entry> e) -> e.getValue().wins()).reversed())
+                        .limit(n)
+                        .map(e -> new RankingSource.Row(e.getKey(), e.getValue().name(), e.getValue().wins()))
+                        .toList());
+    }
+}
+```
+
+`register(plugin, namespace)` returns the namespace the plugin already has, so a plugin that declares placeholders
+there too simply chains `.ranking(...)`. Core removes the rankings with the namespace when the plugin is disabled;
+declaring the same key again (after a reload) replaces the ranking; `namespace.removeRanking(key)` drops one (for a
+feature switch turned off). Another plugin cannot take an enabled plugin's namespace: `register` throws
+`IllegalStateException` naming the owner.
+
+**`RankingInfo`** (immutable; every method returns a copy): `RankingInfo.of(label, description)` (plain text or
+language references such as `lang.ref("rankings.mined.label")`), `.order(Order.DESCENDING | ASCENDING)` or
+`.ascending()`, `.format(Format...)`, `.unit(label)` (optional; consumers may show it, placeholders never add it).
+
+| `Format` | Example (English / German) | Notes |
+| --- | --- | --- |
+| `NUMBER` (default) | `12,345` / `12.345` | Rounded to a whole number |
+| `DECIMAL` | `1,234.50` / `1.234,50` | Two decimals |
+| `DURATION_MILLIS` | `1:05.250`, from one hour `1:02:03.004` | `m:ss.SSS`, `h:mm:ss.SSS` |
+| `DURATION_TICKS` | `0:01.000` for 20 ticks | Ticks as a time, like `DURATION_MILLIS` |
+| `DISTANCE_BLOCKS` | `850 m`, `1.25 km` / `1,25 km` | Kilometres from 1000 blocks |
+
+Separators follow the viewer's language: `de`, `it`, `pt_br` write `1.234,50`, `fr` and `ru` `1 234,50`, `en` and
+`zh_cn` `1,234.50`. `Format.format(value, language)` writes a value the same way for consumers that format themselves.
+
+**`RankingSource`**: `List<Row> top(int n)` (required; usually a lambda), optional `OptionalDouble value(UUID)` and
+`OptionalInt rank(UUID)` for players outside the best 100 (without them Core looks the player up in `top(100)`).
+`Row(UUID player, String name, double value)`.
+
+**The placeholders** (`<key>`: lower-case letters, digits and `-`, 1 to 32 characters, no underscore):
+
+| Percent form | Brace form | Value |
+| --- | --- | --- |
+| `%vystorm_<ns>_top_<key>_<n>_name%` | `{<ns>:top_<key>:<n>:name}` | Name on rank `n` (1 to 100); empty if the rank is not taken |
+| `%vystorm_<ns>_top_<key>_<n>_value%` | `{<ns>:top_<key>:<n>:value}` | Value on rank `n`, formatted in the viewer's language |
+| `%vystorm_<ns>_top_<key>_<n>_raw%` | `{<ns>:top_<key>:<n>:raw}` | The plain number (`1234`, `12.5`), for consumers that format themselves |
+| `%vystorm_<ns>_top_<key>_<n>_uuid%` | `{<ns>:top_<key>:<n>:uuid}` | UUID of the player on rank `n` |
+| `%vystorm_<ns>_rank_<key>%` | `{<ns>:rank_<key>}` | The viewer's rank, `-` if he has none |
+| `%vystorm_<ns>_value_<key>%` | `{<ns>:value_<key>}` | The viewer's value, formatted; `-` if he has none |
+
+Example: `%vystorm_paddock_top_race-wins_1_name%`, `{winter:top_sled-best:3:value}`, `%vystorm_veins_rank_mined%`.
+The declaration adds the values `top_<key>`, `rank_<key>` and `value_<key>` to the namespace; the normal 0.65.0 rules
+then apply (in the percent form the longest declared key wins and the rest are arguments split at `_`; in the brace
+form the key comes before the first `:`). Because a ranking key has no underscore, `top_race-wins_1_name` splits in
+exactly one way. A wrong `n`, an unknown field or extra parts leave the placeholder as written.
+
+**The plugin's own placeholders win:** a value the plugin declared with one of these names is kept (and one it declares
+later replaces Core's); a shorter declared value that matches (a `top` with arguments) and the namespace's fallback
+resolver are asked first, and Core answers only when they give nothing.
+
+**Threads.** Core calls a source on the server thread only. A source must answer from memory: no file or database
+read, no chunk loading, no player-file reads in the call. `n` is capped at 100. Core sorts what the source returns by
+the ranking's order (stable, so ties keep the source's order), drops `null` rows and values that are not finite, and
+cuts the list to `n`. A source that throws is logged once per ranking and server run and counts as empty. All
+placeholders of one ranking share one `top(100)` call per server tick. Resolving a text off the server thread leaves
+ranking placeholders as written (they are not async-safe).
+
+**Reading rankings** (`api.placeholders()`):
+
+| Method | Description |
+| --- | --- |
+| `List<PlaceholderRanking> rankings()` | Every declared ranking: `namespace()`, `key()`, `id()` (`ns:key`), `info()`, `owner()`, and the placeholder names (`topPlaceholder(n, field)`, `rankPlaceholder()`, `valuePlaceholder()`). Any thread. |
+| `Optional<PlaceholderRanking> ranking(String id)` | One ranking by `ns:key` (any case). Any thread. |
+| `List<RankingSource.Row> top(String id, int n)` | The best `n` rows with UUIDs. Server thread; off it throws `IllegalStateException`. |
+| `CompletableFuture<List<RankingSource.Row>> topAsync(String id, int n)` | The same from any thread: runs in the next server tick (at once on the server thread). |
+| `OptionalInt rank(String id, UUID player)` / `OptionalDouble rankingValue(String id, UUID player)` | One player's rank and raw value. Server thread. |
+
+An unknown id, a disabled plugin or a failing source give an empty answer, never an exception.
+
+**What Boards does with it** (from its rankings update): a board element `{type: top, source: "veins:mined", rows: 10}` reads the rows through
+`api.placeholders().top(...)` when the capability is there (cached on its sampling timer), takes order and format from
+the ranking's info unless the element sets them, draws heads from the UUIDs and highlights the viewer.
+`/boards top <source>` lists a ranking in chat and completes the declared ids.
+
+**Admin:** `/vadmin placeholders rankings [namespace]` lists every ranking with `ns:key`, label, description, number of
+entries (`100+` from 100), order, plugin and the best three; hovering a line shows its placeholder names. The
+generated values also appear under `/vadmin placeholders <namespace>`.
+
+**PlaceholderAPI:** the generated placeholders are ordinary values of the namespace and go through the same bridge as
+every other Vystorm placeholder (`%vystorm_paddock_top_race-wins_1_name%` in any PlaceholderAPI text).
+
+**Testing:** `PlaceholderTesting` covers rankings, so a plugin test asserts what it declares and resolves the
+generated placeholders without a server:
+
+```java
+PlaceholderTesting placeholders = PlaceholderTesting.detached();
+MyRankings.declare(PlaceholderTesting.plugin("VystormPaddock"), placeholders.placeholders());
+
+assertEquals(List.of("paddock:race-wins"), placeholders.rankings().stream().map(PlaceholderRanking::id).toList());
+assertEquals("Alex", placeholders.resolve(null, "%vystorm_paddock_top_race-wins_1_name%"));
+assertEquals("1.234", placeholders.language("de").resolve(null, "%vystorm_paddock_top_race-wins_1_value%"));
+assertEquals(List.of(), placeholders.warnings());
+```
 
 ## Menus from files (0.65.0)
 
@@ -850,6 +992,7 @@ Capability names are strings in `CoreApi.Capability` (use the constants, e.g. `C
 | `PLACEHOLDERS` | `placeholders` | 0.65.0 | `api.placeholders()`: one registry for the values of all Vystorm plugins (`%vystorm_<namespace>_<key>%`, `{namespace:key}`), Core's own values, the bridge to PlaceholderAPI in both directions, `/vadmin placeholders`, `Lang.placeholders(true)`; `PlaceholderTesting` for unit tests without a server (see "Placeholders (0.65.0)" at the top) |
 | `FILE_MENUS` | `file-menus` | 0.65.0 | `api.gui().fileMenus()`: screen menus from files in `plugins/vystorm_core/menus` (format `vystorm-menu` version 1), opened with `/vmenu <id>`, their own command or their tile in the main menu; `enabled()`, `ids()`, `open(player, id)`, `reload()`, `errors()`, `warnings()`; `/vadmin menus` (see "Menus from files (0.65.0)" at the top and `docs/MENUS.md`) |
 | `PANEL_LIST_LAYOUT` | `panel-list-layout` | 0.66.0 | `Ui.Section.list()`: a panel section drawn as a settings list on Vystorm Screens (see 18.12) |
+| `PLACEHOLDER_RANKINGS` | `placeholder-rankings` | 0.67.0 | `PlaceholderNamespace.ranking(key, info, source)`, `api.placeholders().rankings()/top/topAsync/rank/rankingValue`, `/vadmin placeholders rankings` (see "Rankings as placeholders") |
 | `COMMAND_VISIBILITY` | `command-visibility` | 0.65.0 | `CommandSpec.Builder.visibleWhen(..)`, `CommandSpec.visibleTo(sender)`, `api.command().refresh()`; the same label registered again after startup keeps its Paper node (see 24.2) |
 | `ITEM_REF_PRIORITY` | `item-ref-priority` | 0.12.0 | Several `ItemRefs` providers per namespace with priority |
 | `MOB_REFS` | `mob-refs` | 0.12.0 | `mob.MobRefs` |

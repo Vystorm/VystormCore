@@ -70,6 +70,13 @@ public final class CoreApi {
          * setting: name, value on the right, description under the name, the whole row clickable). @since 0.66.0
          */
         public static final String PANEL_LIST_LAYOUT = "panel-list-layout";
+        /**
+         * Rankings as placeholders: {@code PlaceholderNamespace.ranking(key, RankingInfo, RankingSource)} declares
+         * {@code %vystorm_<ns>_top_<key>_<n>_name|value|raw|uuid%}, {@code ..._rank_<key>%} and {@code ..._value_<key>%};
+         * {@code api.placeholders().rankings()}, {@code top(id, n)}, {@code topAsync}, {@code rank}, {@code rankingValue};
+         * {@code /vadmin placeholders rankings}. Plugins check {@code CoreApi.has("placeholder-rankings")}. @since 0.67.0
+         */
+        public static final String PLACEHOLDER_RANKINGS = "placeholder-rankings";
         /** Shared Bukkit/Spigot adapters, native persistence and portable client events. @since 0.51.0 */
         public static final String BUKKIT_COMPAT = "bukkit-compat";
         /** Cross-server network via a Velocity/BungeeCord hub: {@link #network()}, {@code /vnet}, server selector. @since 0.53.0 */
@@ -430,6 +437,7 @@ public final class CoreApi {
         since.put(Capability.FILE_MENUS, "0.65.0");
         since.put(Capability.COMMAND_VISIBILITY, "0.65.0");
         since.put(Capability.PANEL_LIST_LAYOUT, "0.66.0");
+        since.put(Capability.PLACEHOLDER_RANKINGS, "0.67.0");
         SINCE = Collections.unmodifiableMap(since);
     }
 

@@ -1,3 +1,9 @@
+## 0.67.0 — 2026-11-22
+
+- **Rankings as placeholders:** Vystorm plugins can now offer rankings (most ore mined, most race wins, fastest sled run) as placeholders. Each ranking gives `%vystorm_<plugin>_top_<ranking>_<n>_name%` and `..._value%` for every place from 1 to 100, plus `%vystorm_<plugin>_rank_<ranking>%` and `%vystorm_<plugin>_value_<ranking>%` for the player who looks at it, for example `%vystorm_paddock_top_race-wins_1_name%`. They work wherever placeholders work: Vystorm Boards, texts of Vystorm plugins and, through PlaceholderAPI, scoreboard and hologram plugins. Values are written the way the player's language writes numbers (`1,234` or `1.234`), times as `1:05.250` and distances as `850 m` or `1.25 km`. Plugins add their rankings in their own updates; Core itself has none.
+- `/vadmin placeholders rankings [namespace]` lists every ranking with its name, description, number of entries and the best three players; pointing at a line shows its placeholder names. Texts in all seven languages.
+- For plugin authors: `PlaceholderNamespace.ranking(key, RankingInfo, RankingSource)` declares a ranking in one call; `api.placeholders().rankings()`, `top(id, n)` (rows with UUIDs), `topAsync`, `rank` and `rankingValue` read them; `PlaceholderTesting` asserts them without a server. Check `CoreApi.has("placeholder-rankings")` before declaring, so your plugin keeps running on older Cores. See "Rankings as placeholders" in docs/API.md.
+
 ## 0.66.2 — 2026-11-21
 
 - Screen menus that stay in front of the player no longer have the item in the player's off hand (a shield, a torch, a map) drawn over their bottom-left corner. While such a menu is open, only the player's own game is told that the off hand is empty; the item stays in the off hand on the server the whole time and shows again as soon as the menu closes, also when the plugin that opened it is switched off. The item in the main hand was already hidden before.
