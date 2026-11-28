@@ -147,6 +147,35 @@ public final class CoreAdminDashboard implements TabExecutor {
                     sender, Vystorm.vystorm_core.main.getApi().placeholders(), args);
             return true;
         }
+        if (args[0].equalsIgnoreCase("survey")) {
+            Vystorm.vystorm_core.survey.internal.SurveyAdmin.handle(sender, core, args);
+            return true;
+        }
+        if (args[0].equalsIgnoreCase("players")) {
+            Vystorm.vystorm_core.knownplayers.internal.KnownPlayersAdmin.handle(sender, core, args);
+            return true;
+        }
+        if (args[0].equalsIgnoreCase("visible")) {
+            Vystorm.vystorm_core.screen.internal.ScreenVisibleAdmin.handle(sender, args);
+            return true;
+        }
+        if (args[0].equalsIgnoreCase("actions")) {
+            Vystorm.vystorm_core.actions.internal.ActionsAdmin.handle(sender, args);
+            return true;
+        }
+        if (args[0].equalsIgnoreCase("packets")) {
+            String packetsSub = args.length > 1 ? args[1].toLowerCase(java.util.Locale.ROOT) : "";
+            if (packetsSub.equals("view")) Vystorm.vystorm_core.packet.internal.view.PacketViewAdmin.handle(sender, true);
+            else {
+                Vystorm.vystorm_core.packet.internal.blocks.ClientBlocksAdmin.handle(sender, args);
+                if (packetsSub.isEmpty() || packetsSub.equals("sets")) Vystorm.vystorm_core.packet.internal.view.PacketViewAdmin.handle(sender, false);
+            }
+            return true;
+        }
+        if (args[0].equalsIgnoreCase("pick")) {
+            Vystorm.vystorm_core.picker.internal.WorldPickAdmin.handle(sender, args);
+            return true;
+        }
         if (args[0].equalsIgnoreCase("menus")) {
             Vystorm.vystorm_core.menus.internal.FileMenusAdmin.handle(sender, args);
             return true;
@@ -353,6 +382,11 @@ public final class CoreAdminDashboard implements TabExecutor {
         if (sub.equals("placeholders") && a.length >= 2)
             return Vystorm.vystorm_core._advancedMethods.placeholderHandler.internal.PlaceholdersAdmin.complete(
                     Vystorm.vystorm_core.main.getApi().placeholders(), a);
+        if (sub.equals("survey") && a.length >= 2) return Vystorm.vystorm_core.survey.internal.SurveyAdmin.complete(a);
+        if (sub.equals("players") && a.length >= 2) return Vystorm.vystorm_core.knownplayers.internal.KnownPlayersAdmin.complete(a);
+        if (sub.equals("packets") && a.length >= 2) return Vystorm.vystorm_core.packet.internal.blocks.ClientBlocksAdmin.complete(a);
+        if (sub.equals("pick") && a.length >= 2) return Vystorm.vystorm_core.picker.internal.WorldPickAdmin.complete(a);
+        if (sub.equals("visible") && a.length >= 2) return Vystorm.vystorm_core.screen.internal.ScreenVisibleAdmin.complete(a);
         if ((sub.equals("language") || sub.equals("lang")) && a.length >= 2)
             return Vystorm.vystorm_core.lang.internal.LanguageAdmin.complete(core, a);
         List<String> out = new ArrayList<>();
@@ -390,6 +424,7 @@ public final class CoreAdminDashboard implements TabExecutor {
                 }
                 case "news" -> out.addAll(Vystorm.vystorm_core.news.internal.NewsService.ADMIN_SUBCOMMANDS);
                 case "menus" -> out.addAll(Vystorm.vystorm_core.menus.internal.FileMenusAdmin.SUBCOMMANDS);
+                case "actions" -> out.addAll(Vystorm.vystorm_core.actions.internal.ActionsAdmin.plugins());
                 case "permissions" -> PermissionList.plugins(core.getServer().getPluginManager(), core)
                         .forEach(p -> out.add(p.getName()));
                 default -> {}
@@ -416,7 +451,8 @@ public final class CoreAdminDashboard implements TabExecutor {
     /** Subcommands handled in {@link #onCommand} besides module ids. */
     static final List<String> SUBCOMMANDS = List.of(
             "list", "status", "language", "lang", "diagnostics", "updates", "migration", "config", "features",
-            "screens", "setup", "permissions", "news", "loot", "commands", "trace", "placeholders", "menus");
+            "screens", "setup", "permissions", "news", "loot", "commands", "trace", "placeholders", "menus", "survey", "players", "pick", "visible",
+            "packets", "actions");
 
     private void open(Player p, int page) {
         if (!valid(p)) return;

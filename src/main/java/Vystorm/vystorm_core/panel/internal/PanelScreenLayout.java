@@ -68,6 +68,8 @@ final class PanelScreenLayout {
         default Component rows(int from, int to, int total) { return Component.text(from + "–" + to + " / " + total); }
         /** Click help of a list row: {@code number} (left more, right less), {@code choice} (next/previous) or {@code type}. */
         default Component listHelp(String kind) { return Component.empty(); }
+        /** 0.71.1: the icon a list entry draws ({@code material} is the entry's item, never null): a Material, or a head. */
+        default Object listIcon(String entryKey, Material material) { return material; }
     }
 
     /** What a click on a widget does. */
@@ -842,7 +844,7 @@ final class PanelScreenLayout {
             }
             if (picked) add(ScreenWidget.fill(id(), x, y + at, 0.006 * m.s(), h - 0.006 * m.s(), 0xFF000000 | GOLD));
             if (!e.tooltip().isEmpty()) hints.put(rowId, tooltip(e.tooltip()));
-            if (mat != null) add(ScreenWidget.icon(id(), x + 0.02 * m.s(), y + at + (h - iconSize) / 2 - 0.003 * m.s(), iconSize, iconSize, mat));
+            if (mat != null) add(ScreenWidget.icon(id(), x + 0.02 * m.s(), y + at + (h - iconSize) / 2 - 0.003 * m.s(), iconSize, iconSize, texts.listIcon(e.key(), mat)));
             double ty = sub ? y + at + 0.012 * m.s() : y + at + (h - m.text()) / 2 - 0.003 * m.s();
             add(label(textX, ty, titleW, m.text(), title).withAlign(ScreenWidget.Align.START));
             if (sub) add(label(textX, ty + m.text(), titleW, m.small(), colored(DialogDowngrade.component(e.subtitle()), MUTED)).withAlign(ScreenWidget.Align.START));

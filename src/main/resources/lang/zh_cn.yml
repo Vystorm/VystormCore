@@ -115,6 +115,11 @@ pause:
   back: 返回
 
 settings:
+  privacy:
+    title: "隐私"
+    description: "其他玩家能看到你的哪些信息"
+    findable-offline: "我离线时其他人可以按名字找到我"
+    findable-offline-hint: "关闭后：你离线时，你的名字不再出现在玩家搜索和最近玩家列表中。在线时照常显示。"
   profile:
     exported: "配置档 {name}：已将 {count} 个已批准的服务器值导出到 settings-profiles。只包含明确标记为可用于配置档的设置。"
     failed: "无法处理配置档。请检查名称、格式、插件版本和已批准的值；详情见服务器日志。"
@@ -1277,6 +1282,14 @@ setup-flow:
   done: "<green>{plugin} 设置完成。可随时在 <white>/vadmin config {plugin}</white> 中修改。"
 
 screen:
+  visible:
+    usage: "<gray>/vadmin visible NAME <dark_gray>— 让没有隐身效果却处于隐身状态的玩家重新可见"
+    not-found: "<red>{player} 不在线。"
+    done: "<green>{player} 已重新可见。"
+    already: "<gray>{player} 并未隐身。"
+    spectator: "<yellow>{player} 处于旁观模式，游戏在此模式下会让所有玩家隐身。请在其离开旁观模式后再运行一次。"
+    player: "<green>你已重新可见。"
+    stuck-admin: "<yellow>你在没有隐身效果的情况下处于隐身状态（旧版 Vystorm Core 遗留）。<gray>/vadmin visible {player}</gray> 可让你重新可见。"
   list:
     position: "第 {from}–{to} 项，共 {total} 项"
     help-number: "左键：增加 · 右键：减少"
@@ -1311,6 +1324,8 @@ screen:
   refused:
     disabled: "<yellow>此服务器已关闭屏幕，将使用经典菜单。"
     busy: "<yellow>已经有一个屏幕打开了。"
+    dead: "<yellow>死亡时无法打开。"
+    spectator: "<yellow>旁观模式下无法点击屏幕，将使用经典菜单。"
     riding: "<yellow>请先下坐骑。"
     gliding: "<yellow>请先着陆。"
     falling: "<yellow>下落时不能打开。"
@@ -1346,6 +1361,16 @@ screen:
       hint: "<gray>点击地图查看坐标。"
       clicked: "<gray>坐标 x {x}, z {z}"
       opened: "<gray>地图屏幕已打开（{mode}）。Shift 放大，跳跃缩小，用按钮或 /screen close 关闭。"
+    paint:
+      title: "<gold>绘画测试"
+      placeholder: "<gray>画布需要固定屏幕（已加载 Core 资源包，经典屏幕关闭）。"
+      red: "红色"
+      green: "绿色"
+      blue: "蓝色"
+      clear: "清空"
+      hint: "<gray>按住右键绘画，左键点一个点。"
+      stats: "<gray>已发送 {patches} 个分块，{pixels} 个像素。"
+      opened: "<gray>绘画屏幕已打开（{mode}）。在画布上按住右键绘画，用按钮或 /screen close 关闭。"
 
 screens-admin:
   status-on: "<green>Vystorm 屏幕已开启。"
@@ -1463,6 +1488,10 @@ file-menus:
     reloaded: "<green>已重新读取菜单：加载 {loaded} 个，跳过 {skipped} 个。"
 feature-off: "<red>此功能在本服务器上已关闭。"
 switches:
+  pickers: "选择菜单：插件让玩家选择其他玩家（标签、搜索、头颅）或世界中的位置、方块、墙面、容器或实体的通用菜单"
+  world-pick: "世界选择：插件让玩家看着位置、方块、墙面、容器或实体并左键点击来选择（也需要开启玩家选择）"
+  known-players: "已知玩家：记录所有来过的玩家（名字、最后上线时间），让菜单也能按名字找到离线玩家。需要重启"
+  survey: "世界勘测：为需要的插件（反透视）提供世界中的房间、洞穴和地表。在插件或你打开之前保持关闭"
   trade-chat: "交易聊天（/vtrade）"
   coordinates: "聊天中可点击的坐标"
   tutorials: "所有插件的教程和新手指南"
@@ -1496,6 +1525,10 @@ switches:
   screens: "Vystorm 界面；关闭时每个菜单显示其对话框或箱子"
   file-menus: "来自 plugins/vystorm_core/menus 文件的界面菜单"
 switch-names:
+  pickers: "玩家选择"
+  world-pick: "世界选择"
+  known-players: "已知玩家"
+  survey: "世界勘测"
   trade-chat: "交易聊天"
   coordinates: "可点击坐标"
   tutorials: "教程"
@@ -1529,3 +1562,493 @@ switch-names:
   screens: "界面"
   file-menus: "文件菜单"
 config-broken-not-saved: "<red>{file} 有 YAML 错误（{problem}）。没有保存任何内容，你的文件保持原样。请修复错误后重新加载。"
+packets:
+  usage: "<gray>/vadmin packets [sets|view]（不加参数：概览；sets：列出所有集合；view：数据包视图的详情）"
+  status: "<gold>客户端方块</gold><gray>：{sets} 个集合 · {viewers} 名玩家 · {cells} 个格子 · 每名玩家每刻最多 {budget} 个格子，所有玩家合计 {total} 个"
+  counters: "<gray>已发送：{sent} 个格子，{batches} 个区段数据包（其中 {singles} 个只含一个方块）· 已恢复 {restores} · 真实变化后已修复 {repairs} · 在玩家体内暂缓 {blocked} · 因上限拒绝 {refused}"
+  none: "<gray>目前没有插件显示客户端方块。"
+  owner: "<gray>{plugin}：{sets} 个集合，{cells} 个格子，{viewers} 名玩家"
+  owner-collision: "<gray>{plugin}：{sets} 个集合，{cells} 个格子，{viewers} 名玩家 · <yellow>{collision} 个会改变玩家能站立的地方</yellow>"
+  set: "<gray>{plugin} '{name}' · 优先级 {priority} · {cells} 个格子 · {viewers} 名玩家 · {pending} 个等待中 · {kind}"
+  set-collision: "<yellow>{plugin} '{name}' 会改变碰撞</yellow><gray> · 优先级 {priority} · {cells} 个格子 · {viewers} 名玩家 · {pending} 个等待中 · {kind}"
+  more: "<gray>…… 还有 {count} 个。"
+  kind-player: "单个玩家"
+  kind-shared: "共享"
+  view-unchecked: "<gold>数据包视图</gold><gray>：未启动（没有插件注册图层）· 任何连接中都没有处理器"
+  view-off: "<gold>数据包视图</gold><gray>：无法在此服务器上运行：{reason}"
+  view-idle: "<gold>数据包视图</gold><gray>：就绪，没有注册图层 · {pairs} 个连接中有处理器"
+  view-status: "<gold>数据包视图</gold><gray>：{layers} 个图层 · {viewers} 名观看者 · {pairs} 个连接中有处理器 · 重写 {chunks} 个区块 · 丢弃 {dropped} 个数据包 · {unreadable} 个无法读取 · 每区块 {micros} 微秒（中位数/95 %）"
+  view-layer: "<gray>{id}（{plugin}）：{kind}，优先级 {priority} · {chunks} 个区块 · {cells} 个格子 · 丢弃 {dropped} · 错误 {errors} · 暂缓 {holds} · {micros} 微秒（中位数/95 %）"
+  view-layer-collision: "<yellow>{id}（{plugin}）改变碰撞</yellow><gray>：{kind}，优先级 {priority} · {chunks} 个区块 · {cells} 个格子 · 丢弃 {dropped} · 错误 {errors} · 暂缓 {holds} · {micros} 微秒（中位数/95 %）"
+  view-counter: "<gray>{name}：{value}"
+  view-selftest: "<gray>自检：{result}"
+survey:
+  usage: "<gray>/vadmin survey status [世界] · start <world> <radius> [x z] [generate=true workers=0 snapshots=9 ms=5 tps=18 yield=true] · pause|resume|cancel [世界] · rule <world> [reach|hall-radius|void-below|doors-stop-reach <value>] · at <world> <x> <y> <z>"
+  switched-off: "<gray>世界勘测已关闭。请在 Core 的 config.yml 中打开 survey.enabled；需要它的插件会自行打开。"
+  required: "<gray>由以下插件打开：{plugins}"
+  status: "<gold>世界勘测</gold><gray>：{workers} 个工作线程 · 已勘测 {surveys} 个区块，每个区块 {millis} 毫秒、{bytes} 字节 · {waiting} 个等待中 · {failures} 个失败 · {listeners} 个监听器"
+  status-tick: "<gray>服务器刻 {mspt} 毫秒 · 快照平均每刻 {pump} 毫秒"
+  status-world: "<gray>{world}：跟踪 {tracked} 个区块，{stale} 个已过期，{files} 个文件（{size} KB）· 范围 {reach}，大厅 {hall}，从下方算天空 {void}，门阻挡范围 {doors}"
+  status-load: "<gray>区块加载：{offered} 个立即带有记录，{late} 个稍后，{missing} 个没有记录（{queued} 个等待勘测），{stale} 个已过期 · 每次加载 {lookup} 毫秒 · 已核查 {audited} 个，发现 {findings} 个过期 · 内存中有 {regions} 个区域文件（{regionkb} KB）"
+  job: "<gray>{world} 的任务：{state} · {total} 个区块中已完成 {done} 个（{percent} %），跳过 {skipped} 个 · 每秒 {rate} 个区块 · 剩余 {eta} · 中心 {x} {z}，半径 {radius}"
+  no-job: "<gray>{world} 没有任务。"
+  started: "<green>已在 {world} 开始勘测任务：{x} {z} 周围 {total} 个区块。"
+  bad-option: "<red>未知的选项或值：{option}"
+  refused: "<red>{error}"
+  paused: "<yellow>{world} 的任务已暂停。"
+  resumed: "<green>{world} 的任务继续进行。"
+  cancelled: "<yellow>{world} 的任务已取消。"
+  unknown-world: "<red>未知世界：{world}"
+  rule: "<gray>{world} 的规则：范围 {reach}，大厅 {hall}，从下方算天空 {void}，门阻挡范围 {doors}"
+  rule-set: "<green>{world} 的规则已更改。它的区块会在需要时重新勘测。"
+  at: "<gray>{world} 中的 {x} {y} {z}：{kind}{room}"
+  at-room: " · 区块 {cx} {cz} 的房间 {room}，{volume} 个格子，{contact}"
+  at-pending: "<gray>正在勘测区块 {cx} {cz} ..."
+  at-failed: "<red>区块 {cx} {cz} 没有勘测结果：{error}"
+  flag-yes: "是"
+  flag-no: "否"
+  bossbar: "世界勘测 {world}：{done}/{total}（{percent} %）· 每秒 {rate} · 剩余 {eta} · {state}"
+  kind:
+    solid: "实心"
+    surface: "地表"
+    enclosed: "封闭"
+  contact:
+    surface: "地表"
+    mouth: "有通往地表的开口"
+    sealed: "封闭"
+    unknown: "尚未找到开口"
+  state:
+    running: "进行中"
+    paused: "已暂停"
+    finished: "已完成"
+    cancelled: "已取消"
+known-players:
+  admin:
+    store-off: "<gray>已知玩家列表已关闭（Core 的 config.yml 中的 known-players.enabled）。"
+    pick-off: "<gray>玩家选择不可用。"
+    usage: "<gray>/vadmin players find 前缀 <dark_gray>·</dark_gray> /vadmin players forget 名字|UUID <dark_gray>·</dark_gray> /vadmin players pick [multi]"
+    status: "<gray>已知玩家：<white>{count}</white>（{state}）。"
+    loaded: "文件已读取"
+    loading: "文件仍在读取中"
+    find-head: "<gray>以 <white>{prefix}</white> 开头的已知玩家：<white>{count}</white> / {total}"
+    find-line: "<white>{player} <dark_gray>{uuid} <gray>最后上线 {seen}{hidden}"
+    hidden: " <yellow>离线时不可查找"
+    none: "<gray>没有以 {prefix} 开头的已知玩家。"
+    unknown: "<red>{player} 不是已知玩家。"
+    forgotten: "<green>{player}（{uuid}）已从已知玩家中移除。"
+pickers:
+  title: "选择玩家"
+  closed: "<gray>此选择已关闭。"
+  switched-off: "<gray>此服务器已关闭菜单选择玩家。"
+  gone: "<gray>该玩家已不在列表中。"
+  full: "<red>最多只能选择 {max} 个。"
+  denied-chosen: "{player} 已无法选择：{reason}"
+  timed-out: "<gray>玩家选择因长时间未点击而关闭。"
+  open-again: "重新打开"
+  open-again-hover: "重新打开玩家选择"
+  store-off: "此服务器无法查找离线玩家，只列出在线玩家。"
+  back: "返回"
+  previous: "上一页"
+  next: "下一页"
+  done: "完成（已选 {count}）"
+  chosen-count: "已选 {count} / {max}"
+  rows: "第 {from} 到 {to} 个，共 {total} 个"
+  error: "<red>{reason}"
+  tab:
+    online: "在线 {count}"
+    nearby: "附近 {count}"
+    recent: "最近 {count}"
+    search: "搜索"
+  search:
+    label: "名字"
+    placeholder: "输入名字的开头"
+    type: "输入名字。输入 {min} 个字母后显示离线玩家。"
+    short: "目前只有在线玩家：输入 {min} 个字母后显示离线玩家。"
+    title: "查找玩家"
+    question: "名字开头"
+  empty:
+    online: "没有其他人在线。"
+    nearby: "你附近没有人。"
+    recent: "最近没有其他人来过。"
+    search: "没有找到该名字的玩家。"
+  row:
+    name: "<yellow>{player}"
+    name-chosen: "<green>✔ {player}"
+    online: "<green>在线"
+    online-near: "<green>在线 · {distance} 米"
+    seen-today: "<gray>今天来过"
+    seen-week: "<gray>本周来过"
+    seen-month: "<gray>本月来过"
+    seen-earlier: "<gray>很久以前来过"
+    seen-unknown: "<gray>离线"
+    seen-at: "<gray>上次 {date}"
+    chosen: "<green>✔ 已选"
+    denied: "<red>{reason}"
+    click-pick: "<dark_gray>点击：选择"
+    click-tick: "<dark_gray>点击：加入选择"
+    click-untick: "<dark_gray>点击：移出选择"
+  chest:
+    back-hint: "<gray>返回上一个菜单"
+    search-none: "<gray>尚未搜索"
+    search-current: "<gray>搜索：<white>{query}"
+    search-hint: "<dark_gray>左键：输入名字 · 右键：清除"
+    tab-current: "<green>当前显示"
+    tab-hint: "<dark_gray>点击：显示"
+    info: "<white>信息"
+    done-hint: "<gray>已选 {count} / {max} · 点击确认"
+    page: "<gray>第 {page} 页，共 {pages} 页"
+    done: "完成（{count}）"
+  demo:
+    title: "玩家选择（测试）"
+    subtitle: "用 /vadmin players pick 打开；不会改变任何内容"
+    not-yourself: "不能选自己"
+    picked: "已选：{players}（新增 {added}，移除 {removed}）"
+    usage: "<gray>/vadmin players pick [multi] [self] [tab=online|nearby|recent|search] [search=文本] [page=页码] [tick=数量]"
+    dump-head: "<gray>选择箱，标签 {tab}：在线 {online}，最近 {recent}，搜索结果 {search}，已知玩家 {known}，已填 {slots} 格"
+  return-demo:
+    title: "返回测试"
+    subtitle: "通过 /vadmin pick demo 打开；不会更改任何内容"
+    pick-subtitle: "从返回测试启动；完成后会回到那里"
+    arg: "打开参数：{arg}"
+    counter: "计数：{count}"
+    add: "+1"
+    last: "上次结果：{result}"
+    none: "暂无"
+    pick-player: "选择一名玩家"
+    pick-players: "选择玩家（多选）"
+    pick-block: "选择方块"
+    pick-area: "选择区域"
+    chest-title: "返回测试（箱子）"
+    chest-note: "箱子：与屏幕相同的会话"
+    in-game: "<gray>返回测试只能在游戏中打开。"
+  world:
+    switched-off: "<gray>此服务器已关闭在世界中选择。"
+    spectator: "<gray>旁观模式下不能在世界中选择。"
+    started: "<yellow>{title}</yellow><gray>：{hint}。"
+    bar: "{title} · 左键：选择 · 潜行：选项"
+    button-options: "选项"
+    button-options-hover: "使用你所在的位置、输入坐标或取消"
+    button-cancel: "取消"
+    button-cancel-hover: "停止选择并返回"
+    open-again: "重新打开"
+    open-again-hover: "重新开始选择"
+    ended:
+      timeout: "<gray>{title} 的选择因长时间未点击而停止。"
+      interrupted: "<gray>{title} 的选择已停止。"
+      world-changed: "<gray>{title} 的选择已停止：你切换了世界。"
+      replaced: "<gray>{title} 的选择已停止：打开了另一个菜单。"
+    hint:
+      position: "<green>左键：选择你所在的位置 · 潜行：选项"
+      block: "<green>左键：选择这个方块 · 潜行：选项"
+      face: "<green>左键：选择这一面 · 潜行：选项"
+      container: "<green>左键：选择这个容器 · 潜行：选项"
+      entity: "<green>左键：选择这个实体 · 潜行：选项"
+      area: "<green>左键：第一个角，然后第二个 · 潜行：选项"
+    kind:
+      position: "一个位置"
+      block: "一个方块"
+      face: "方块的一面"
+      container: "一个容器"
+      entity: "一个实体"
+      area: "一个区域"
+    reason:
+      nothing: "这里没有可选的：请瞄准 {reach} 格以内的东西。"
+      block: "不能选择这个方块。"
+      face: "不能选择这一面。"
+      container: "这不是容器。"
+      entity: "不能选择这个。"
+      world: "这个世界中不能选择任何东西。"
+      protected: "你不能在这里建造。"
+      check-failed: "现在无法检查。"
+      refused: "没有成功。"
+    options:
+      info-kind: "<gray>选择{kind}"
+      info-reach: "<gray>距离：{reach} 格"
+      stand-position: "<yellow>我站的位置"
+      stand-position-hint: "<gray>使用你的位置和朝向"
+      stand-block: "<yellow>脚下的方块"
+      stand-block-hint: "<gray>使用你脚下的方块"
+      type: "<yellow>输入坐标"
+      type-hint: "<gray>x y z，~ 表示你自己的位置"
+      resume: "<yellow>继续选择"
+      resume-hint: "<gray>瞄准后左键点击"
+      cancel: "<red>取消"
+      cancel-hint: "<gray>停止选择并返回"
+      redo-first: "<yellow>重选角 1"
+      redo-first-hint: "<gray>重新选择第一个角"
+    typed:
+      title: "输入坐标"
+      question: "x y z（~ 表示你的位置）"
+      question-face: "x y z 和一个面（north、east、south、west、up、down）"
+      format: "请输入三个数字：x y z。"
+      face: "未知的面：请用 north、east、south、west、up 或 down。"
+      far: "太远了（最多 {max} 格）。"
+      height: "这在世界的上方或下方。"
+      unloaded: "世界的这一部分未加载。"
+      refused: "<red>未选择（{at}）：{reason}"
+    describe:
+      position: "位置 {x} {y} {z}，朝向 {facing}"
+      block: "{x} {y} {z} 处的 {type}"
+      face: "{x} {y} {z} 处 {type} 的 {face} 面"
+      container: "{x} {y} {z} 处的 {type}"
+      entity: "{x} {y} {z} 处的 {type} {uuid}，朝向 {facing}"
+      area: "从 {from} 到 {to} 的区域（{size}，{blocks} 个方块）"
+    demo:
+      title: "世界选择（测试）"
+      subtitle: "通过 /vadmin pick world 打开；不会改变任何东西。"
+      no-bedrock: "此测试不接受基岩。"
+      picked: "已选择：{target}"
+      usage: "<gray>/vadmin pick world <position|block|face|container|entity|area> [reach=距离] [build] [faces=sides|up|down|any] [max=N] [fullheight]"
+      status: "<gray>世界选择：{state}；默认距离 {default}，插件最多 {max}（硬上限 {hard}）；轮廓在 {distance} 格以内（上限 {hard-distance}），每次最多 {points} 个粒子（上限 {hard-points}）；输入的坐标在 {typed} 格以内；默认超时 {timeout} 秒，最多 {max-timeout} 秒；进行中的选择：{running}"
+      state-on: "开启"
+      state-off: "关闭"
+      no-bedrock-corner: "此测试不接受基岩作为第一个角。"
+    area:
+      bar: "{title} · 第 {corner} 个角，共 2 个"
+      bar-size: "{title} · 第 {corner} 个角，共 2 个 · {size}"
+      bar-confirm: "{title} · {size} · 确认"
+      corner1: "<green>左键：角 1 · 潜行：选项"
+      corner2: "<green>左键：角 2 · 潜行：选项"
+      size-corner1: "<green>{size}，{blocks} 个方块 · 左键：角 1"
+      size-corner2: "<green>{size}，{blocks} 个方块 · 左键：角 2"
+      size-checking: "<yellow>{size}，{blocks} 个方块 · 正在检查保护 …"
+      size-partial: "<yellow>{size}，{blocks} 个方块 · 部分受保护：确认时检查"
+      paused: "<green>左键或潜行：重新打开确认界面"
+      corner-set: "<gray>角 {corner} 已设置：{x} {y} {z}"
+      corner-cleared: "<gray>角 1 已清除：请重新选择。"
+      redo: "<gray>重新选择角 {corner}；另一个角保留。"
+      confirm-closed: "<gray>两个角都已保留。左键或潜行可重新打开确认界面。"
+      reason:
+        other-world: "两个角必须在同一个世界中。"
+        too-big: "太大：{size}，最多 {max}。"
+        too-small: "太小：{size}，至少 {min}。"
+        too-many: "方块太多：{blocks}，最多 {max}。"
+        protected: "你不能在整个区域内建造。"
+        partial: "你不能在 {x} {y} {z} 建造。"
+        guard-failed: "无法检查保护。"
+        too-slow: "保护检查耗时过长：请选择更小的区域。"
+        checking: "仍在检查保护：请稍后再试。"
+      confirm:
+        from: "<gray>从 <white>{from}</white> 到 <white>{to}"
+        size: "<gray>大小 <white>{size}</white>，{blocks} 个方块"
+        world: "<gray>世界 <white>{world}"
+        height-picked: "<gray>高度：按所选"
+        height-full: "<gray>高度：整个世界高度"
+        height-fixed: "<gray>高度：从下角向上 {height} 格"
+        blocks-label: "<white>{blocks} 个方块"
+        ready: "<green>✔ 可以使用"
+        use: "<green>使用此区域"
+        use-hint: "<gray>交出该区域"
+        redo-first: "<yellow>重选角 1"
+        redo-first-hint: "<gray>重新选择角 1；角 2 保留"
+        redo-second: "<yellow>重选角 2"
+        redo-second-hint: "<gray>重新选择角 2；角 1 保留"
+        height: "<yellow>完整高度"
+        height-hint: "<gray>从世界底部到顶部"
+        height-off: "<yellow>按所选"
+        height-off-hint: "<gray>恢复所选高度"
+        cancel: "<red>取消"
+        cancel-hint: "<gray>停止选择并返回"
+actions:
+  staff-note: "<gray><i>[{actor}：{text}]"
+  copy-line: "<gray>命令（点击复制）："
+  copy-none: "<gray>没有原版命令能做到这一点：{note}"
+  copy-note: "<gray>备注：{note}"
+  admin:
+    plugins: "<gold>本服务器中的审计日志：<white>{plugins}"
+    usage: "<gray>用法：/vadmin actions <plugin> [page] [filter]"
+    unknown: "<red>没有名为 {plugin} 的已启用插件。"
+    header: "<gold>{plugin} 的审计日志，第 {page} 页（最新在前）："
+    empty: "<gray>没有记录。"
+    denied: "<red>读取此日志需要权限 {node}。"
+game-rules:
+  unknown-desc: "Vystorm 尚不认识的规则（{id}）；请参阅服务器文档。"
+  category:
+    mobs: "生物"
+    spawning: "生成"
+    player: "玩家"
+    drops: "掉落"
+    world: "世界"
+    chat: "聊天"
+    other: "其他"
+  rule:
+    advance_time:
+      name: "昼夜循环"
+      desc: "时间会流逝。关闭后太阳和月亮静止不动。"
+    advance_weather:
+      name: "天气循环"
+      desc: "天气会自行变化。关闭后保持当前天气。"
+    allow_entering_nether_using_portals:
+      name: "下界传送门可用"
+      desc: "玩家可以通过传送门前往下界。"
+    block_drops:
+      name: "方块掉落物品"
+      desc: "被破坏的方块会掉落自身或战利品。"
+    block_explosion_drop_decay:
+      name: "方块爆炸掉落损耗"
+      desc: "方块（床、重生锚）的爆炸只会掉落一部分被炸毁的东西。"
+    command_block_output:
+      name: "命令方块聊天提示"
+      desc: "命令方块会在聊天中向管理员报告它做了什么。"
+    command_blocks_work:
+      name: "命令方块运行"
+      desc: "命令方块会执行它们的命令。"
+    drowning_damage:
+      name: "溺水伤害"
+      desc: "玩家缺氧时会损失生命值。"
+    elytra_movement_check:
+      name: "鞘翅速度检查"
+      desc: "服务器会检查滑翔玩家是否速度异常。"
+    ender_pearls_vanish_on_death:
+      name: "死亡时珍珠消失"
+      desc: "投掷者死亡时，已投出的末影珍珠会消失。"
+    entity_drops:
+      name: "实体掉落"
+      desc: "矿车、船、物品展示框等被破坏时会掉落为物品。"
+    fall_damage:
+      name: "摔落伤害"
+      desc: "玩家会因坠落受伤。"
+    fire_damage:
+      name: "火焰伤害"
+      desc: "玩家会被火和岩浆烧伤。"
+    fire_spread_radius_around_player:
+      name: "火焰蔓延"
+      desc: "火在玩家周围多远范围内蔓延和熄灭。0：火保持原样，-1：到处蔓延。在 1.20.6 上只是开关。"
+    forgive_dead_players:
+      name: "原谅死亡玩家"
+      desc: "被追击的玩家死亡后，愤怒的中立生物会平静下来。"
+    freeze_damage:
+      name: "冰冻伤害"
+      desc: "玩家在细雪中会受伤。"
+    global_sound_events:
+      name: "全世界可闻首领音效"
+      desc: "部分首领和传送门音效全世界的玩家都能听到。"
+    immediate_respawn:
+      name: "立即重生"
+      desc: "玩家立刻重生，不显示死亡界面。"
+    keep_inventory:
+      name: "保留物品栏"
+      desc: "玩家死亡后保留物品和经验。"
+    lava_source_conversion:
+      name: "岩浆生成源"
+      desc: "两个岩浆源之间可以生成新的岩浆源。"
+    limited_crafting:
+      name: "仅限已解锁配方"
+      desc: "玩家只能合成自己已解锁的配方。"
+    locator_bar:
+      name: "定位栏"
+      desc: "经验条会显示其他玩家的位置。"
+    log_admin_commands:
+      name: "向管理员通报命令"
+      desc: "管理命令会显示给其他管理员并记入服务器日志。"
+    max_block_modifications:
+      name: "单条命令方块上限"
+      desc: "一条命令（fill、clone）最多能修改的方块数。"
+    max_command_forks:
+      name: "命令分支上限"
+      desc: "单次命令执行最多能创建的上下文数量。"
+    max_command_sequence_length:
+      name: "命令链上限"
+      desc: "一个函数或命令链最多能执行的命令数。"
+    max_entity_cramming:
+      name: "拥挤上限"
+      desc: "同一位置最多可容纳多少生物，超过后会受伤。0：不限制。"
+    max_minecart_speed:
+      name: "矿车最高速度"
+      desc: "矿车在铁轨上的最高速度，单位为方块每秒（实验性矿车功能）。"
+    max_snow_accumulation_height:
+      name: "积雪高度"
+      desc: "下雪时最多可堆积多少层雪。"
+    mob_drops:
+      name: "生物战利品"
+      desc: "生物被击杀时会掉落战利品和经验。"
+    mob_explosion_drop_decay:
+      name: "生物爆炸掉落损耗"
+      desc: "苦力怕等生物的爆炸只会掉落一部分被炸毁的东西。"
+    mob_griefing:
+      name: "生物改变方块"
+      desc: "苦力怕、末影人、村民等可以破坏、拿走或放置方块。"
+    natural_health_regeneration:
+      name: "自然恢复"
+      desc: "玩家吃饱时会随时间恢复生命。"
+    player_movement_check:
+      name: "玩家速度检查"
+      desc: "服务器会检查玩家是否有不可能的移动。"
+    players_nether_portal_creative_delay:
+      name: "传送等待（创造）"
+      desc: "创造模式玩家站在下界传送门中多少刻后才会传送。"
+    players_nether_portal_default_delay:
+      name: "传送等待"
+      desc: "玩家站在下界传送门中多少刻后才会传送。"
+    players_sleeping_percentage:
+      name: "所需睡眠比例（%）"
+      desc: "需要入睡才能跳过夜晚的玩家比例。"
+    projectiles_can_break_blocks:
+      name: "投射物破坏方块"
+      desc: "箭等投射物可以打碎陶罐、紫颂花之类的东西。"
+    pvp:
+      name: "玩家对战 PvP"
+      desc: "玩家之间可以互相伤害。"
+    raids:
+      name: "袭击"
+      desc: "村庄中可能触发袭击。在 1.20.6 上以相反的规则 disableRaids 保存。"
+    random_tick_speed:
+      name: "随机刻速度"
+      desc: "作物、树苗和草的生长以及树叶凋落的快慢。0 会让它们停止。"
+    reduced_debug_info:
+      name: "精简调试界面"
+      desc: "F3 界面不显示坐标和其他细节。"
+    respawn_radius:
+      name: "重生半径"
+      desc: "新玩家在世界出生点周围多远的范围内出现。"
+    send_command_feedback:
+      name: "命令反馈"
+      desc: "玩家能看到自己所执行命令的反馈。"
+    show_advancement_messages:
+      name: "进度消息"
+      desc: "玩家获得进度时，聊天会通知所有人。"
+    show_death_messages:
+      name: "死亡消息"
+      desc: "玩家死亡时，聊天会通知所有人。"
+    spawn_chunk_radius:
+      name: "出生点区块"
+      desc: "世界出生点周围保持加载的区块半径（仅 1.20.6）。"
+    spawn_mobs:
+      name: "生成生物"
+      desc: "动物和怪物会自行出现。"
+    spawn_monsters:
+      name: "生成怪物"
+      desc: "敌对生物会自行出现。"
+    spawn_patrols:
+      name: "生成巡逻队"
+      desc: "掠夺者巡逻队会在世界中游荡。"
+    spawn_phantoms:
+      name: "生成幻翼"
+      desc: "三天或更久没睡觉的玩家会在夜里遇到幻翼。"
+    spawn_wandering_traders:
+      name: "流浪商人"
+      desc: "流浪商人和他的羊驼会来拜访玩家。"
+    spawn_wardens:
+      name: "生成监守者"
+      desc: "幽匿尖啸体可以召唤监守者。"
+    spawner_blocks_work:
+      name: "刷怪笼运作"
+      desc: "刷怪笼会生成生物。"
+    spectators_generate_chunks:
+      name: "旁观者加载地形"
+      desc: "旁观模式的玩家会使新地形生成。"
+    spread_vines:
+      name: "藤蔓生长"
+      desc: "藤蔓会蔓延到相邻的方块。"
+    tnt_explodes:
+      name: "TNT 会爆炸"
+      desc: "点燃的 TNT 会爆炸。关闭后只会嘶嘶作响。"
+    tnt_explosion_drop_decay:
+      name: "TNT 爆炸掉落损耗"
+      desc: "TNT 爆炸只会掉落一部分被炸毁的方块。"
+    universal_anger:
+      name: "迁怒所有人"
+      desc: "被激怒的中立生物会攻击附近所有玩家，而不只是打它们的那一个。"
+    water_source_conversion:
+      name: "水生成源"
+      desc: "两个水源之间可以生成新的水源。"

@@ -23,6 +23,18 @@ import org.bukkit.plugin.Plugin;
  * <p>Preferred access: {@code api.gui().screens()}.
  */
 public final class Screens {
+    /**
+     * Map bytes Core sends to one viewer per server tick for {@link ScreenSession#setMap} updates (64 KiB = four full
+     * tiles, before compression); a patch larger than what is left waits for the next tick, but every tick sends at
+     * least one. The first picture of a map widget when the screen opens is not limited.
+     */
+    public static final int MAP_BYTES_PER_TICK = 64 * 1024;
+    /**
+     * A held right button repeats "use" every 4 client ticks (200 ms; Minecraft {@code rightClickDelay}); after this
+     * long without a repeat Core reports {@link ScreenInput.Press} up: one repeat may arrive up to 150 ms late.
+     */
+    public static final long PRESS_RELEASE_MILLIS = 350;
+
     private final Plugin owner;
 
     private Screens(Plugin owner) { this.owner = Objects.requireNonNull(owner, "owner"); }
@@ -47,6 +59,12 @@ public final class Screens {
      * windows, send slots, crafting inputs). Guard with {@code CoreApi.atLeast("0.61.0")}.
      */
     public static void keepAsChest(org.bukkit.inventory.Inventory inventory) { Vystorm.vystorm_core.screen.internal.InventoryScreens.keepAsChest(inventory); }
+
+    /**
+     * The map colour table (since 0.72.0, capability {@code map-palette}), the same on every server: see {@link MapColors}.
+     * Preferred access: {@code api.gui().screens().mapColors()}.
+     */
+    public static MapColors mapColors() { return MapColors.table(); }
 
     /** Goes back to the screen the player came from; false when there is none (since 0.61.0). */
     public boolean back(Player player) { return ScreenRuntime.get().back(player); }

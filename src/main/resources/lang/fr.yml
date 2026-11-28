@@ -106,6 +106,11 @@ pause:
   tutorials-tooltip: Guides pour tous les plugins
   back: Retour
 settings:
+  privacy:
+    title: "Confidentialité"
+    description: "Ce que les autres joueurs voient de toi"
+    findable-offline: "Les autres peuvent me trouver par mon nom quand je suis hors ligne"
+    findable-offline-hint: "Désactivé : quand tu es hors ligne, ton nom n'apparaît plus dans la recherche de joueurs ni dans la liste des joueurs récents. En ligne, tu es affiché comme avant."
   profile:
     exported: 'Profil {name}: exporté des valeurs de serveur approuvées {count} vers des profils de paramètres. Seuls les
       paramètres de sécurité du profil sont explicitement inclus.'
@@ -1290,6 +1295,14 @@ setup-flow:
   done: "<green>{plugin} est configuré. Tout reste modifiable via <white>/vadmin config {plugin}</white>."
 
 screen:
+  visible:
+    usage: "<gray>/vadmin visible NAME <dark_gray>— rend visible un joueur invisible sans effet d'invisibilité"
+    not-found: "<red>{player} n'est pas en ligne."
+    done: "<green>{player} est de nouveau visible."
+    already: "<gray>{player} n'était pas invisible."
+    spectator: "<yellow>{player} est en mode spectateur, où le jeu montre chaque joueur invisible. Relance la commande une fois sorti du mode spectateur."
+    player: "<green>Tu es de nouveau visible."
+    stuck-admin: "<yellow>Tu es invisible sans effet d'invisibilité (un reste d'une ancienne version de Vystorm Core). <gray>/vadmin visible {player}</gray> te rend visible."
   list:
     position: "{from} à {to} sur {total}"
     help-number: "Clic gauche : plus · clic droit : moins"
@@ -1324,6 +1337,8 @@ screen:
   refused:
     disabled: "<yellow>Les écrans sont désactivés sur ce serveur ; le menu classique est utilisé."
     busy: "<yellow>Un écran est déjà ouvert."
+    dead: "<yellow>Pas tant que tu es mort."
+    spectator: "<yellow>Les écrans ne sont pas cliquables en mode spectateur ; le menu classique est utilisé."
     riding: "<yellow>Descends d'abord de ta monture."
     gliding: "<yellow>Atterris d'abord."
     falling: "<yellow>Pas pendant une chute."
@@ -1359,6 +1374,16 @@ screen:
       hint: "<gray>Clique sur la carte pour les coordonnées."
       clicked: "<gray>x {x}, z {z}"
       opened: "<gray>Écran de carte ouvert ({mode}). Shift zoome, saut dézoome, ferme avec le bouton ou /screen close."
+    paint:
+      title: "<gold>Test de peinture"
+      placeholder: "<gray>La toile a besoin d'écrans fixes (pack Core chargé, écrans classiques désactivés)."
+      red: "Rouge"
+      green: "Vert"
+      blue: "Bleu"
+      clear: "Effacer"
+      hint: "<gray>Maintiens le clic droit pour peindre, clic gauche pour un point."
+      stats: "<gray>{patches} morceaux, {pixels} pixels envoyés."
+      opened: "<gray>Écran de peinture ouvert ({mode}). Maintiens le bouton droit sur la toile pour peindre, ferme avec le bouton ou /screen close."
 
 screens-admin:
   status-on: "<green>Les écrans Vystorm sont activés."
@@ -1476,6 +1501,10 @@ file-menus:
     reloaded: "<green>Menus relus : {loaded} chargés, {skipped} ignorés."
 feature-off: "<red>Cette fonctionnalité est désactivée sur ce serveur."
 switches:
+  pickers: "Menus de choix : les menus communs où les plugins font choisir des joueurs (onglets, recherche, têtes) ou un endroit, un bloc, un mur, un conteneur ou une entité dans le monde"
+  world-pick: "Choix dans le monde : les plugins font choisir un endroit, un bloc, un mur, un conteneur ou une entité en le regardant et en faisant un clic gauche (il faut aussi le choix de joueurs)"
+  known-players: "Joueurs connus : la liste de tous ceux qui sont déjà venus (nom, vu pour la dernière fois), pour que les menus trouvent aussi les joueurs hors ligne par leur nom. Redémarrage requis"
+  survey: "Relevé du monde : salles, grottes et surface des mondes pour les plugins qui en ont besoin (anti-xray). Désactivé tant qu'un plugin ou toi ne l'activez pas"
   trade-chat: "Chat commercial (/vtrade)"
   coordinates: "Coordonnées cliquables dans le chat"
   tutorials: "Tutoriels de tous les plugins et guide des premiers pas"
@@ -1509,6 +1538,10 @@ switches:
   screens: "Écrans Vystorm ; désactivé : chaque menu affiche son dialogue ou son coffre"
   file-menus: "Menus d'écran tirés des fichiers de plugins/vystorm_core/menus"
 switch-names:
+  pickers: "Choix de joueurs"
+  world-pick: "Choix dans le monde"
+  known-players: "Joueurs connus"
+  survey: "Relevé du monde"
   trade-chat: "Chat de commerce"
   coordinates: "Coordonnées cliquables"
   tutorials: "Tutoriels"
@@ -1542,3 +1575,493 @@ switch-names:
   screens: "Écrans"
   file-menus: "Menus depuis des fichiers"
 config-broken-not-saved: "<red>{file} contient une erreur YAML ({problem}). Rien n'a été enregistré, ton fichier reste tel quel. Corrige l'erreur, puis recharge."
+packets:
+  usage: "<gray>/vadmin packets [sets|view]"
+  status: "<gold>Blocs client</gold><gray> : {sets} ensembles · {viewers} joueurs · {cells} cellules · au plus {budget} cellules par joueur et par tick, {total} pour tous les joueurs"
+  counters: "<gray>Envoyé : {sent} cellules en {batches} paquets de section ({singles} avec un seul bloc) · {restores} restaurées · {repairs} réparées après des changements réels · {blocked} retenues dans un joueur · {refused} refusées à une limite"
+  none: "<gray>Aucun plugin n'affiche de blocs client pour le moment."
+  owner: "<gray>{plugin} : {sets} ensembles, {cells} cellules, {viewers} joueurs"
+  owner-collision: "<gray>{plugin} : {sets} ensembles, {cells} cellules, {viewers} joueurs · <yellow>{collision} changent ce sur quoi les joueurs peuvent se tenir</yellow>"
+  set: "<gray>{plugin} '{name}' · priorité {priority} · {cells} cellules · {viewers} joueurs · {pending} en attente · {kind}"
+  set-collision: "<yellow>{plugin} '{name}' change la collision</yellow><gray> · priorité {priority} · {cells} cellules · {viewers} joueurs · {pending} en attente · {kind}"
+  more: "<gray>… et {count} de plus."
+  kind-player: "un joueur"
+  kind-shared: "partagé"
+  view-unchecked: "<gold>Vue paquets</gold><gray> : pas démarrée (aucun plugin n'a enregistré de couche) · aucun gestionnaire dans les connexions"
+  view-off: "<gold>Vue paquets</gold><gray> : ne fonctionne pas sur ce serveur : {reason}"
+  view-idle: "<gold>Vue paquets</gold><gray> : prête, aucune couche enregistrée · gestionnaires dans {pairs} connexions"
+  view-status: "<gold>Vue paquets</gold><gray> : {layers} couches · {viewers} joueurs · gestionnaires dans {pairs} connexions · {chunks} chunks réécrits · {dropped} paquets retenus · {unreadable} illisibles · {micros} µs par chunk (médiane/95 %)"
+  view-layer: "<gray>{id} ({plugin}) : {kind}, priorité {priority} · {chunks} chunks · {cells} cellules · {dropped} retenus · {errors} erreurs · {holds} en attente · {micros} µs (médiane/95 %)"
+  view-layer-collision: "<yellow>{id} ({plugin}) modifie la collision</yellow><gray> : {kind}, priorité {priority} · {chunks} chunks · {cells} cellules · {dropped} retenus · {errors} erreurs · {holds} en attente · {micros} µs (médiane/95 %)"
+  view-counter: "<gray>{name} : {value}"
+  view-selftest: "<gray>Autotest : {result}"
+survey:
+  usage: "<gray>/vadmin survey status [monde] · start <world> <radius> [x z] [generate=true workers=0 snapshots=9 ms=5 tps=18 yield=true] · pause|resume|cancel [monde] · rule <world> [reach|hall-radius|void-below|doors-stop-reach <value>] · at <world> <x> <y> <z>"
+  switched-off: "<gray>Le relevé du monde est désactivé. Active survey.enabled dans le config.yml de Core ; les plugins qui en ont besoin l'activent eux-mêmes."
+  required: "<gray>Activé par : {plugins}"
+  status: "<gold>Relevé du monde</gold><gray> : {workers} threads de travail · {surveys} chunks relevés, {millis} ms et {bytes} octets par chunk · {waiting} en attente · {failures} échecs · {listeners} écouteurs"
+  status-tick: "<gray>Tick du serveur {mspt} ms · instantanés {pump} ms par tick en moyenne"
+  status-world: "<gray>{world} : {tracked} chunks suivis, {stale} périmés, {files} fichiers ({size} Ko) · portée {reach}, salles {hall}, ciel par en dessous {void}, les portes arrêtent la portée {doors}"
+  status-load: "<gray>Chargements de chunks : {offered} avec leur relevé tout de suite, {late} un instant après, {missing} sans relevé ({queued} en attente), {stale} périmés · {lookup} ms par chargement · {audited} vérifiés, {findings} trouvés périmés · {regions} fichiers de région en mémoire ({regionkb} Ko)"
+  job: "<gray>Tâche dans {world} : {state} · {done} sur {total} chunks ({percent} %), {skipped} ignorés · {rate} chunks/s · reste {eta} · centre {x} {z}, rayon {radius}"
+  no-job: "<gray>Aucune tâche dans {world}."
+  started: "<green>Tâche de relevé lancée dans {world} : {total} chunks autour de {x} {z}."
+  bad-option: "<red>Option ou valeur inconnue : {option}"
+  refused: "<red>{error}"
+  paused: "<yellow>Tâche dans {world} en pause."
+  resumed: "<green>La tâche dans {world} reprend."
+  cancelled: "<yellow>Tâche dans {world} annulée."
+  unknown-world: "<red>Monde inconnu : {world}"
+  rule: "<gray>Règle de {world} : portée {reach}, salles {hall}, ciel par en dessous {void}, les portes arrêtent la portée {doors}"
+  rule-set: "<green>Règle de {world} modifiée. Ses chunks seront relevés à nouveau quand on en aura besoin."
+  at: "<gray>{x} {y} {z} dans {world} : {kind}{room}"
+  at-room: " · salle {room} du chunk {cx} {cz}, {volume} cellules, {contact}"
+  at-pending: "<gray>Relevé du chunk {cx} {cz} ..."
+  at-failed: "<red>Pas de relevé du chunk {cx} {cz} : {error}"
+  flag-yes: "oui"
+  flag-no: "non"
+  bossbar: "Relevé du monde {world} : {done}/{total} ({percent} %) · {rate}/s · reste {eta} · {state}"
+  kind:
+    solid: "solide"
+    surface: "surface"
+    enclosed: "enfermé"
+  contact:
+    surface: "surface"
+    mouth: "a une ouverture vers la surface"
+    sealed: "fermé"
+    unknown: "aucune ouverture trouvée pour l'instant"
+  state:
+    running: "en cours"
+    paused: "en pause"
+    finished: "terminé"
+    cancelled: "annulé"
+known-players:
+  admin:
+    store-off: "<gray>La liste des joueurs connus est désactivée (known-players.enabled dans le config.yml de Core)."
+    pick-off: "<gray>Le choix de joueurs n'est pas disponible."
+    usage: "<gray>/vadmin players find PREFIX <dark_gray>·</dark_gray> /vadmin players forget NAME|UUID <dark_gray>·</dark_gray> /vadmin players pick [multi]"
+    status: "<gray>Joueurs connus : <white>{count}</white> ({state})."
+    loaded: "fichier lu"
+    loading: "lecture du fichier en cours"
+    find-head: "<gray>Joueurs connus commençant par <white>{prefix}</white> : <white>{count}</white> sur {total}"
+    find-line: "<white>{player} <dark_gray>{uuid} <gray>vu le {seen}{hidden}"
+    hidden: " <yellow>introuvable hors ligne"
+    none: "<gray>Aucun joueur connu ne commence par {prefix}."
+    unknown: "<red>{player} n'est pas un joueur connu."
+    forgotten: "<green>{player} ({uuid}) a été retiré des joueurs connus."
+pickers:
+  title: "Choisir un joueur"
+  closed: "<gray>Ce choix est fermé."
+  switched-off: "<gray>Le choix de joueurs dans un menu est désactivé sur ce serveur."
+  gone: "<gray>Ce joueur n'est plus dans la liste."
+  full: "<red>Tu peux en choisir {max} au plus."
+  denied-chosen: "{player} ne peut plus être choisi : {reason}"
+  timed-out: "<gray>Le choix de joueurs s'est fermé faute de clic."
+  open-again: "Rouvrir"
+  open-again-hover: "Rouvre le choix de joueurs"
+  store-off: "Les joueurs hors ligne ne sont pas trouvables sur ce serveur ; seuls les joueurs en ligne sont listés."
+  back: "Retour"
+  previous: "Page précédente"
+  next: "Page suivante"
+  done: "Terminé ({count} choisis)"
+  chosen-count: "{count} sur {max} choisis"
+  rows: "{from} à {to} sur {total}"
+  error: "<red>{reason}"
+  tab:
+    online: "En ligne {count}"
+    nearby: "À proximité {count}"
+    recent: "Récents {count}"
+    search: "Rechercher"
+  search:
+    label: "Nom"
+    placeholder: "Tape le début d'un nom"
+    type: "Tape un nom. Les joueurs hors ligne apparaissent à partir de {min} lettres."
+    short: "Pour l'instant seulement les joueurs en ligne : hors ligne à partir de {min} lettres."
+    title: "Trouver un joueur"
+    question: "Début du nom"
+  empty:
+    online: "Personne d'autre n'est en ligne."
+    nearby: "Personne n'est près de toi."
+    recent: "Personne d'autre n'est venu récemment."
+    search: "Aucun joueur trouvé avec ce nom."
+  row:
+    name: "<yellow>{player}"
+    name-chosen: "<green>✔ {player}"
+    online: "<green>en ligne"
+    online-near: "<green>en ligne · {distance} m"
+    seen-today: "<gray>vu aujourd'hui"
+    seen-week: "<gray>vu cette semaine"
+    seen-month: "<gray>vu ce mois-ci"
+    seen-earlier: "<gray>vu il y a longtemps"
+    seen-unknown: "<gray>hors ligne"
+    seen-at: "<gray>vu le {date}"
+    chosen: "<green>✔ choisi"
+    denied: "<red>{reason}"
+    click-pick: "<dark_gray>Clic : choisir"
+    click-tick: "<dark_gray>Clic : ajouter au choix"
+    click-untick: "<dark_gray>Clic : retirer du choix"
+  chest:
+    back-hint: "<gray>Retour à ton menu"
+    search-none: "<gray>Pas encore de recherche"
+    search-current: "<gray>Recherche : <white>{query}"
+    search-hint: "<dark_gray>Clic gauche : taper un nom · clic droit : effacer"
+    tab-current: "<green>Affiché"
+    tab-hint: "<dark_gray>Clic : afficher"
+    info: "<white>Infos"
+    done-hint: "<gray>{count} sur {max} choisis · clic pour valider"
+    page: "<gray>Page {page} sur {pages}"
+    done: "Terminé ({count})"
+  demo:
+    title: "Choix de joueurs (test)"
+    subtitle: "Ouvert avec /vadmin players pick ; rien n'est modifié"
+    not-yourself: "pas toi-même"
+    picked: "Choisis : {players} (ajoutés {added}, retirés {removed})"
+    usage: "<gray>/vadmin players pick [multi] [self] [tab=online|nearby|recent|search] [search=TEXT] [page=N] [tick=N]"
+    dump-head: "<gray>Coffre de choix, onglet {tab} : en ligne {online}, récents {recent}, résultats {search}, joueurs connus {known}, {slots} cases remplies"
+  return-demo:
+    title: "Test de retour"
+    subtitle: "Ouvert avec /vadmin pick demo ; rien n'est modifié"
+    pick-subtitle: "Lancé depuis le test de retour ; vous y revenez"
+    arg: "Ouvert avec : {arg}"
+    counter: "Compteur : {count}"
+    add: "+1"
+    last: "Dernier résultat : {result}"
+    none: "aucun pour l'instant"
+    pick-player: "Choisir un joueur"
+    pick-players: "Choisir des joueurs (plusieurs)"
+    pick-block: "Choisir un bloc"
+    pick-area: "Choisir une zone"
+    chest-title: "Test de retour (coffre)"
+    chest-note: "Coffre : la même session que l’écran"
+    in-game: "<gray>Le test de retour ne s'ouvre qu'en jeu."
+  world:
+    switched-off: "<gray>Le choix dans le monde est désactivé sur ce serveur."
+    spectator: "<gray>Tu ne peux rien choisir dans le monde en mode spectateur."
+    started: "<yellow>{title}</yellow><gray> : {hint}."
+    bar: "{title} · clic gauche : choisir · accroupi : options"
+    button-options: "Options"
+    button-options-hover: "Prendre ta position, saisir des coordonnées ou annuler"
+    button-cancel: "Annuler"
+    button-cancel-hover: "Arrêter le choix et revenir"
+    open-again: "Rouvrir"
+    open-again-hover: "Relance le choix"
+    ended:
+      timeout: "<gray>Le choix pour {title} s'est arrêté faute de clic."
+      interrupted: "<gray>Le choix pour {title} s'est arrêté."
+      world-changed: "<gray>Le choix pour {title} s'est arrêté : tu as changé de monde."
+      replaced: "<gray>Le choix pour {title} s'est arrêté : un autre menu s'est ouvert."
+    hint:
+      position: "<green>Clic gauche : choisir ta position · Accroupi : options"
+      block: "<green>Clic gauche : choisir ce bloc · Accroupi : options"
+      face: "<green>Clic gauche : choisir cette face · Accroupi : options"
+      container: "<green>Clic gauche : choisir ce conteneur · Accroupi : options"
+      entity: "<green>Clic gauche : choisir cette entité · Accroupi : options"
+      area: "<green>Clic gauche : premier coin, puis le second · S'accroupir : options"
+    kind:
+      position: "un endroit"
+      block: "un bloc"
+      face: "une face de bloc"
+      container: "un conteneur"
+      entity: "une entité"
+      area: "une zone"
+    reason:
+      nothing: "Rien à choisir ici : vise quelque chose à {reach} blocs au plus."
+      block: "Ce bloc ne peut pas être choisi."
+      face: "Cette face ne peut pas être choisie."
+      container: "Ce n'est pas un conteneur."
+      entity: "Ceci ne peut pas être choisi."
+      world: "Rien ne peut être choisi dans ce monde."
+      protected: "Tu n'as pas le droit de construire ici."
+      check-failed: "Impossible de vérifier pour le moment."
+      refused: "Cela n'a pas marché."
+    options:
+      info-kind: "<gray>Choisis {kind}"
+      info-reach: "<gray>Portée : {reach} blocs"
+      stand-position: "<yellow>Ma position"
+      stand-position-hint: "<gray>Prend ta position et la direction où tu regardes"
+      stand-block: "<yellow>Bloc sous moi"
+      stand-block-hint: "<gray>Prend le bloc sous tes pieds"
+      type: "<yellow>Saisir x y z"
+      type-hint: "<gray>x y z, ~ est ta propre position"
+      resume: "<yellow>Choisir encore"
+      resume-hint: "<gray>Vise et fais un clic gauche"
+      cancel: "<red>Annuler"
+      cancel-hint: "<gray>Arrêter le choix et revenir"
+      redo-first: "<yellow>Refaire coin 1"
+      redo-first-hint: "<gray>Choisir à nouveau le premier coin"
+    typed:
+      title: "Saisir des coordonnées"
+      question: "x y z (~ est ta position)"
+      question-face: "x y z et une face (north, east, south, west, up, down)"
+      format: "Saisis trois nombres : x y z."
+      face: "Face inconnue : utilise north, east, south, west, up ou down."
+      far: "C'est trop loin ({max} blocs au plus)."
+      height: "C'est au-dessus ou en dessous du monde."
+      unloaded: "Cette partie du monde n'est pas chargée."
+      refused: "<red>Non choisi ({at}) : {reason}"
+    describe:
+      position: "position {x} {y} {z}, regard vers {facing}"
+      block: "{type} en {x} {y} {z}"
+      face: "face {face} de {type} en {x} {y} {z}"
+      container: "{type} en {x} {y} {z}"
+      entity: "{type} {uuid} en {x} {y} {z}, regard vers {facing}"
+      area: "zone de {from} à {to} ({size}, {blocks} blocs)"
+    demo:
+      title: "Choix dans le monde (test)"
+      subtitle: "Ouvert avec /vadmin pick world ; rien n'est modifié."
+      no-bedrock: "Ce test refuse la bedrock."
+      picked: "Choisi : {target}"
+      usage: "<gray>/vadmin pick world <position|block|face|container|entity|area> [reach=N] [build] [faces=sides|up|down|any] [max=N] [fullheight]"
+      status: "<gray>Choix dans le monde : {state} ; portée {default} par défaut, plugins jusqu'à {max} (limite fixe {hard}) ; contour dans un rayon de {distance} blocs (limite {hard-distance}), {points} particules par passage (limite {hard-points}) ; coordonnées saisies à {typed} blocs au plus ; délai {timeout} s par défaut, {max-timeout} s au plus ; choix en cours : {running}"
+      state-on: "activé"
+      state-off: "désactivé"
+      no-bedrock-corner: "Ce test refuse la bedrock comme premier coin."
+    area:
+      bar: "{title} · coin {corner} sur 2"
+      bar-size: "{title} · coin {corner} sur 2 · {size}"
+      bar-confirm: "{title} · {size} · confirmer"
+      corner1: "<green>Clic gauche : coin 1 · S'accroupir : options"
+      corner2: "<green>Clic gauche : coin 2 · S'accroupir : options"
+      size-corner1: "<green>{size}, {blocks} blocs · clic gauche : coin 1"
+      size-corner2: "<green>{size}, {blocks} blocs · clic gauche : coin 2"
+      size-checking: "<yellow>{size}, {blocks} blocs · vérification de la protection …"
+      size-partial: "<yellow>{size}, {blocks} blocs · en partie protégée : vérifiée à la confirmation"
+      paused: "<green>Clic gauche ou s'accroupir : rouvrir la confirmation"
+      corner-set: "<gray>Coin {corner} placé : {x} {y} {z}"
+      corner-cleared: "<gray>Coin 1 effacé : choisis-le à nouveau."
+      redo: "<gray>Choisis à nouveau le coin {corner} ; l'autre coin reste."
+      confirm-closed: "<gray>Les deux coins sont gardés. Clic gauche ou s'accroupir rouvre la confirmation."
+      reason:
+        other-world: "Les deux coins doivent être dans le même monde."
+        too-big: "Trop grande : {size}, au plus {max}."
+        too-small: "Trop petite : {size}, au moins {min}."
+        too-many: "Trop de blocs : {blocks}, au plus {max}."
+        protected: "Tu ne peux pas construire dans toute cette zone."
+        partial: "Tu ne peux pas construire en {x} {y} {z}."
+        guard-failed: "La protection n'a pas pu être vérifiée."
+        too-slow: "La vérification de la protection a pris trop de temps : choisis une zone plus petite."
+        checking: "La protection est encore en cours de vérification : réessaie dans un instant."
+      confirm:
+        from: "<gray>De <white>{from}</white> à <white>{to}"
+        size: "<gray>Taille <white>{size}</white>, {blocks} blocs"
+        world: "<gray>Monde <white>{world}"
+        height-picked: "<gray>Hauteur : comme choisie"
+        height-full: "<gray>Hauteur : toute la hauteur du monde"
+        height-fixed: "<gray>Hauteur : {height} blocs depuis le coin bas"
+        blocks-label: "<white>{blocks} blocs"
+        ready: "<green>✔ Prête"
+        use: "<green>Prendre zone"
+        use-hint: "<gray>Transmet la zone"
+        redo-first: "<yellow>Refaire coin 1"
+        redo-first-hint: "<gray>Choisir à nouveau le coin 1 ; le coin 2 reste"
+        redo-second: "<yellow>Refaire coin 2"
+        redo-second-hint: "<gray>Choisir à nouveau le coin 2 ; le coin 1 reste"
+        height: "<yellow>Toute hauteur"
+        height-hint: "<gray>Du bas jusqu'en haut du monde"
+        height-off: "<yellow>Comme choisi"
+        height-off-hint: "<gray>Retour à la hauteur choisie"
+        cancel: "<red>Annuler"
+        cancel-hint: "<gray>Arrêter de choisir et revenir"
+actions:
+  staff-note: "<gray><i>[{actor} : {text}]"
+  copy-line: "<gray>Commande (clic pour copier) :"
+  copy-none: "<gray>Aucune commande vanilla ne fait exactement cela : {note}"
+  copy-note: "<gray>Remarque : {note}"
+  admin:
+    plugins: "<gold>Journaux d'audit sur ce serveur : <white>{plugins}"
+    usage: "<gray>/vadmin actions <plugin> [page] [filter]"
+    unknown: "<red>Aucun plugin activé nommé {plugin}."
+    header: "<gold>Journal d'audit de {plugin}, page {page} (du plus récent) :"
+    empty: "<gray>Aucune entrée."
+    denied: "<red>Lire ce journal demande {node}."
+game-rules:
+  unknown-desc: "Une règle que Vystorm ne connaît pas encore ({id}) ; voir la documentation du serveur."
+  category:
+    mobs: "Mobs"
+    spawning: "Apparition"
+    player: "Joueur"
+    drops: "Butin"
+    world: "Monde"
+    chat: "Chat"
+    other: "Autres"
+  rule:
+    advance_time:
+      name: "Cycle jour-nuit"
+      desc: "L'heure avance. Désactivé : le soleil et la lune restent figés."
+    advance_weather:
+      name: "Cycle météo"
+      desc: "La météo change toute seule. Désactivé : la météo actuelle reste."
+    allow_entering_nether_using_portals:
+      name: "Portails du Nether"
+      desc: "Les joueurs peuvent aller dans le Nether par des portails."
+    block_drops:
+      name: "Blocs lâchent des objets"
+      desc: "Les blocs cassés lâchent eux-mêmes ou leur butin."
+    block_explosion_drop_decay:
+      name: "Explosions de blocs : perte"
+      desc: "Les explosions de blocs (lits, ancres) ne lâchent qu'une partie de ce qu'elles détruisent."
+    command_block_output:
+      name: "Chat des blocs de commande"
+      desc: "Les blocs de commande signalent aux ops dans le chat ce qu'ils ont fait."
+    command_blocks_work:
+      name: "Blocs de commande actifs"
+      desc: "Les blocs de commande exécutent leurs commandes."
+    drowning_damage:
+      name: "Dégâts de noyade"
+      desc: "Les joueurs perdent de la vie quand ils manquent d'air."
+    elytra_movement_check:
+      name: "Contrôle vitesse élytres"
+      desc: "Le serveur vérifie que les joueurs en vol plané ne vont pas trop vite."
+    ender_pearls_vanish_on_death:
+      name: "Perles perdues à la mort"
+      desc: "Les perles d'Ender lancées disparaissent quand leur lanceur meurt."
+    entity_drops:
+      name: "Butin des entités"
+      desc: "Wagonnets, bateaux, cadres et autres lâchent un objet quand on les casse."
+    fall_damage:
+      name: "Dégâts de chute"
+      desc: "Les joueurs se blessent en tombant."
+    fire_damage:
+      name: "Dégâts de feu"
+      desc: "Les joueurs se blessent dans le feu et la lave."
+    fire_spread_radius_around_player:
+      name: "Propagation du feu"
+      desc: "Jusqu'où, autour des joueurs, le feu se propage et s'éteint. 0 : le feu reste tel quel, -1 : partout. Sur 1.20.6, un simple interrupteur."
+    forgive_dead_players:
+      name: "Pardon aux joueurs morts"
+      desc: "Les mobs neutres en colère se calment quand le joueur qu'ils poursuivent meurt."
+    freeze_damage:
+      name: "Dégâts de gel"
+      desc: "Les joueurs se blessent dans la neige poudreuse."
+    global_sound_events:
+      name: "Sons de boss mondiaux"
+      desc: "Certains sons de boss et de portail sont entendus par tout le monde."
+    immediate_respawn:
+      name: "Réapparition immédiate"
+      desc: "Les joueurs réapparaissent aussitôt, sans écran de mort."
+    keep_inventory:
+      name: "Garder l'inventaire"
+      desc: "Les joueurs gardent objets et expérience à leur mort."
+    lava_source_conversion:
+      name: "La lave crée des sources"
+      desc: "Deux sources de lave peuvent en créer une nouvelle entre elles."
+    limited_crafting:
+      name: "Recettes débloquées"
+      desc: "Les joueurs ne peuvent fabriquer que les recettes débloquées."
+    locator_bar:
+      name: "Barre de repérage"
+      desc: "La barre d'expérience montre où sont les autres joueurs."
+    log_admin_commands:
+      name: "Informer les ops"
+      desc: "Les commandes d'admin sont montrées aux autres ops et dans le journal du serveur."
+    max_block_modifications:
+      name: "Limite de blocs/commande"
+      desc: "Nombre maximal de blocs qu'une commande (fill, clone) peut modifier."
+    max_command_forks:
+      name: "Limite de forks"
+      desc: "Nombre maximal de contextes qu'une exécution de commande peut créer."
+    max_command_sequence_length:
+      name: "Limite de chaîne"
+      desc: "Nombre maximal de commandes qu'une fonction ou chaîne peut exécuter."
+    max_entity_cramming:
+      name: "Limite d'entassement"
+      desc: "Combien de mobs peuvent se tenir au même endroit avant de subir des dégâts. 0 : pas de limite."
+    max_minecart_speed:
+      name: "Vitesse max wagonnet"
+      desc: "Vitesse maximale des wagonnets sur rails, en blocs par seconde (fonction expérimentale)."
+    max_snow_accumulation_height:
+      name: "Hauteur de neige"
+      desc: "Combien de couches de neige peuvent s'accumuler quand il neige."
+    mob_drops:
+      name: "Butin des mobs"
+      desc: "Les mobs lâchent leur butin et de l'expérience quand on les tue."
+    mob_explosion_drop_decay:
+      name: "Explosions de mobs : perte"
+      desc: "Les explosions de creepers et d'autres mobs ne lâchent qu'une partie de ce qu'elles détruisent."
+    mob_griefing:
+      name: "Mobs modifient les blocs"
+      desc: "Creepers, endermen, villageois et autres peuvent casser, prendre ou poser des blocs."
+    natural_health_regeneration:
+      name: "Soin naturel"
+      desc: "Les joueurs guérissent avec le temps quand ils sont bien nourris."
+    player_movement_check:
+      name: "Contrôle vitesse joueur"
+      desc: "Le serveur vérifie que les joueurs ne font pas de mouvements impossibles."
+    players_nether_portal_creative_delay:
+      name: "Attente portail (créatif)"
+      desc: "Ticks qu'un joueur créatif reste dans un portail du Nether avant de voyager."
+    players_nether_portal_default_delay:
+      name: "Attente portail"
+      desc: "Ticks qu'un joueur reste dans un portail du Nether avant de voyager."
+    players_sleeping_percentage:
+      name: "Dormeurs requis (%)"
+      desc: "Part des joueurs qui doivent dormir pour passer la nuit."
+    projectiles_can_break_blocks:
+      name: "Projectiles cassent blocs"
+      desc: "Les flèches et autres projectiles peuvent casser des choses comme les pots et le chorus."
+    pvp:
+      name: "PvP"
+      desc: "Les joueurs peuvent se blesser entre eux."
+    raids:
+      name: "Raids"
+      desc: "Des raids peuvent commencer dans les villages. Sur 1.20.6, stocké comme règle inverse disableRaids."
+    random_tick_speed:
+      name: "Vitesse des ticks aléatoires"
+      desc: "Vitesse de pousse des cultures, pousses et herbe, et de disparition des feuilles. 0 l'arrête."
+    reduced_debug_info:
+      name: "Écran debug réduit"
+      desc: "L'écran F3 omet les coordonnées et d'autres détails."
+    respawn_radius:
+      name: "Rayon de réapparition"
+      desc: "À quelle distance du point d'apparition du monde les nouveaux joueurs arrivent."
+    send_command_feedback:
+      name: "Réponses des commandes"
+      desc: "Les joueurs voient les réponses des commandes qu'ils exécutent."
+    show_advancement_messages:
+      name: "Messages de progrès"
+      desc: "Le chat informe tout le monde quand un joueur obtient un progrès."
+    show_death_messages:
+      name: "Messages de mort"
+      desc: "Le chat informe tout le monde quand un joueur meurt."
+    spawn_chunk_radius:
+      name: "Chunks d'apparition"
+      desc: "Rayon des chunks gardés chargés autour du point d'apparition du monde (1.20.6 seulement)."
+    spawn_mobs:
+      name: "Apparition des mobs"
+      desc: "Animaux et monstres apparaissent tout seuls."
+    spawn_monsters:
+      name: "Apparition des monstres"
+      desc: "Les mobs hostiles apparaissent tout seuls."
+    spawn_patrols:
+      name: "Apparition des patrouilles"
+      desc: "Des patrouilles de pillards parcourent le monde."
+    spawn_phantoms:
+      name: "Apparition des phantoms"
+      desc: "Les phantoms viennent la nuit chez les joueurs qui n'ont pas dormi depuis trois jours ou plus."
+    spawn_wandering_traders:
+      name: "Marchands ambulants"
+      desc: "Les marchands ambulants et leurs lamas rendent visite aux joueurs."
+    spawn_wardens:
+      name: "Apparition des wardens"
+      desc: "Les hurleurs sculk peuvent appeler un warden."
+    spawner_blocks_work:
+      name: "Générateurs actifs"
+      desc: "Les générateurs de monstres créent des mobs."
+    spectators_generate_chunks:
+      name: "Spectateurs chargent terrain"
+      desc: "Les joueurs en mode spectateur font générer du nouveau terrain."
+    spread_vines:
+      name: "Les lianes poussent"
+      desc: "Les lianes se propagent aux blocs voisins."
+    tnt_explodes:
+      name: "Le TNT explose"
+      desc: "Le TNT allumé explose. Désactivé : il fait seulement des étincelles."
+    tnt_explosion_drop_decay:
+      name: "Explosions TNT : perte"
+      desc: "Les explosions de TNT ne lâchent qu'une partie des blocs détruits."
+    universal_anger:
+      name: "Colère contre tous"
+      desc: "Les mobs neutres énervés attaquent tous les joueurs proches, pas seulement celui qui les a frappés."
+    water_source_conversion:
+      name: "L'eau crée des sources"
+      desc: "Deux sources d'eau peuvent en créer une nouvelle entre elles."

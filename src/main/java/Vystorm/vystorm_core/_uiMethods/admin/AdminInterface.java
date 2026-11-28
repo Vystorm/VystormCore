@@ -17,4 +17,7 @@ public interface AdminInterface {
 
     /** Feature diagnostics shown to admins ({@code lifecycle.FeatureDiagnostics}). @since 0.64.0 */
     default Vystorm.vystorm_core.lifecycle.FeatureDiagnosticsInterface diagnostics() { return Vystorm.vystorm_core.lifecycle.FeatureDiagnosticsInterface.DEFAULT; }
+
+    /** The admin action runner: preview, copy as command, confirm, audit log, vanilla dispatch ({@code actions.ActionsInterface}). @since 0.73.0 */
+    default Vystorm.vystorm_core.actions.ActionsInterface actions() { return Vystorm.vystorm_core.actions.ActionsInterface.DEFAULT; }
 }

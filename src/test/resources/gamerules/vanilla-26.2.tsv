@@ -1,0 +1,60 @@
+# name	kind	min	max (from the vanilla data generator commands.json)
+advance_time	BOOLEAN		
+advance_weather	BOOLEAN		
+allow_entering_nether_using_portals	BOOLEAN		
+block_drops	BOOLEAN		
+block_explosion_drop_decay	BOOLEAN		
+command_block_output	BOOLEAN		
+command_blocks_work	BOOLEAN		
+drowning_damage	BOOLEAN		
+elytra_movement_check	BOOLEAN		
+ender_pearls_vanish_on_death	BOOLEAN		
+entity_drops	BOOLEAN		
+fall_damage	BOOLEAN		
+fire_damage	BOOLEAN		
+fire_spread_radius_around_player	INTEGER	-1	
+forgive_dead_players	BOOLEAN		
+freeze_damage	BOOLEAN		
+global_sound_events	BOOLEAN		
+immediate_respawn	BOOLEAN		
+keep_inventory	BOOLEAN		
+lava_source_conversion	BOOLEAN		
+limited_crafting	BOOLEAN		
+locator_bar	BOOLEAN		
+log_admin_commands	BOOLEAN		
+max_block_modifications	INTEGER	1	
+max_command_forks	INTEGER	0	
+max_command_sequence_length	INTEGER	0	
+max_entity_cramming	INTEGER	0	
+max_minecart_speed	INTEGER	1	1000
+max_snow_accumulation_height	INTEGER	0	8
+mob_drops	BOOLEAN		
+mob_explosion_drop_decay	BOOLEAN		
+mob_griefing	BOOLEAN		
+natural_health_regeneration	BOOLEAN		
+player_movement_check	BOOLEAN		
+players_nether_portal_creative_delay	INTEGER	0	
+players_nether_portal_default_delay	INTEGER	0	
+players_sleeping_percentage	INTEGER	0	
+projectiles_can_break_blocks	BOOLEAN		
+pvp	BOOLEAN		
+raids	BOOLEAN		
+random_tick_speed	INTEGER	0	
+reduced_debug_info	BOOLEAN		
+respawn_radius	INTEGER	0	
+send_command_feedback	BOOLEAN		
+show_advancement_messages	BOOLEAN		
+show_death_messages	BOOLEAN		
+spawn_mobs	BOOLEAN		
+spawn_monsters	BOOLEAN		
+spawn_patrols	BOOLEAN		
+spawn_phantoms	BOOLEAN		
+spawn_wandering_traders	BOOLEAN		
+spawn_wardens	BOOLEAN		
+spawner_blocks_work	BOOLEAN		
+spectators_generate_chunks	BOOLEAN		
+spread_vines	BOOLEAN		
+tnt_explodes	BOOLEAN		
+tnt_explosion_drop_decay	BOOLEAN		
+universal_anger	BOOLEAN		
+water_source_conversion	BOOLEAN		

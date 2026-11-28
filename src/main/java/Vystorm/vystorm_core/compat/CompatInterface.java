@@ -46,4 +46,7 @@ public interface CompatInterface {
 
     /** Which chunks a client has received ({@link ClientEvents}). */
     default ClientEventsInterface clientEvents() { return ClientEventsInterface.DEFAULT; }
+
+    /** Game rules across Paper 1.20.6, Spigot and Paper/Purpur 26.x, labels and rule claims. @since 0.73.0 */
+    default Vystorm.vystorm_core.compat.gamerule.GameRulesInterface gameRules() { return Vystorm.vystorm_core.compat.gamerule.GameRulesInterface.DEFAULT; }
 }

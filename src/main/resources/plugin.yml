@@ -105,6 +105,10 @@ permissions:
         vystorm_core.config.*: true
         vystorm_core.language.others: true
         vystorm_core.news.write: true
+        vystorm_core.pickers.exact-last-seen: true
+    vystorm_core.pickers.exact-last-seen:
+      description: 'Exact last-seen date of offline players in the player picker (others see today / this week / this month / earlier)'
+      default: op
     vystorm_core.config.*:
       description: 'Konfiguration aller Plugins im Einstellungsmenü sehen und ändern (je Plugin vystorm_core.config.<plugin>)'
       default: op

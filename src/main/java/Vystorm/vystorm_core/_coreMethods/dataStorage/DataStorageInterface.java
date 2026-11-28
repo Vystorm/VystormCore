@@ -89,4 +89,7 @@ void saveAll();
 
     /** Previews of data migrations ({@code storage.MigrationPreviews}). @since 0.64.0 */
     default Vystorm.vystorm_core.storage.MigrationPreviewsInterface migrationPreviews() { return Vystorm.vystorm_core.storage.MigrationPreviewsInterface.DEFAULT; }
+
+    /** Players who joined this server: name, last seen, skin address ({@code knownplayers.KnownPlayers}). @since 0.71.0 */
+    default Vystorm.vystorm_core.knownplayers.KnownPlayersInterface knownPlayers() { return Vystorm.vystorm_core.knownplayers.KnownPlayersInterface.DEFAULT; }
 }

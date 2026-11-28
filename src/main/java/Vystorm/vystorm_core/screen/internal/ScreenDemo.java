@@ -86,6 +86,8 @@ public final class ScreenDemo {
 
     void open(Player player, String mode, String fill) {
         if ("map".equalsIgnoreCase(mode)) { new ScreenMapDemo(lang, screens).open(player); return; }
+        // screen canvas: "/screen demo paint holes" is the 26.3 map experiment (C0)
+        if ("paint".equalsIgnoreCase(mode)) { new ScreenPaintDemo(lang, screens).open(player, "holes".equalsIgnoreCase(fill)); return; }
         if ("gif".equalsIgnoreCase(mode)) { new ScreenGifDemo(core, lang, screens).open(player, fill); return; }
         if ("hud".equalsIgnoreCase(mode)) {
             var huds = Vystorm.vystorm_core.screen.Huds.of(core);
@@ -109,7 +111,7 @@ public final class ScreenDemo {
                 .build();
         ScreenOpenResult result = screens.open(player, spec);
         if (result.opened()) lang.send(player, "screen.demo.opened", "mode", result.mode().name().toLowerCase(Locale.ROOT));
-        else lang.send(player, result.refusedKey());
+        else if (ScreenRuntime.silentRefusal(result.refusedKey())) lang.send(player, result.refusedKey());   // 0.71.1: the others the runtime told
     }
 
     private void handle(ScreenSession session, ScreenInput input, int[] count) {

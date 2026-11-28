@@ -1,6 +1,8 @@
 package Vystorm.vystorm_core.visual;
 
 import Vystorm.vystorm_core.lifecycle.ProviderFailures;
+import Vystorm.vystorm_core.packet.ClientBlockSet;
+import Vystorm.vystorm_core.packet.internal.blocks.ClientBlocksRuntime;
 import java.util.*;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
@@ -19,53 +21,69 @@ import org.bukkit.plugin.Plugin;
 /**
  * Shared visual primitives. No portal rules or ProtocolLib dependency. Bukkit-facing operations are
  * server-thread only; disabled owners are rejected and cleaned by CoreLifecycle. @since 0.29.0
+ * <p>Since 0.72.0 a {@link BlockView} is a client block set of priority 0 named {@code visuals}
+ * ({@code api.packages().clientBlocks()}): its changes go out in the same call as before, but as one multi-block packet
+ * per chunk section; cells overwritten by real block changes or a chunk resend are sent again by Core without a new
+ * {@code replace}; and several plugins can show a view to the same player (see {@link #open}).
  * <p>Preferred access: {@code api.particle().visuals()}.
  */
 public final class Visuals {
-    private static final Map<UUID, Session> VIEWS = new HashMap<>();
+    private static final Map<UUID, List<Session>> VIEWS = new HashMap<>();
+    static {
+        // Quit, world change, respawn: the client block sets are gone; drop the sessions too (no packets).
+        ClientBlocksRuntime.onForget(id -> {
+            List<Session> views = VIEWS.remove(id);
+            if (views != null) for (Session s : views) s.gone();
+        });
+    }
     private Visuals() {}
+    /**
+     * Opens a block view for one player. Since 0.72.0 every plugin may have one open view per player (before: one view
+     * per player across all plugins); a plugin that opens a second view for the same player still gets
+     * {@code IllegalStateException}, as before. Where views of two plugins name the same cell, the newer view is shown.
+     * @throws IllegalStateException when the owner is disabled, the viewer is offline, this plugin already shows the
+     *     player a view, or the player is at the client block limit (64 sets)
+     */
     public static BlockView open(Plugin owner, Player viewer) {
         thread(); Objects.requireNonNull(owner); Objects.requireNonNull(viewer);
         if (!owner.isEnabled() || !viewer.isOnline()) throw new IllegalStateException("Inactive owner or viewer");
-        if (VIEWS.containsKey(viewer.getUniqueId())) throw new IllegalStateException("Viewer already owns a block view");
-        Session session = new Session(owner, viewer);
-        VIEWS.put(viewer.getUniqueId(), session);
+        List<Session> views = VIEWS.computeIfAbsent(viewer.getUniqueId(), id -> new ArrayList<>(1));
+        views.removeIf(Session::gone);
+        for (Session view : views) if (view.owner == owner) throw new IllegalStateException("Viewer already owns a block view");
+        ClientBlockSet set;
+        try { set = ClientBlocksRuntime.get().openView(owner, viewer); }
+        catch (RuntimeException refused) { if (views.isEmpty()) VIEWS.remove(viewer.getUniqueId()); throw refused; }
+        Session session = new Session(owner, viewer, set);
+        views.add(session);
         return session;
     }
     public static void release(Plugin owner) {
         if (owner == null || VIEWS.isEmpty()) return;
         thread();
-        for (Session view : List.copyOf(VIEWS.values())) if (view.owner == owner) view.close();
+        for (Session view : all()) if (view.owner == owner) view.close();
     }
     public static void shutdown() {
         if (VIEWS.isEmpty()) return;
         thread();
-        for (Session view : List.copyOf(VIEWS.values())) view.close();
+        for (Session view : all()) view.close();
+        VIEWS.clear();
     }
+    private static List<Session> all() {
+        List<Session> all = new ArrayList<>();
+        for (List<Session> views : VIEWS.values()) all.addAll(views);
+        return all;
+    }
+    /**
+     * Kept for compatibility (Core registers it). Since 0.72.0 the client block runtime handles chunk resends, quit,
+     * world change and respawn for block views, so this listener has no handlers.
+     */
     public static Listener lifecycleListener() {
-        return new Listener() {
-            @EventHandler public void chunkLoaded(Vystorm.vystorm_core.compat.ClientEvents.Loaded e) {
-                chunkUpdated(e.getPlayer(), e.getWorld().getUID(), e.getChunk().getX(), e.getChunk().getZ());
-            }
-            @EventHandler public void chunkUnloaded(Vystorm.vystorm_core.compat.ClientEvents.Unloaded e) {
-                chunkUpdated(e.getPlayer(), e.getWorld().getUID(), e.getChunk().getX(), e.getChunk().getZ());
-            }
-            @EventHandler public void quit(PlayerQuitEvent e) { forget(e.getPlayer()); }
-            @EventHandler public void changedWorld(PlayerChangedWorldEvent e) { forget(e.getPlayer()); }
-            @EventHandler(priority = EventPriority.MONITOR) public void respawn(PlayerRespawnEvent e) { forget(e.getPlayer()); }
-        };
+        return new Listener() {};
     }
-    // A real chunk packet replaces client-side illusions. Forget that sent-state so the next
-    // budgeted refresh re-applies it, including after dimension changes/initial chunk delivery.
+    // A real chunk packet replaced the client-side cells: the client block runtime sends them again within its budget.
     static void chunkUpdated(Player viewer, UUID world, int chunkX, int chunkZ) {
         thread();
-        Session session = VIEWS.get(viewer.getUniqueId());
-        if (session != null && session.world.equals(world))
-            session.sent.keySet().removeIf(p -> (p.x() >> 4) == chunkX && (p.z() >> 4) == chunkZ);
-    }
-    private static void forget(Player viewer) {
-        Session session = VIEWS.remove(viewer.getUniqueId());
-        if (session != null) { session.closed = true; session.sent.clear(); }
+        ClientBlocksRuntime.get().chunkLoaded(viewer, world, chunkX, chunkZ);
     }
     /** Emit points in the viewer's current world. Maximum 512 particles per call; no global broadcast. */
     public static <T> void particles(Player viewer, Particle particle, List<Point3> points, T data) {
@@ -153,11 +171,20 @@ public final class Visuals {
         private final Plugin owner;
         private final Player viewer;
         private final UUID world;
+        /** The view's cells in the order they were first sent (the content of its client block set). */
         private final Map<BlockPosition, BlockData> sent = new LinkedHashMap<>();
+        private final ClientBlockSet set;
         private boolean closed;
-        Session(Plugin owner, Player viewer) { this.owner = owner; this.viewer = viewer; world = viewer.getWorld().getUID(); }
-        @Override public boolean isClosed() { thread(); return closed; }
-        @Override public boolean covers(BlockPosition position) { thread(); return !closed && sent.containsKey(position); }
+        Session(Plugin owner, Player viewer, ClientBlockSet set) {
+            this.owner = owner; this.viewer = viewer; this.set = set; world = viewer.getWorld().getUID();
+        }
+        /** Closed by the caller, or by Core (quit, world change, respawn, owner disabled). */
+        boolean gone() {
+            if (!closed && set.isClosed()) { closed = true; sent.clear(); }
+            return closed;
+        }
+        @Override public boolean isClosed() { thread(); return gone(); }
+        @Override public boolean covers(BlockPosition position) { thread(); return !gone() && sent.containsKey(position); }
         @Override public int replace(Map<BlockPosition, BlockData> desired, int budget) {
             return replace(desired, budget, false);
         }
@@ -166,7 +193,7 @@ public final class Visuals {
         }
         private int replace(Map<BlockPosition, BlockData> desired, int budget, boolean prioritize) {
             thread(); Objects.requireNonNull(desired);
-            if (closed) throw new IllegalStateException("View is closed");
+            if (gone()) throw new IllegalStateException("View is closed");
             if (budget < 1 || budget > 4096 || desired.size() > 4096) throw new IllegalArgumentException("View budget exceeded");
             if (!owner.isEnabled() || !viewer.isOnline() || !viewer.getWorld().getUID().equals(world)) { close(); return 0; }
             World current = viewer.getWorld();
@@ -174,39 +201,43 @@ public final class Visuals {
             desired.forEach((p, d) -> { Objects.requireNonNull(p); Objects.requireNonNull(d); if (loaded(current, p)) target.put(p, d.clone()); });
             int remaining = 0;
             int cleanupBudget = prioritize ? Math.max(1, budget / 4) : budget;
+            // Same choice of changes as before 0.72.0; they go to the view's client block set and out in this call,
+            // one packet per chunk section. Restores read the real block (or the next lower set's) when sent.
+            Map<BlockPosition, BlockData> puts = new LinkedHashMap<>();
+            List<BlockPosition> restores = new ArrayList<>();
             for (BlockPosition p : List.copyOf(sent.keySet())) {
                 if (target.containsKey(p)) continue;
                 if (cleanupBudget == 0) continue;
-                if (loaded(current, p)) send(p, current.getBlockAt(p.x(), p.y(), p.z()).getBlockData());
-                sent.remove(p); budget--; cleanupBudget--;
+                restores.add(p); sent.remove(p); budget--; cleanupBudget--;
             }
             for (var entry : target.entrySet()) {
                 if (entry.getValue().equals(sent.get(entry.getKey()))) continue;
                 if (budget == 0) { remaining++; continue; }
-                send(entry.getKey(), entry.getValue()); sent.put(entry.getKey(), entry.getValue()); budget--;
+                puts.put(entry.getKey(), entry.getValue()); sent.put(entry.getKey(), entry.getValue()); budget--;
             }
             // Use any unused visible budget for cleanup, and count each pending restoration once.
             for (BlockPosition p : List.copyOf(sent.keySet())) {
                 if (target.containsKey(p)) continue;
                 if (budget == 0) { remaining++; continue; }
-                if (loaded(current, p)) send(p, current.getBlockAt(p.x(), p.y(), p.z()).getBlockData());
-                sent.remove(p); budget--;
+                restores.add(p); sent.remove(p); budget--;
+            }
+            if (!puts.isEmpty() || !restores.isEmpty()) {
+                try { ClientBlocksRuntime.get().applyNow(set, puts, restores); }
+                catch (RuntimeException failure) {
+                    sent.keySet().removeAll(puts.keySet());
+                    ProviderFailures.report("Visuals", owner.getName(), "replace", failure);
+                }
             }
             return remaining;
         }
-        private void send(BlockPosition p, BlockData data) {
-            viewer.sendBlockChange(new Location(viewer.getWorld(), p.x(), p.y(), p.z()), data);
-        }
         @Override public void close() {
             thread(); if (closed) return;
-            closed = true; VIEWS.remove(viewer.getUniqueId(), this);
-            if (viewer.isOnline() && viewer.getWorld().getUID().equals(world)) {
-                World current = viewer.getWorld();
-                for (BlockPosition p : sent.keySet()) if (loaded(current, p)) {
-                    try { send(p, current.getBlockAt(p.x(), p.y(), p.z()).getBlockData()); }
-                    catch (RuntimeException failure) { ProviderFailures.report("Visuals", owner.getName(), "restore", failure); }
-                }
-            }
+            closed = true;
+            List<Session> views = VIEWS.get(viewer.getUniqueId());
+            if (views != null) { views.remove(this); if (views.isEmpty()) VIEWS.remove(viewer.getUniqueId()); }
+            boolean sameWorld = viewer.isOnline() && viewer.getWorld().getUID().equals(world);
+            try { ClientBlocksRuntime.get().closeNow(set, sameWorld); }
+            catch (RuntimeException failure) { ProviderFailures.report("Visuals", owner.getName(), "restore", failure); }
             sent.clear();
         }
     }

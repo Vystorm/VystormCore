@@ -37,6 +37,10 @@ public final class CoreLifecycle implements Listener {
             new Step("ChatCallbacks", Vystorm.vystorm_core.compat.ClickActions::release),
             new Step("ClientBiomes", Vystorm.vystorm_core.packet.ClientBiomes::release),
             new Step("Visuals", Vystorm.vystorm_core.visual.Visuals::release),
+            new Step("ClientBlocks", Vystorm.vystorm_core.packet.ClientBlocks::release),
+            new Step("PacketView", Vystorm.vystorm_core.packet.PacketView::release),
+            new Step("RuleClaims", owner -> Vystorm.vystorm_core.compat.gamerule.internal.RuleClaimRegistry.shared().release(owner.getName())),
+            new Step("ActionLogs", Vystorm.vystorm_core.actions.internal.ActionRunner::release),
             new Step("LicensedModules", Vystorm.vystorm_core.licensing.LicensedModules::release),
             new Step("ConfigEditor", Vystorm.vystorm_core._uiMethods.settings.ConfigEditor::unregister),
             new Step("PlayerMenu", Vystorm.vystorm_core.playermenu.PlayerMenu::unregister),
@@ -64,13 +68,17 @@ public final class CoreLifecycle implements Listener {
             new Step("RuntimeContextHub", owner -> RuntimeContextHub.get().unregisterOwner(owner)),
             new Step("WorldEnvironmentRegistry", owner -> WorldEnvironmentRegistry.get().unregisterOwner(owner)),
             new Step("RegionService", owner -> RegionService.get().unregisterOwner(owner)),
+            new Step("BlockWrites", Vystorm.vystorm_core.blocks.BlockWrites::release),
+            new Step("EditGuards", owner -> Vystorm.vystorm_core.blocks.internal.EditGuardRegistry.shared().release(owner)),
             new Step("SpawnPointService", owner -> Vystorm.vystorm_core.spawn.SpawnPointService.get().unregisterOwner(owner)),
             new Step("CoreCommands", Vystorm.vystorm_core.commands.CoreCommands::unregister),
             new Step("WebServices", Vystorm.vystorm_core.web.WebServices::unregister),
             new Step("ClientUi", Vystorm.vystorm_core.web.ClientUi::release),
+            new Step("Pickers", Vystorm.vystorm_core.picker.Pickers::release),
             new Step("Panels", Vystorm.vystorm_core.panel.Panels::release),
             new Step("Screens", owner -> { try { Vystorm.vystorm_core.screen.internal.ScreenRuntime.get().release(owner); } catch (IllegalStateException notRunning) { } }),
             new Step("ManagedWorlds", Vystorm.vystorm_core.worlds.ManagedWorlds::release),
+            new Step("WorldSurvey", Vystorm.vystorm_core.survey.WorldSurvey::release),
             new Step("Localization", owner -> Vystorm.vystorm_core.lang.Localization.get().unregister(owner)));
 
     private record Step(String name, Consumer<Plugin> action) {}

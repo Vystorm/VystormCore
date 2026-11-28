@@ -6,7 +6,8 @@ import org.bukkit.block.data.BlockData;
 /**
  * A private, non-physical block overlay for one player. All calls must run on the server thread.
  * Never changes world blocks. Close restores current real block states, not old captured states.
- * Only one active view per player is admitted, so plugins cannot overwrite one another's cleanup.
+ * One active view per player and plugin (before 0.72.0: per player); views of several plugins are client block sets of
+ * priority 0, so one plugin's cleanup shows the other's blocks again instead of overwriting them.
  * @since 0.29.0
  */
 public interface BlockView extends AutoCloseable {

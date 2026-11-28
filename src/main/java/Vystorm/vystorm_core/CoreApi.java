@@ -54,6 +54,12 @@ public final class CoreApi {
          */
         public static final String PLACEHOLDERS = "placeholders";
         /**
+         * {@code api.survey()}: the world survey (surface, rooms, caves, room joins across chunks, live open cells,
+         * stored records per chunk, pre-compute jobs, {@code /vadmin survey}). Off until the switch
+         * {@code survey.enabled} is on or a plugin calls {@code require(plugin)}. @since 0.68.0
+         */
+        public static final String WORLD_SURVEY = "world-survey";
+        /**
          * {@code api.gui().fileMenus()}: screen menus from files in {@code plugins/vystorm_core/menus} (format
          * {@code vystorm-menu} version 1, written by the menu editor), opened with {@code /vmenu <id>}, their own
          * command or their tile in the main menu; {@code /vadmin menus}. @since 0.65.0
@@ -77,6 +83,105 @@ public final class CoreApi {
          * {@code /vadmin placeholders rankings}. Plugins check {@code CoreApi.has("placeholder-rankings")}. @since 0.67.0
          */
         public static final String PLACEHOLDER_RANKINGS = "placeholder-rankings";
+        /**
+         * {@code api.blocks()}: the shared block state table ({@code states()}), the Bukkit block writer with a check of
+         * the state before each write and a time limit ({@code writer(world)}, {@code bukkitWriter()}) and
+         * {@code writerReport()}. @since 0.69.0
+         */
+        public static final String BLOCK_WRITES = "block-writes";
+        /**
+         * {@code api.blocks().chunks()}: chunk loads that hold the chunk with a plugin ticket until the hold is closed,
+         * asynchronous on Paper and Purpur, synchronous in a time slice per tick on Spigot. @since 0.69.0
+         */
+        public static final String CHUNK_LOADS = "chunk-loads";
+        /**
+         * {@code blocks.BlocksEditedEvent} and {@code api.blocks().announce(source, chunk)}: one event per chunk after
+         * many cells were written without per-block events. @since 0.69.0
+         */
+        public static final String BLOCKS_EDITED_EVENT = "blocks-edited-event";
+        /**
+         * {@code api.area().mayEdit(ask)} and {@code api.area().editGuards()}: may a plugin change the cells of one chunk
+         * (allow, deny, or a test per cell), from Core's regions and the guards plugins register. @since 0.69.0
+         */
+        public static final String EDIT_ASK = "edit-ask";
+        /**
+         * {@code api.data().knownPlayers()}: the players who joined this server (name, first and last seen, skin
+         * address), fed on join and quit, seeded once from {@code usercache.json}; prefix search and "recent" honour the
+         * personal "findable when offline" setting; {@code /vadmin players find|forget}. @since 0.71.0
+         */
+        public static final String KNOWN_PLAYERS = "known-players";
+        /**
+         * {@code picker.PickReturn}: a panel opened again after a hand-over with the same argument and the session
+         * values carried over ({@code panel(action)}, {@code panel(owner, name, arg)}, {@code to}, {@code none},
+         * {@code go(player, result)} with the result as the status line). @since 0.71.0
+         */
+        public static final String PICK_RETURN = "pick-return";
+        /**
+         * {@code api.gui().pickers()}: the shared player picker (tabs Online, Nearby, Recent, Search; heads, paging,
+         * single or multiple choice, filter and rule with a reason), shown in the client mod, as a Vystorm Screen or as
+         * Core's 54-slot chest; returns to the calling panel through {@code PickReturn} (implies {@code pick-return}).
+         * @since 0.71.0
+         */
+        public static final String PLAYER_PICKER = "player-picker";
+        /**
+         * {@code api.gui().pickers().world(..)}: pick mode for one target in the world (position with facing, block,
+         * wall face, container, entity) without an item: particle outline green/red from the plugin's check,
+         * left-click chooses, sneak opens the options (use where I stand, type coordinates, cancel), the player's world
+         * actions cancelled meanwhile; protection {@code NONE} or {@code BUILD}; returns through {@code PickReturn}.
+         * Also {@code api.particle().paths().box/circle}. @since 0.71.0
+         */
+        public static final String WORLD_PICK = "world-pick";
+        /**
+         * {@code PickKind.AREA} for {@code api.gui().pickers().world(..)}: a box from two corners, each chosen like a
+         * block (left-click, "block below me", typed coordinates, redo the first corner), a live box preview with the
+         * size, the plugin's {@code AreaRules} under Core's caps (512 x 384 x 512, 50,000,000 blocks), a confirm view
+         * (use, redo a corner, full height, cancel), {@code Picked.Area} as the result and {@code PickProtection.BUILD}
+         * for the whole box without loading chunks. @since 0.71.0
+         */
+        public static final String WORLD_PICK_AREA = "world-pick-area";
+        /**
+         * {@code PanelSpec.Builder.contextFallback(BiConsumer<Player, FallbackContext>)}: a plugin's own chest fallback gets
+         * the panel's argument, its session values (also those a {@code PickReturn} carries back), the returning pick's
+         * result, {@code reopen()} by the normal route, and {@code PickReturn.panel(FallbackContext)} for picks started
+         * from the chest. One-argument fallbacks work as before. @since 0.71.0
+         */
+        public static final String PANEL_FALLBACK_CONTEXT = "panel-fallback-context";
+        /**
+         * {@code api.area().editGuards().registerOwnRegions(plugin, guard)}: a guard that answers the edit ask for the
+         * plugin's own regions; Core's region answer skips their {@code build} flag while it is registered (other
+         * plugins' regions count as before, deny wins), so a protection plugin can let its builders and bypassing
+         * admins edit with tools and picks as they build by hand. @since 0.71.0
+         */
+        public static final String EDIT_ASK_OWN_REGIONS = "edit-ask-own-regions";
+        /**
+         * {@code api.packages().clientBlocks()}: named per-player (or per-area) sets of client-only blocks with a
+         * priority, sent as one multi-block packet per chunk section within budgets, repaired after real block changes
+         * and chunk resends, cleaned up on quit, world change, expiry and plugin disable; Paper, Purpur and Spigot
+         * 1.20.6 to 26.x. {@code Visuals.open} block views run on it. @since 0.72.0
+         */
+        public static final String CLIENT_BLOCKS = "client-blocks";
+        /**
+         * {@code api.packages().packetView()}: one shared pair of handlers per connection that rewrites chunk, light,
+         * section and block packets through registered layers (MASK layers in this version: hidden cells, their light and
+         * block entities, object packets in hidden cells); each chunk is decoded and encoded once per viewer; handlers
+         * only while a layer is registered; Paper, Purpur and Spigot 26.2 and 26.3 after a self-test
+         * ({@code supported()}). @since 0.73.0
+         */
+        public static final String PACKET_VIEW = "packet-view";
+        /**
+         * {@code api.admin().actions()}: admin action runner with preview (human line, API call, equivalent vanilla
+         * command), copy as command, confirm, the family permission rule, monthly audit log ({@code /vadmin actions}),
+         * staff note and vanilla dispatch with the answer captured on Paper/Purpur. @since 0.73.0
+         */
+        public static final String ADMIN_ACTIONS = "admin-actions";
+        /**
+         * {@code api.compat().gameRules()}: every game rule of a world on Paper 1.20.6, Spigot and Paper/Purpur 26.x
+         * under one stable id per rule (renamed and inverted rules mapped), type, range, default, Vystorm's own labels
+         * and descriptions in seven languages. @since 0.73.0
+         */
+        public static final String GAME_RULES = "game-rules";
+        /** {@code api.compat().gameRules().claims()}: plugins declare the game rules they set ("also set by X"). @since 0.73.0 */
+        public static final String RULE_CLAIMS = "rule-claims";
         /** Shared Bukkit/Spigot adapters, native persistence and portable client events. @since 0.51.0 */
         public static final String BUKKIT_COMPAT = "bukkit-compat";
         /** Cross-server network via a Velocity/BungeeCord hub: {@link #network()}, {@code /vnet}, server selector. @since 0.53.0 */
@@ -137,6 +242,14 @@ public final class CoreApi {
         public static final String SCREENS = "screens";
         /** HUD corner window: {@link Vystorm.vystorm_core.screen.Huds}, {@link Vystorm.vystorm_core.screen.HudCard}. @since 0.59.0 */
         public static final String HUD_WINDOW = "hud-window";
+        /** {@code ScreenSession.setMap} sends only the changed rectangle of each map tile, at most {@code Screens.MAP_BYTES_PER_TICK} per viewer and tick. @since 0.72.0 */
+        public static final String SCREEN_MAP_PARTIAL = "screen-map-partial";
+        /** {@code ScreenSession.trackPointer} and {@code ScreenInput.Pointer}: pointer samples over a widget, at most one per tick. @since 0.72.0 */
+        public static final String SCREEN_POINTER = "screen-pointer";
+        /** {@code ScreenSession.trackPress} and {@code ScreenInput.Press}: right button down and up (hold to paint). @since 0.72.0 */
+        public static final String SCREEN_PRESS = "screen-press";
+        /** {@code api.gui().screens().mapColors()}: the map colour table ({@code screen.MapColors}), the same on every platform. @since 0.72.0 */
+        public static final String MAP_PALETTE = "map-palette";
         /** {@code commands.CoreCommands}/{@code CommandSpec}/{@code Arg}: central command trees with localized subcommands, keyword values, help, root aliases, {@code /vhelp}, {@code /vadmin commands}, plugin.yml adapter. @since 0.45.0 */
         public static final String COMMANDS = "commands";
         /** {@code ConfigEditor.history}/{@code undo}: change history of the config editor with undo, {@code /vadmin config history}. @since 0.44.0 */
@@ -356,6 +469,10 @@ public final class CoreApi {
         since.put(Capability.PROFILES, "0.56.0");
         since.put(Capability.SCREENS, "0.57.0");
         since.put(Capability.HUD_WINDOW, "0.59.0");
+        since.put(Capability.SCREEN_MAP_PARTIAL, "0.72.0");
+        since.put(Capability.SCREEN_POINTER, "0.72.0");
+        since.put(Capability.SCREEN_PRESS, "0.72.0");
+        since.put(Capability.MAP_PALETTE, "0.72.0");
         since.put(Capability.LANGUAGE_SELECTION, "0.45.0");
         since.put(Capability.LOOT_TABLES, "0.34.0");
         since.put(Capability.LOOT_ROLLS, "0.44.0");
@@ -434,10 +551,27 @@ public final class CoreApi {
         since.put(Capability.MANAGERS, "0.64.0");
         since.put(Capability.EVENT_STAGES, "0.64.0");
         since.put(Capability.PLACEHOLDERS, "0.65.0");
+        since.put(Capability.WORLD_SURVEY, "0.68.0");
         since.put(Capability.FILE_MENUS, "0.65.0");
         since.put(Capability.COMMAND_VISIBILITY, "0.65.0");
         since.put(Capability.PANEL_LIST_LAYOUT, "0.66.0");
         since.put(Capability.PLACEHOLDER_RANKINGS, "0.67.0");
+        since.put(Capability.BLOCK_WRITES, "0.69.0");
+        since.put(Capability.CHUNK_LOADS, "0.69.0");
+        since.put(Capability.BLOCKS_EDITED_EVENT, "0.69.0");
+        since.put(Capability.EDIT_ASK, "0.69.0");
+        since.put(Capability.KNOWN_PLAYERS, "0.71.0");
+        since.put(Capability.PICK_RETURN, "0.71.0");
+        since.put(Capability.PLAYER_PICKER, "0.71.0");
+        since.put(Capability.WORLD_PICK, "0.71.0");
+        since.put(Capability.WORLD_PICK_AREA, "0.71.0");
+        since.put(Capability.PANEL_FALLBACK_CONTEXT, "0.71.0");
+        since.put(Capability.EDIT_ASK_OWN_REGIONS, "0.71.0");
+        since.put(Capability.CLIENT_BLOCKS, "0.72.0");
+        since.put(Capability.PACKET_VIEW, "0.73.0");
+        since.put(Capability.ADMIN_ACTIONS, "0.73.0");
+        since.put(Capability.GAME_RULES, "0.73.0");
+        since.put(Capability.RULE_CLAIMS, "0.73.0");
         SINCE = Collections.unmodifiableMap(since);
     }
 

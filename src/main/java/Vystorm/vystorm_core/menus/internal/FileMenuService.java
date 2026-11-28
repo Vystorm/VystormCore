@@ -462,7 +462,7 @@ public final class FileMenuService {
             ScreenOpenResult result = Screens.of(core).open(player, spec, menu.key(), viewer -> { if (open(viewer, menu.id()) != Result.OPENED) tell(viewer, "common.menu-unavailable"); });
             if (!result.opened()) {
                 open.remove(player.getUniqueId(), state);
-                if (result.refusedKey() != null && !ScreenRuntime.silentRefusal(result.refusedKey())) tell(player, result.refusedKey());
+                // 0.71.1: the screen runtime already told the player why (at most every few seconds)
                 return;
             }
             state.session = Screens.of(core).session(player).orElse(null);

@@ -376,6 +376,12 @@ screens:
   # Plugin dialogs with input fields as screens too (0.61.0): switches and choices change with a click, a click on a
   # text or number box opens a one-field typing dialog. false = those dialogs stay native.
   dialog-inputs: true
+  # 0.71.1: Vystorm Core 0.71.0 and older could leave a player invisible for good (a screen opened in spectator mode or
+  # under an invisibility potion). Such players are named in the console at join, admins among them get a chat line,
+  # and /vadmin visible <player> makes them visible. true = every player who joins invisible without an invisibility
+  # effect (and not in spectator mode) is made visible at once. Off by default, because another plugin (a vanish
+  # plugin) may make players invisible on purpose this way.
+  repair-invisible-on-join: false
 
 # Hold sneak and left-click twice quickly into the air: opens the Vystorm menu (/menu). Off by default since 0.65.1
 # (it got in the way of building and mining while sneaking); true switches it on. /menu and /vmenu always work.
@@ -427,3 +433,77 @@ plugin-worlds:
 # are empty. The register itself keeps working, because protection plugins rely on it.
 region-register:
   enabled: true
+
+# World survey (0.68.0): finds the rooms, caves and the surface of the worlds for plugins that need them (an
+# anti-xray plugin, for example). Off by default: nothing runs and nothing is stored until this is true or a plugin
+# switches it on through the API. Records are kept in plugins/vystorm_core/survey/<world-uuid>/.
+survey:
+  enabled: false
+  # Worker threads for the surveys; 0 picks a quarter of the processor cores (1 to 4).
+  workers: 0
+  # Most chunk snapshots taken per tick and most milliseconds per tick for them (a running job may raise both).
+  snapshots-per-tick: 9
+  millis-per-tick: 3.0
+  # Chunks whose block classes stay in memory for 30 seconds, so neighbouring surveys reuse them.
+  class-cache: 512
+  # Write a line to the log when a chunk becomes stale through a block change and when it is surveyed again.
+  log-changes: false
+  # A chunk whose stored record carries the same stamp as the chunk gets its record at once when it loads. The audit
+  # compares a share of these records with the chunk's blocks later, at low priority, and catches changes made
+  # without Core seeing them (tools that write region files, plugins that set blocks without events): off, sample, all.
+  audit: sample
+  audit-share: 0.1
+  audit-per-tick: 2
+  # Loaded chunks near players that have no record yet are surveyed a few per second, the nearest first.
+  auto-survey-per-second: 4
+
+# Client blocks (0.72.0): blocks that plugins show only to some players (portal previews, borders, build
+# previews), sent as one packet per chunk section. Most cells sent per player and tick, and for all players together;
+# the rest follows in the next ticks, nearest first.
+client-blocks:
+  cells-per-tick: 8192
+  cells-per-tick-total: 32768
+
+# Known players (0.71.0): Core keeps a list of the players who joined (name, first and last seen, skin address) in
+# plugins/vystorm_core/known-players.dat, so plugins can find offline players by name without slow lookups. It is
+# filled on every join and, once, from the server's usercache.json. Never a network lookup. Needs a restart.
+known-players:
+  enabled: true
+  # Players not seen for this many days are dropped at start (0 keeps everyone).
+  forget-after-days: 365
+
+# Player picker (0.71.0): the shared menu in which plugins let players choose other players (tabs Online, Nearby,
+# Recent, Search; Core's own chest when no screen opens). Offline players only show in Recent and in a name search.
+pickers:
+  enabled: true
+  players:
+    # Radius of the Nearby tab when a plugin sets none, and the largest radius a plugin may ask for (blocks).
+    default-nearby: 16
+    max-nearby: 64
+    # Days a player counts as recent.
+    recent-days: 30
+    # Letters a search needs before it shows offline players, and the most offline hits of one search.
+    search-min-chars: 3
+    search-max-hits: 20
+    # Skins on the chest heads: all (stored skin addresses, no lookup), online (only online players), none.
+    heads: all
+  # World pick (0.71.0): plugins let a player choose a spot, block, wall, chest, entity or an area from two corners by
+  # looking at it and left-clicking (sneak opens the options). Nothing in the world changes while a player picks.
+  world:
+    enabled: true
+    # How far a player can choose (blocks) when a plugin sets nothing, and the most any plugin may ask for (at most 64).
+    default-reach: 6
+    max-reach: 64
+    # The outline is drawn only within this many blocks of the player (at most 64), with at most this many particles
+    # per pass (at most 512).
+    preview-distance: 48
+    preview-points: 450
+    # Typed coordinates (options menu) may be at most this many blocks away from the player.
+    typed-distance: 128
+    # The largest area any plugin may let a player choose: blocks per side (x, y, z) and blocks in all. These are
+    # Core's caps: lower values apply, higher ones are cut back to 512 x 384 x 512 and 50,000,000 blocks.
+    max-area:
+      x: 512
+      y: 384
+      z: 512
+      volume: 50000000

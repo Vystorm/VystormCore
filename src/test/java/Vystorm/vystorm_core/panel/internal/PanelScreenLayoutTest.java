@@ -48,6 +48,25 @@ class PanelScreenLayoutTest {
     }
 
     @Test
+    void givenListIconHook_whenLaidOut_thenTheRowDrawsTheHooksIconAndOthersKeepTheirItem() {
+        Object head = new Object();
+        PanelScreenLayout.Texts texts = new PanelScreenLayout.Texts() {
+            @Override public Component close() { return Component.text("Close"); }
+            @Override public Component page(int page, int pages) { return Component.text(page + "/" + pages); }
+            @Override public Component scrollHint() { return Component.text("scroll"); }
+            @Override public Object listIcon(String entryKey, org.bukkit.Material material) { return entryKey.equals("p:a") ? head : material; }
+        };
+        PanelDocument d = doc("""
+                {"type":"list","id":"players","items":[
+                  {"key":"p:a","title":"Alex","icon":{"item":"minecraft:player_head"}},
+                  {"key":"p:b","title":"Steve","icon":{"item":"minecraft:player_head"}},
+                  {"key":"c","title":"No icon"}]}""");
+        PanelScreenLayout.Result r = PanelScreenLayout.layout(d, new PanelScreenLayout.View(), PanelScreenLayout.metrics(d.root(), 2.49, 1.4, 1.0), texts, List.of());
+        List<Object> icons = r.layout().widgets().stream().filter(w -> w.kind() == ScreenWidget.Kind.ICON).map(ScreenWidget::icon).toList();
+        assertEquals(List.of(head, org.bukkit.Material.PLAYER_HEAD), icons, "the hook's head for p:a, the plain item for p:b, nothing for the row without an icon");
+    }
+
+    @Test
     void givenLongContent_whenLaidOut_thenPanelIsCappedAndScrolls() {
         StringBuilder sb = new StringBuilder();
         for (int i = 0; i < 60; i++) sb.append(i == 0 ? "" : ",").append("{\"type\":\"text\",\"text\":\"Zeile ").append(i).append("\"}");

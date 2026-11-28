@@ -90,6 +90,24 @@ public final class ScreenListener implements Listener {
     @EventHandler(priority = EventPriority.MONITOR)
     public void quit(PlayerQuitEvent e) { runtime().close(e.getPlayer(), ScreenInput.Reason.QUIT); }
 
+    /**
+     * 0.71.1: first of all join handlers, so the state checked is the one loaded from the player file, before any other
+     * plugin (a vanish plugin) sets its own at join.
+     */
+    @EventHandler(priority = EventPriority.LOWEST)
+    public void join(org.bukkit.event.player.PlayerJoinEvent e) { runtime().onJoin(e.getPlayer()); }
+
+    /** 0.71.1: switching to spectator closes the screen first (the change itself comes after this event). */
+    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
+    public void gameMode(org.bukkit.event.player.PlayerGameModeChangeEvent e) { runtime().onGameMode(e.getPlayer(), e.getNewGameMode()); }
+
+    /** 0.71.1: a player lost an invisibility effect: checked a moment later for invisibility an older Core left behind. */
+    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
+    public void effect(org.bukkit.event.entity.EntityPotionEffectEvent e) {
+        if (!(e.getEntity() instanceof Player player) || e.getNewEffect() != null) return;
+        if (org.bukkit.potion.PotionEffectType.INVISIBILITY.equals(e.getModifiedType())) runtime().recheckInvisible(player);
+    }
+
     @EventHandler(priority = EventPriority.MONITOR)
     public void load(EntitiesLoadEvent e) { runtime().sweep(e.getEntities()); }
 }

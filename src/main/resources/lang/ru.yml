@@ -106,6 +106,11 @@ pause:
   tutorials-tooltip: Руководство для всех плагинов
   back: Назад
 settings:
+  privacy:
+    title: "Конфиденциальность"
+    description: "Что другие игроки видят о вас"
+    findable-offline: "Другие могут найти меня по имени, когда я офлайн"
+    findable-offline-hint: "Выключено: пока вы офлайн, ваше имя не показывается в поиске игроков и в списке недавних игроков. Онлайн вас видно как прежде."
   profile:
     exported: 'Профиль {name}: экспортировано {count} утвержденных значений сервера в настройки-профили. Включены только явно
       безопасные настройки профиля.'
@@ -1284,6 +1289,14 @@ setup-flow:
   done: "<green>{plugin} настроен. Всё можно изменить в <white>/vadmin config {plugin}</white>."
 
 screen:
+  visible:
+    usage: "<gray>/vadmin visible NAME <dark_gray>— снова делает видимым игрока, который невидим без эффекта невидимости"
+    not-found: "<red>{player} не в сети."
+    done: "<green>{player} снова видим."
+    already: "<gray>{player} не был невидим."
+    spectator: "<yellow>{player} в режиме наблюдателя, где игра показывает всех игроков невидимыми. Повтори команду, когда он выйдет из этого режима."
+    player: "<green>Ты снова видим."
+    stuck-admin: "<yellow>Ты невидим без эффекта невидимости (остаток от старой версии Vystorm Core). <gray>/vadmin visible {player}</gray> снова делает тебя видимым."
   list:
     position: "{from}–{to} из {total}"
     help-number: "ЛКМ: больше · ПКМ: меньше"
@@ -1318,6 +1331,8 @@ screen:
   refused:
     disabled: "<yellow>Экраны на этом сервере выключены; используется классическое меню."
     busy: "<yellow>Экран уже открыт."
+    dead: "<yellow>Не пока ты мёртв."
+    spectator: "<yellow>В режиме наблюдателя по экранам нельзя кликать; используется классическое меню."
     riding: "<yellow>Сначала слезь с транспорта."
     gliding: "<yellow>Сначала приземлись."
     falling: "<yellow>Не во время падения."
@@ -1353,6 +1368,16 @@ screen:
       hint: "<gray>Нажми на карту, чтобы увидеть координаты."
       clicked: "<gray>x {x}, z {z}"
       opened: "<gray>Экран карты открыт ({mode}). Shift приближает, прыжок отдаляет, закрыть — кнопкой или /screen close."
+    paint:
+      title: "<gold>Тест рисования"
+      placeholder: "<gray>Холсту нужны закреплённые экраны (пакет Core загружен, классические экраны выключены)."
+      red: "Красный"
+      green: "Зелёный"
+      blue: "Синий"
+      clear: "Очистить"
+      hint: "<gray>Удерживайте правую кнопку, чтобы рисовать, левый клик ставит точку."
+      stats: "<gray>Отправлено частей: {patches}, пикселей: {pixels}."
+      opened: "<gray>Экран рисования открыт ({mode}). Удерживайте правую кнопку над холстом, чтобы рисовать; закрыть кнопкой или /screen close."
 
 screens-admin:
   status-on: "<green>Экраны Vystorm включены."
@@ -1470,6 +1495,10 @@ file-menus:
     reloaded: "<green>Меню прочитаны заново: загружено {loaded}, пропущено {skipped}."
 feature-off: "<red>Эта функция выключена на этом сервере."
 switches:
+  pickers: "Меню выбора: общие меню, в которых плагины дают выбрать игроков (вкладки, поиск, головы) или место, блок, стену, контейнер или существо в мире"
+  world-pick: "Выбор в мире: плагины дают выбрать место, блок, стену, контейнер или существо, посмотрев на него и нажав левую кнопку (нужен и выбор игроков)"
+  known-players: "Известные игроки: список всех, кто уже заходил (имя, когда был в последний раз), чтобы меню находили игроков по имени и офлайн. Нужен перезапуск"
+  survey: "Обследование мира: комнаты, пещеры и поверхность миров для плагинов, которым это нужно (анти-иксрей). Выключено, пока его не включит плагин или вы"
   trade-chat: "Торговый чат (/vtrade)"
   coordinates: "Кликабельные координаты в чате"
   tutorials: "Обучение всех плагинов и руководство «Первые шаги»"
@@ -1503,6 +1532,10 @@ switches:
   screens: "Экраны Vystorm; выкл.: каждое меню показывает свой диалог или сундук"
   file-menus: "Экранные меню из файлов в plugins/vystorm_core/menus"
 switch-names:
+  pickers: "Выбор игроков"
+  world-pick: "Выбор в мире"
+  known-players: "Известные игроки"
+  survey: "Обследование мира"
   trade-chat: "Торговый чат"
   coordinates: "Кликабельные координаты"
   tutorials: "Обучение"
@@ -1536,3 +1569,493 @@ switch-names:
   screens: "Экраны"
   file-menus: "Меню из файлов"
 config-broken-not-saved: "<red>В {file} ошибка YAML ({problem}). Ничего не сохранено, файл остался как был. Исправьте ошибку и перезагрузите."
+packets:
+  usage: "<gray>/vadmin packets [sets|view]"
+  status: "<gold>Клиентские блоки</gold><gray>: наборов {sets} · игроков {viewers} · клеток {cells} · не более {budget} клеток на игрока за тик, {total} на всех игроков"
+  counters: "<gray>Отправлено: {sent} клеток в {batches} пакетах секций ({singles} с одним блоком) · восстановлено {restores} · исправлено после реальных изменений {repairs} · задержано внутри игрока {blocked} · отклонено на пределе {refused}"
+  none: "<gray>Сейчас ни один плагин не показывает клиентские блоки."
+  owner: "<gray>{plugin}: наборов {sets}, клеток {cells}, игроков {viewers}"
+  owner-collision: "<gray>{plugin}: наборов {sets}, клеток {cells}, игроков {viewers} · <yellow>{collision} меняют, на чём могут стоять игроки</yellow>"
+  set: "<gray>{plugin} '{name}' · приоритет {priority} · клеток {cells} · игроков {viewers} · ожидает {pending} · {kind}"
+  set-collision: "<yellow>{plugin} '{name}' меняет столкновения</yellow><gray> · приоритет {priority} · клеток {cells} · игроков {viewers} · ожидает {pending} · {kind}"
+  more: "<gray>… и ещё {count}."
+  kind-player: "один игрок"
+  kind-shared: "общий"
+  view-unchecked: "<gold>Вид пакетов</gold><gray>: не запущен (ни один плагин не зарегистрировал слой) · обработчиков в соединениях нет"
+  view-off: "<gold>Вид пакетов</gold><gray>: не работает на этом сервере: {reason}"
+  view-idle: "<gold>Вид пакетов</gold><gray>: готов, слоёв нет · обработчики в {pairs} соединениях"
+  view-status: "<gold>Вид пакетов</gold><gray>: слоёв {layers} · зрителей {viewers} · обработчики в {pairs} соединениях · переписано чанков {chunks} · отброшено пакетов {dropped} · нечитаемых {unreadable} · {micros} мкс на чанк (медиана/95 %)"
+  view-layer: "<gray>{id} ({plugin}): {kind}, приоритет {priority} · чанков {chunks} · клеток {cells} · отброшено {dropped} · ошибок {errors} · задержано {holds} · {micros} мкс (медиана/95 %)"
+  view-layer-collision: "<yellow>{id} ({plugin}) меняет столкновения</yellow><gray>: {kind}, приоритет {priority} · чанков {chunks} · клеток {cells} · отброшено {dropped} · ошибок {errors} · задержано {holds} · {micros} мкс (медиана/95 %)"
+  view-counter: "<gray>{name}: {value}"
+  view-selftest: "<gray>Самопроверка: {result}"
+survey:
+  usage: "<gray>/vadmin survey status [мир] · start <world> <radius> [x z] [generate=true workers=0 snapshots=9 ms=5 tps=18 yield=true] · pause|resume|cancel [мир] · rule <world> [reach|hall-radius|void-below|doors-stop-reach <value>] · at <world> <x> <y> <z>"
+  switched-off: "<gray>Обследование мира выключено. Включите survey.enabled в config.yml Core; плагины, которым оно нужно, включают его сами."
+  required: "<gray>Включено плагинами: {plugins}"
+  status: "<gold>Обследование мира</gold><gray>: {workers} рабочих потоков · обследовано чанков: {surveys}, {millis} мс и {bytes} байт на чанк · ждут: {waiting} · ошибок: {failures} · слушателей: {listeners}"
+  status-tick: "<gray>Тик сервера {mspt} мс · снимки в среднем {pump} мс за тик"
+  status-world: "<gray>{world}: отслеживается чанков: {tracked}, устарело: {stale}, файлов: {files} ({size} КБ) · охват {reach}, залы {hall}, небо снизу {void}, двери останавливают охват {doors}"
+  status-load: "<gray>Загрузки чанков: сразу с записью: {offered}, чуть позже: {late}, без записи: {missing} (ждут обследования: {queued}), устарело: {stale} · {lookup} мс на загрузку · проверено: {audited}, найдено устаревших: {findings} · файлов регионов в памяти: {regions} ({regionkb} КБ)"
+  job: "<gray>Задание в {world}: {state} · {done} из {total} чанков ({percent} %), пропущено {skipped} · {rate} чанков/с · осталось {eta} · центр {x} {z}, радиус {radius}"
+  no-job: "<gray>В {world} нет задания."
+  started: "<green>Задание обследования запущено в {world}: {total} чанков вокруг {x} {z}."
+  bad-option: "<red>Неизвестный параметр или значение: {option}"
+  refused: "<red>{error}"
+  paused: "<yellow>Задание в {world} приостановлено."
+  resumed: "<green>Задание в {world} продолжается."
+  cancelled: "<yellow>Задание в {world} отменено."
+  unknown-world: "<red>Неизвестный мир: {world}"
+  rule: "<gray>Правило мира {world}: охват {reach}, залы {hall}, небо снизу {void}, двери останавливают охват {doors}"
+  rule-set: "<green>Правило мира {world} изменено. Его чанки будут обследованы заново, когда понадобятся."
+  at: "<gray>{x} {y} {z} в мире {world}: {kind}{room}"
+  at-room: " · комната {room} чанка {cx} {cz}, {volume} клеток, {contact}"
+  at-pending: "<gray>Обследую чанк {cx} {cz} ..."
+  at-failed: "<red>Нет обследования чанка {cx} {cz}: {error}"
+  flag-yes: "да"
+  flag-no: "нет"
+  bossbar: "Обследование мира {world}: {done}/{total} ({percent} %) · {rate}/с · осталось {eta} · {state}"
+  kind:
+    solid: "твёрдый"
+    surface: "поверхность"
+    enclosed: "замкнутый"
+  contact:
+    surface: "поверхность"
+    mouth: "есть выход на поверхность"
+    sealed: "замкнута"
+    unknown: "выход пока не найден"
+  state:
+    running: "идёт"
+    paused: "на паузе"
+    finished: "завершено"
+    cancelled: "отменено"
+known-players:
+  admin:
+    store-off: "<gray>Список известных игроков выключен (known-players.enabled в config.yml Core)."
+    pick-off: "<gray>Выбор игроков недоступен."
+    usage: "<gray>/vadmin players find PREFIX <dark_gray>·</dark_gray> /vadmin players forget NAME|UUID <dark_gray>·</dark_gray> /vadmin players pick [multi]"
+    status: "<gray>Известные игроки: <white>{count}</white> ({state})."
+    loaded: "файл прочитан"
+    loading: "файл ещё читается"
+    find-head: "<gray>Известные игроки на <white>{prefix}</white>: <white>{count}</white> из {total}"
+    find-line: "<white>{player} <dark_gray>{uuid} <gray>был в последний раз {seen}{hidden}"
+    hidden: " <yellow>не находится офлайн"
+    none: "<gray>Нет известных игроков на {prefix}."
+    unknown: "<red>{player} не известный игрок."
+    forgotten: "<green>{player} ({uuid}) удалён из известных игроков."
+pickers:
+  title: "Выбор игрока"
+  closed: "<gray>Этот выбор уже закрыт."
+  switched-off: "<gray>Выбор игроков в меню на этом сервере выключен."
+  gone: "<gray>Этого игрока больше нет в списке."
+  full: "<red>Можно выбрать не больше {max}."
+  denied-chosen: "{player} больше нельзя выбрать: {reason}"
+  timed-out: "<gray>Выбор игроков закрылся: долго не было нажатий."
+  open-again: "Открыть снова"
+  open-again-hover: "Снова открывает выбор игроков"
+  store-off: "Офлайн-игроков на этом сервере найти нельзя; показаны только игроки онлайн."
+  back: "Назад"
+  previous: "Предыдущая страница"
+  next: "Следующая страница"
+  done: "Готово (выбрано: {count})"
+  chosen-count: "Выбрано {count} из {max}"
+  rows: "с {from} по {to} из {total}"
+  error: "<red>{reason}"
+  tab:
+    online: "Онлайн {count}"
+    nearby: "Рядом {count}"
+    recent: "Недавние {count}"
+    search: "Поиск"
+  search:
+    label: "Имя"
+    placeholder: "Введите начало имени"
+    type: "Введите имя. Офлайн-игроки появляются от {min} букв."
+    short: "Пока только игроки онлайн: офлайн-игроки от {min} букв."
+    title: "Найти игрока"
+    question: "Начало имени"
+  empty:
+    online: "Больше никого нет онлайн."
+    nearby: "Рядом с вами никого нет."
+    recent: "Недавно больше никого не было."
+    search: "Игрок с таким именем не найден."
+  row:
+    name: "<yellow>{player}"
+    name-chosen: "<green>✔ {player}"
+    online: "<green>онлайн"
+    online-near: "<green>онлайн · {distance} м"
+    seen-today: "<gray>был сегодня"
+    seen-week: "<gray>был на этой неделе"
+    seen-month: "<gray>был в этом месяце"
+    seen-earlier: "<gray>был давно"
+    seen-unknown: "<gray>офлайн"
+    seen-at: "<gray>был {date}"
+    chosen: "<green>✔ выбран"
+    denied: "<red>{reason}"
+    click-pick: "<dark_gray>Клик: выбрать"
+    click-tick: "<dark_gray>Клик: добавить к выбору"
+    click-untick: "<dark_gray>Клик: убрать из выбора"
+  chest:
+    back-hint: "<gray>Назад, откуда вы пришли"
+    search-none: "<gray>Поиска ещё нет"
+    search-current: "<gray>Поиск: <white>{query}"
+    search-hint: "<dark_gray>ЛКМ: ввести имя · ПКМ: очистить"
+    tab-current: "<green>Показано сейчас"
+    tab-hint: "<dark_gray>Клик: показать"
+    info: "<white>Сведения"
+    done-hint: "<gray>Выбрано {count} из {max} · клик, чтобы подтвердить"
+    page: "<gray>Страница {page} из {pages}"
+    done: "Готово ({count})"
+  demo:
+    title: "Выбор игроков (тест)"
+    subtitle: "Открыто через /vadmin players pick; ничего не меняется"
+    not-yourself: "не вы сами"
+    picked: "Выбрано: {players} (добавлено {added}, убрано {removed})"
+    usage: "<gray>/vadmin players pick [multi] [self] [tab=online|nearby|recent|search] [search=TEXT] [page=N] [tick=N]"
+    dump-head: "<gray>Сундук выбора, вкладка {tab}: онлайн {online}, недавние {recent}, найдено {search}, известных игроков {known}, занято ячеек {slots}"
+  return-demo:
+    title: "Тест возврата"
+    subtitle: "Открыто через /vadmin pick demo; ничего не меняется"
+    pick-subtitle: "Запущено из теста возврата; вы вернётесь туда"
+    arg: "Открыто с: {arg}"
+    counter: "Счётчик: {count}"
+    add: "+1"
+    last: "Последний результат: {result}"
+    none: "пока нет"
+    pick-player: "Выбрать игрока"
+    pick-players: "Выбрать игроков (несколько)"
+    pick-block: "Выбрать блок"
+    pick-area: "Выбрать область"
+    chest-title: "Тест возврата (сундук)"
+    chest-note: "Сундук: та же сессия, что и на экране"
+    in-game: "<gray>Тест возврата открывается только в игре."
+  world:
+    switched-off: "<gray>Выбор в мире на этом сервере выключен."
+    spectator: "<gray>В режиме наблюдателя нельзя выбирать в мире."
+    started: "<yellow>{title}</yellow><gray>: {hint}."
+    bar: "{title} · левый клик: выбрать · присесть: настройки"
+    button-options: "Настройки"
+    button-options-hover: "Взять ваше место, ввести координаты или отменить"
+    button-cancel: "Отмена"
+    button-cancel-hover: "Прекратить выбор и вернуться"
+    open-again: "Открыть снова"
+    open-again-hover: "Начинает выбор заново"
+    ended:
+      timeout: "<gray>Выбор для {title} остановлен: долго не было нажатий."
+      interrupted: "<gray>Выбор для {title} остановлен."
+      world-changed: "<gray>Выбор для {title} остановлен: вы сменили мир."
+      replaced: "<gray>Выбор для {title} остановлен: открылось другое меню."
+    hint:
+      position: "<green>Левый клик: выбрать место, где вы стоите · Присесть: настройки"
+      block: "<green>Левый клик: выбрать этот блок · Присесть: настройки"
+      face: "<green>Левый клик: выбрать эту сторону · Присесть: настройки"
+      container: "<green>Левый клик: выбрать этот контейнер · Присесть: настройки"
+      entity: "<green>Левый клик: выбрать это существо · Присесть: настройки"
+      area: "<green>ЛКМ: первый угол, затем второй · Присесть: настройки"
+    kind:
+      position: "место"
+      block: "блок"
+      face: "сторону блока"
+      container: "контейнер"
+      entity: "существо"
+      area: "область"
+    reason:
+      nothing: "Здесь нечего выбрать: наведитесь на что-то не дальше {reach} блоков."
+      block: "Этот блок выбрать нельзя."
+      face: "Эту сторону выбрать нельзя."
+      container: "Это не контейнер."
+      entity: "Это выбрать нельзя."
+      world: "В этом мире ничего выбрать нельзя."
+      protected: "Здесь вам нельзя строить."
+      check-failed: "Сейчас это проверить нельзя."
+      refused: "Не получилось."
+    options:
+      info-kind: "<gray>Выберите {kind}"
+      info-reach: "<gray>Дальность: {reach} блоков"
+      stand-position: "<yellow>Где я стою"
+      stand-position-hint: "<gray>Берёт вашу позицию и направление взгляда"
+      stand-block: "<yellow>Блок подо мной"
+      stand-block-hint: "<gray>Берёт блок под вашими ногами"
+      type: "<yellow>Ввести x y z"
+      type-hint: "<gray>x y z, ~ — ваша позиция"
+      resume: "<yellow>К выбору"
+      resume-hint: "<gray>Наведитесь и нажмите левой кнопкой"
+      cancel: "<red>Отмена"
+      cancel-hint: "<gray>Прекратить выбор и вернуться"
+      redo-first: "<yellow>Угол 1 заново"
+      redo-first-hint: "<gray>Выбрать первый угол ещё раз"
+    typed:
+      title: "Ввод координат"
+      question: "x y z (~ — ваша позиция)"
+      question-face: "x y z и сторона (north, east, south, west, up, down)"
+      format: "Введите три числа: x y z."
+      face: "Неизвестная сторона: north, east, south, west, up или down."
+      far: "Это слишком далеко (не больше {max} блоков)."
+      height: "Это выше или ниже мира."
+      unloaded: "Эта часть мира не загружена."
+      refused: "<red>Не выбрано ({at}): {reason}"
+    describe:
+      position: "позиция {x} {y} {z}, взгляд на {facing}"
+      block: "{type} в {x} {y} {z}"
+      face: "сторона {face} у {type} в {x} {y} {z}"
+      container: "{type} в {x} {y} {z}"
+      entity: "{type} {uuid} в {x} {y} {z}, взгляд на {facing}"
+      area: "область от {from} до {to} ({size}, блоков: {blocks})"
+    demo:
+      title: "Выбор в мире (тест)"
+      subtitle: "Открыто через /vadmin pick world; ничего не меняется."
+      no-bedrock: "Этот тест не принимает бедрок."
+      picked: "Выбрано: {target}"
+      usage: "<gray>/vadmin pick world <position|block|face|container|entity|area> [reach=N] [build] [faces=sides|up|down|any] [max=N] [fullheight]"
+      status: "<gray>Выбор в мире: {state}; дальность {default} по умолчанию, плагинам до {max} (жёсткий предел {hard}); контур в пределах {distance} блоков (предел {hard-distance}), {points} частиц за проход (предел {hard-points}); введённые координаты не дальше {typed} блоков; время {timeout} с по умолчанию, не больше {max-timeout} с; идёт выборов: {running}"
+      state-on: "включён"
+      state-off: "выключен"
+      no-bedrock-corner: "Этот тест не принимает бедрок как первый угол."
+    area:
+      bar: "{title} · угол {corner} из 2"
+      bar-size: "{title} · угол {corner} из 2 · {size}"
+      bar-confirm: "{title} · {size} · подтвердить"
+      corner1: "<green>ЛКМ: угол 1 · Присесть: настройки"
+      corner2: "<green>ЛКМ: угол 2 · Присесть: настройки"
+      size-corner1: "<green>{size}, блоков: {blocks} · ЛКМ: угол 1"
+      size-corner2: "<green>{size}, блоков: {blocks} · ЛКМ: угол 2"
+      size-checking: "<yellow>{size}, блоков: {blocks} · проверка защиты …"
+      size-partial: "<yellow>{size}, блоков: {blocks} · частично защищено: проверим при подтверждении"
+      paused: "<green>ЛКМ или присесть: снова открыть подтверждение"
+      corner-set: "<gray>Угол {corner}: {x} {y} {z}"
+      corner-cleared: "<gray>Угол 1 сброшен: выберите его заново."
+      redo: "<gray>Выберите угол {corner} заново; другой угол остаётся."
+      confirm-closed: "<gray>Оба угла сохранены. ЛКМ или присесть снова откроет подтверждение."
+      reason:
+        other-world: "Оба угла должны быть в одном мире."
+        too-big: "Слишком большая: {size}, не больше {max}."
+        too-small: "Слишком маленькая: {size}, не меньше {min}."
+        too-many: "Слишком много блоков: {blocks}, не больше {max}."
+        protected: "Вам нельзя строить во всей этой области."
+        partial: "Вам нельзя строить в {x} {y} {z}."
+        guard-failed: "Не удалось проверить защиту."
+        too-slow: "Проверка защиты заняла слишком много времени: выберите область поменьше."
+        checking: "Защита ещё проверяется: попробуйте через мгновение."
+      confirm:
+        from: "<gray>От <white>{from}</white> до <white>{to}"
+        size: "<gray>Размер <white>{size}</white>, блоков: {blocks}"
+        world: "<gray>Мир <white>{world}"
+        height-picked: "<gray>Высота: как выбрано"
+        height-full: "<gray>Высота: вся высота мира"
+        height-fixed: "<gray>Высота: {height} блоков от нижнего угла"
+        blocks-label: "<white>блоков: {blocks}"
+        ready: "<green>✔ Готово"
+        use: "<green>Взять область"
+        use-hint: "<gray>Передаёт область"
+        redo-first: "<yellow>Угол 1 заново"
+        redo-first-hint: "<gray>Выбрать угол 1 заново; угол 2 остаётся"
+        redo-second: "<yellow>Угол 2 заново"
+        redo-second-hint: "<gray>Выбрать угол 2 заново; угол 1 остаётся"
+        height: "<yellow>Вся высота"
+        height-hint: "<gray>От низа до верха мира"
+        height-off: "<yellow>Как выбрано"
+        height-off-hint: "<gray>Вернуть выбранную высоту"
+        cancel: "<red>Отмена"
+        cancel-hint: "<gray>Прекратить выбор и вернуться"
+actions:
+  staff-note: "<gray><i>[{actor}: {text}]"
+  copy-line: "<gray>Команда (нажмите, чтобы скопировать):"
+  copy-none: "<gray>Ни одна ванильная команда не делает именно этого: {note}"
+  copy-note: "<gray>Примечание: {note}"
+  admin:
+    plugins: "<gold>Журналы аудита на этом сервере: <white>{plugins}"
+    usage: "<gray>/vadmin actions <plugin> [page] [filter]"
+    unknown: "<red>Нет включённого плагина {plugin}."
+    header: "<gold>Журнал аудита {plugin}, страница {page} (сначала новые):"
+    empty: "<gray>Записей нет."
+    denied: "<red>Для чтения этого журнала нужно право {node}."
+game-rules:
+  unknown-desc: "Правило, которого Vystorm пока не знает ({id}); смотрите документацию сервера."
+  category:
+    mobs: "Мобы"
+    spawning: "Появление"
+    player: "Игрок"
+    drops: "Выпадение"
+    world: "Мир"
+    chat: "Чат"
+    other: "Прочее"
+  rule:
+    advance_time:
+      name: "Смена дня и ночи"
+      desc: "Время суток идёт. Выкл.: солнце и луна стоят на месте."
+    advance_weather:
+      name: "Смена погоды"
+      desc: "Погода меняется сама. Выкл.: текущая погода остаётся."
+    allow_entering_nether_using_portals:
+      name: "Порталы в Незер"
+      desc: "Игроки могут попасть в Незер через порталы."
+    block_drops:
+      name: "Блоки дают предметы"
+      desc: "Сломанные блоки выпадают сами или оставляют добычу."
+    block_explosion_drop_decay:
+      name: "Взрывы блоков: потери"
+      desc: "Взрывы блоков (кроватей, якорей) оставляют лишь часть разрушенного."
+    command_block_output:
+      name: "Чат командных блоков"
+      desc: "Командные блоки сообщают операторам в чат, что они сделали."
+    command_blocks_work:
+      name: "Командные блоки работают"
+      desc: "Командные блоки вообще выполняют свои команды."
+    drowning_damage:
+      name: "Урон от утопления"
+      desc: "Игроки теряют здоровье, когда у них кончается воздух."
+    elytra_movement_check:
+      name: "Проверка скорости элитр"
+      desc: "Сервер проверяет парящих игроков на невозможную скорость."
+    ender_pearls_vanish_on_death:
+      name: "Жемчуг пропадает при смерти"
+      desc: "Брошенные жемчужины Края исчезают, когда погибает бросивший."
+    entity_drops:
+      name: "Выпадение объектов"
+      desc: "Вагонетки, лодки, рамки и подобное выпадают предметами при поломке."
+    fall_damage:
+      name: "Урон от падения"
+      desc: "Игроки получают урон при падении."
+    fire_damage:
+      name: "Урон от огня"
+      desc: "Игроки получают урон от огня и лавы."
+    fire_spread_radius_around_player:
+      name: "Распространение огня"
+      desc: "Как далеко от игроков огонь распространяется и гаснет. 0: огонь остаётся как есть, -1: везде. В 1.20.6 это переключатель."
+    forgive_dead_players:
+      name: "Прощать погибших игроков"
+      desc: "Разозлённые нейтральные мобы успокаиваются, когда гибнет преследуемый игрок."
+    freeze_damage:
+      name: "Урон от холода"
+      desc: "Игроки получают урон в снежной пудре."
+    global_sound_events:
+      name: "Звуки боссов на весь мир"
+      desc: "Некоторые звуки боссов и порталов слышны всем в мире."
+    immediate_respawn:
+      name: "Мгновенное возрождение"
+      desc: "Игроки возрождаются сразу, без экрана смерти."
+    keep_inventory:
+      name: "Сохранять инвентарь"
+      desc: "Игроки сохраняют предметы и опыт после смерти."
+    lava_source_conversion:
+      name: "Лава создаёт источники"
+      desc: "Два источника лавы могут создать новый между собой."
+    limited_crafting:
+      name: "Только открытые рецепты"
+      desc: "Игроки могут создавать только открытые ими рецепты."
+    locator_bar:
+      name: "Шкала-локатор"
+      desc: "Шкала опыта показывает, где находятся другие игроки."
+    log_admin_commands:
+      name: "Сообщать ops о командах"
+      desc: "Команды админов видны другим операторам и в логе сервера."
+    max_block_modifications:
+      name: "Лимит блоков на команду"
+      desc: "Сколько блоков самое большее может изменить одна команда (fill, clone)."
+    max_command_forks:
+      name: "Лимит ветвлений команд"
+      desc: "Сколько контекстов самое большее может создать один запуск команды."
+    max_command_sequence_length:
+      name: "Лимит цепочки команд"
+      desc: "Сколько команд самое большее может выполнить функция или цепочка."
+    max_entity_cramming:
+      name: "Лимит скученности"
+      desc: "Сколько мобов могут стоять в одном месте, прежде чем получат урон. 0: без лимита."
+    max_minecart_speed:
+      name: "Макс. скорость вагонетки"
+      desc: "Наибольшая скорость вагонеток на рельсах, в блоках в секунду (экспериментальная функция)."
+    max_snow_accumulation_height:
+      name: "Высота снега"
+      desc: "Сколько слоёв снега может накопиться во время снегопада."
+    mob_drops:
+      name: "Добыча с мобов"
+      desc: "Мобы оставляют добычу и опыт, когда их убивают."
+    mob_explosion_drop_decay:
+      name: "Взрывы мобов: потери"
+      desc: "Взрывы криперов и других мобов оставляют лишь часть разрушенного."
+    mob_griefing:
+      name: "Мобы меняют блоки"
+      desc: "Криперы, эндермены, жители и другие могут ломать, брать или ставить блоки."
+    natural_health_regeneration:
+      name: "Естественное лечение"
+      desc: "Игроки со временем лечатся, если они сыты."
+    player_movement_check:
+      name: "Проверка скорости игроков"
+      desc: "Сервер проверяет игроков на невозможные движения."
+    players_nether_portal_creative_delay:
+      name: "Ожидание в портале (творч.)"
+      desc: "Сколько тиков игрок в творческом режиме стоит в портале Незера до перехода."
+    players_nether_portal_default_delay:
+      name: "Ожидание в портале"
+      desc: "Сколько тиков игрок стоит в портале Незера до перехода."
+    players_sleeping_percentage:
+      name: "Нужно спящих (%)"
+      desc: "Доля игроков, которым нужно спать, чтобы пропустить ночь."
+    projectiles_can_break_blocks:
+      name: "Снаряды ломают блоки"
+      desc: "Стрелы и другие снаряды могут разбивать горшки, хорус и подобное."
+    pvp:
+      name: "PvP"
+      desc: "Игроки могут наносить урон друг другу."
+    raids:
+      name: "Рейды"
+      desc: "Рейды могут начинаться в деревнях. В 1.20.6 хранится как обратное правило disableRaids."
+    random_tick_speed:
+      name: "Скорость случайных тиков"
+      desc: "Как быстро растут посевы, саженцы и трава и опадает листва. 0 останавливает."
+    reduced_debug_info:
+      name: "Краткий экран отладки"
+      desc: "Экран F3 не показывает координаты и другие подробности."
+    respawn_radius:
+      name: "Радиус возрождения"
+      desc: "На каком расстоянии от точки появления в мире возникают новые игроки."
+    send_command_feedback:
+      name: "Ответы команд"
+      desc: "Игроки видят ответы на выполняемые ими команды."
+    show_advancement_messages:
+      name: "Сообщения о достижениях"
+      desc: "Чат сообщает всем, когда игрок получает достижение."
+    show_death_messages:
+      name: "Сообщения о смерти"
+      desc: "Чат сообщает всем, когда игрок погибает."
+    spawn_chunk_radius:
+      name: "Чанки возрождения"
+      desc: "Радиус чанков, остающихся загруженными вокруг точки появления в мире (только 1.20.6)."
+    spawn_mobs:
+      name: "Появление мобов"
+      desc: "Животные и монстры появляются сами."
+    spawn_monsters:
+      name: "Появление монстров"
+      desc: "Враждебные мобы появляются сами."
+    spawn_patrols:
+      name: "Появление патрулей"
+      desc: "По миру бродят патрули разбойников."
+    spawn_phantoms:
+      name: "Появление фантомов"
+      desc: "Фантомы приходят ночью к игрокам, не спавшим три дня или дольше."
+    spawn_wandering_traders:
+      name: "Странствующие торговцы"
+      desc: "Странствующие торговцы и их ламы навещают игроков."
+    spawn_wardens:
+      name: "Появление стражей"
+      desc: "Скалк-крикуны могут призвать стража."
+    spawner_blocks_work:
+      name: "Спавнеры работают"
+      desc: "Спавнеры монстров создают мобов."
+    spectators_generate_chunks:
+      name: "Наблюдатели грузят местность"
+      desc: "Игроки в режиме наблюдателя вызывают генерацию новой местности."
+    spread_vines:
+      name: "Лианы растут"
+      desc: "Лианы расползаются на соседние блоки."
+    tnt_explodes:
+      name: "Динамит взрывается"
+      desc: "Подожжённый динамит взрывается. Выкл.: он лишь шипит."
+    tnt_explosion_drop_decay:
+      name: "Взрывы динамита: потери"
+      desc: "Взрывы динамита оставляют лишь часть разрушенных блоков."
+    universal_anger:
+      name: "Гнев на всех"
+      desc: "Разозлённые нейтральные мобы нападают на всех игроков поблизости, а не только на ударившего."
+    water_source_conversion:
+      name: "Вода создаёт источники"
+      desc: "Два источника воды могут создать новый между собой."

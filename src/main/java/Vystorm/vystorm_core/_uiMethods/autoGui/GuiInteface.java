@@ -136,6 +136,9 @@ ArrayList<String> getMenuNames();
     /** Screen menus from files in {@code plugins/vystorm_core/menus} ({@code menus.FileMenus}). @since 0.65.0 */
     default Vystorm.vystorm_core.menus.FileMenusInterface fileMenus() { return Vystorm.vystorm_core.menus.FileMenusInterface.DEFAULT; }
 
+    /** Shared pickers: the player picker with tabs, search and the chest fallback ({@code picker.Pickers}). @since 0.71.0 */
+    default Vystorm.vystorm_core.picker.PickersInterface pickers() { return Vystorm.vystorm_core.picker.PickersInterface.DEFAULT; }
+
     /** Recent menus and the menu explorer ({@code _uiMethods.menu.MenuExplorer}). @since 0.64.0 */
     default Vystorm.vystorm_core._uiMethods.menu.MenuExplorerInterface menuExplorer() { return Vystorm.vystorm_core._uiMethods.menu.MenuExplorerInterface.DEFAULT; }
 

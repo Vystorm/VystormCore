@@ -28,6 +28,13 @@ public final class PanelRegistry {
 
     public static synchronized Optional<Registered> find(String id) { return Optional.ofNullable(PANELS.get(id)); }
 
+    /** 0.71.0: the registration that holds exactly this spec (identity), if any. */
+    public static synchronized Optional<Registered> findBySpec(PanelSpec spec) {
+        if (spec == null) return Optional.empty();
+        for (Registered r : PANELS.values()) if (r.spec() == spec) return Optional.of(r);
+        return Optional.empty();
+    }
+
     /** Entfernt alle Panels des Plugins; gibt ihre IDs zurück. */
     public static synchronized List<String> release(Plugin owner) {
         List<String> out = new ArrayList<>();

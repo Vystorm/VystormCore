@@ -30,7 +30,14 @@ class ManagerLoadingTest {
             "_advancedMethods.placeholderHandler.internal.PlaceholderRuntime",
             "_advancedMethods.placeholderHandler.RankingInfo", "_advancedMethods.placeholderHandler.RankingInfo$Format",
             "_advancedMethods.placeholderHandler.RankingSource", "_advancedMethods.placeholderHandler.RankingSource$Row",
-            "_advancedMethods.placeholderHandler.PlaceholderRanking");
+            "_advancedMethods.placeholderHandler.PlaceholderRanking",
+            "blocks.BlockWritesInterface", "blocks.BlockWrites", "blocks.StateTable", "blocks.BlockWriter", "blocks.ChunkCells",
+            "blocks.WriteSink", "blocks.WriterReport", "blocks.ChunkLoads", "blocks.ChunkHold", "blocks.BlocksEditedEvent",
+            "blocks.EditedChunk", "blocks.EditedChunk$Builder", "blocks.EditCause", "blocks.EditAsk", "blocks.EditVerdict",
+            "blocks.EditGuards", "blocks.EditGuard", "blocks.CellTest", "blocks.BlockWritesTesting",
+            "blocks.internal.SharedStateTable", "blocks.internal.BukkitBlockWriter", "blocks.internal.TicketChunkLoads",
+            "blocks.internal.BukkitChunkSource", "blocks.internal.EditedCells", "blocks.internal.EditGuardRegistry",
+            "blocks.internal.RegionEditGuard");
 
     private static void add(List<URL> urls, Class<?> anchor) {
         urls.add(anchor.getProtectionDomain().getCodeSource().getLocation());

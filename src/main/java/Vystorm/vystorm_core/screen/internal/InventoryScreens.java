@@ -128,7 +128,8 @@ public final class InventoryScreens implements Listener {
                 .backdrop(ScreenSpec.Backdrop.BLACK)
                 .onInput((session, input) -> { mirror.screen = session; handle(mirror, input); })
                 .build();
-        if (!Screens.of(core).open(player, spec).opened()) {
+        // 0.71.1: quiet: when the screen is refused the player keeps the chest that is already open, nothing to explain
+        if (!ScreenRuntime.get().open(core, player, spec, null, false).opened()) {
             forget(mirror);
             reopenReal(player, mirror.top);   // no screen possible: show the real chest
         }

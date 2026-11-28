@@ -172,6 +172,7 @@ public final class PanelHub implements PanelChannel.Listener {
         }
         int id = nextSession.merge(p.getUniqueId(), 1, Integer::sum);
         Session s = new Session(id, p, reg, arg);
+        PanelOpener.seed(s);   // 0.71.0: values carried back by PickReturn
         try {
             render(s);
         } catch (RuntimeException failure) {
@@ -690,6 +691,15 @@ public final class PanelHub implements PanelChannel.Listener {
     public boolean openScreen(Player p, PanelRegistry.Registered reg, String arg) { return screens.open(p, reg, arg); }
 
     // ------------------------------------------------------------------ Hilfen
+
+    /**
+     * 0.71.0 ({@code PickReturn.panel}): panel, argument and a copy of the session values of one of Core's own actions
+     * (client mod, screen, dialog); empty for a {@link PanelAction} implemented outside Core.
+     */
+    public static java.util.Optional<PanelResume> resumeOf(PanelAction action) {
+        if (!(action instanceof Act act) || act.session == null) return java.util.Optional.empty();
+        return java.util.Optional.of(new PanelResume(act.session.reg, act.session.arg, new java.util.LinkedHashMap<>(act.session.state)));
+    }
 
     boolean allowed(PanelRegistry.Registered reg, Player p) {
         try {

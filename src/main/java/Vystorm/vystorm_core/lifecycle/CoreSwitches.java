@@ -58,7 +58,15 @@ public final class CoreSwitches {
             new String[] {"screens.dialog-inputs", "switches.screen-dialog-inputs"},
             new String[] {"metrics", "switches.metrics"},
             new String[] {"update-check.enabled", "switches.update-check"},
-            new String[] {"review-reminder.enabled", "switches.review-reminder"});
+            new String[] {"review-reminder.enabled", "switches.review-reminder"},
+            // 0.68.0: off by default; plugins that need the survey switch it on through api.survey().require(plugin)
+            new String[] {"survey.enabled", "switches.survey"},
+            // 0.71.0: the known-player store (needs a restart)
+            new String[] {"known-players.enabled", "switches.known-players"},
+            // 0.71.0: the shared player picker (Core's panel and chest)
+            new String[] {"pickers.enabled", "switches.pickers"},
+            // 0.71.0: world picks (needs pickers.enabled too)
+            new String[] {"pickers.world.enabled", "switches.world-pick"});
 
     /**
      * 0.66.1: the older {@code enabled} keys that {@code /vadmin features} lists by themselves, with the id of their

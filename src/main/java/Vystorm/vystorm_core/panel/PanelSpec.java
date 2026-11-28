@@ -2,6 +2,7 @@ package Vystorm.vystorm_core.panel;
 
 import Vystorm.vystorm_core._uiMethods.menu.MenuCategory;
 import java.util.Objects;
+import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
@@ -20,6 +21,7 @@ public final class PanelSpec {
     private final String webSubPath;
     private final boolean dialogFallback;
     private final Consumer<Player> fallback;
+    private final BiConsumer<Player, FallbackContext> contextFallback;
 
     private PanelSpec(Builder b) {
         title = b.title;
@@ -31,7 +33,10 @@ public final class PanelSpec {
         webModule = b.webModule;
         webSubPath = b.webSubPath;
         dialogFallback = b.dialogFallback;
-        fallback = b.fallback;
+        BiConsumer<Player, FallbackContext> withContext = b.contextFallback;
+        contextFallback = withContext;
+        fallback = withContext == null ? b.fallback
+                : player -> Vystorm.vystorm_core.panel.internal.PanelOpener.runFresh(player, this, withContext);
     }
 
     /** @param title Anzeigename (auch {@code Lang.ref}) für Menüeintrag und Dialogtitel */
@@ -46,7 +51,15 @@ public final class PanelSpec {
     public String webModule() { return webModule; }
     public String webSubPath() { return webSubPath; }
     public boolean dialogFallback() { return dialogFallback; }
+    /**
+     * The plugin's own fallback as a one-argument call. For a fallback given with
+     * {@link Builder#contextFallback(BiConsumer)} this runs it with a fresh {@link FallbackContext} (empty argument and
+     * session, no result), so code and tests that call {@code spec.fallback().accept(player)} keep working.
+     */
     public Consumer<Player> fallback() { return fallback; }
+
+    /** The fallback given with {@link Builder#contextFallback(BiConsumer)}, or null. @since 0.71.0 */
+    public BiConsumer<Player, FallbackContext> contextFallback() { return contextFallback; }
 
     public static final class Builder {
         private final String title;
@@ -59,6 +72,7 @@ public final class PanelSpec {
         private String webSubPath = "";
         private boolean dialogFallback;
         private Consumer<Player> fallback;
+        private BiConsumer<Player, FallbackContext> contextFallback;
 
         private Builder(String title) { this.title = Objects.requireNonNull(title, "title"); }
 
@@ -87,7 +101,15 @@ public final class PanelSpec {
         public Builder dialogFallback(boolean on) { this.dialogFallback = on; return this; }
 
         /** Eigener Kisten-/Dialogweg; hat Vorrang vor Dialog und Link. */
-        public Builder fallback(Consumer<Player> fallback) { this.fallback = fallback; return this; }
+        public Builder fallback(Consumer<Player> fallback) { this.fallback = fallback; this.contextFallback = null; return this; }
+
+        /**
+         * Own chest or dialog route that also gets the panel's argument, session values and the result of a pick that
+         * came back ({@link FallbackContext}, read its session lifetime rule). Same place in the route order as
+         * {@link #fallback(Consumer)}; the later of the two calls wins. A name of its own (not a {@code fallback}
+         * overload), so {@code fallback(null)} and method references to overloaded methods still compile. @since 0.71.0
+         */
+        public Builder contextFallback(BiConsumer<Player, FallbackContext> fallback) { this.contextFallback = fallback; this.fallback = null; return this; }
 
         public PanelSpec build() {
             if (render == null) throw new IllegalStateException("PanelSpec needs render(...)");

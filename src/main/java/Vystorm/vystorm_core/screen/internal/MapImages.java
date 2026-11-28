@@ -37,14 +37,9 @@ public final class MapImages {
         if (p != null) return p;
         p = new int[256];
         java.util.Arrays.fill(p, -1);
-        for (int i = 4; i < 256; i++) {
-            try {
-                @SuppressWarnings("removal") Color c = org.bukkit.map.MapPalette.getColor((byte) i);
-                if (c != null && c.getAlpha() == 255) p[i] = c.getRGB() & 0xFFFFFF;
-            } catch (RuntimeException | LinkageError outOfRange) {
-                break;
-            }
-        }
+        // screen canvas: Core's own copy of the table (MapPalette.getColor is deprecated for removal; same values)
+        Vystorm.vystorm_core.screen.MapColors table = Vystorm.vystorm_core.screen.MapColors.table();
+        for (int i = 4; i < 256; i++) p[i] = table.rgb(i);
         palette = p;
         return p;
     }

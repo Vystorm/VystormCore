@@ -48,7 +48,8 @@ public final class ScreenSprites {
      * {@link #of} gives the paper icon. @since 0.65.0
      */
     public static boolean has(String material) {
-        return "PAPER".equalsIgnoreCase(material) || !FALLBACK.equals(of(material));
+        // 0.71.0: player heads are drawn as a player object glyph (ScreenHeads)
+        return "PAPER".equalsIgnoreCase(material) || (material != null && ScreenHeads.isHeadName(material)) || !FALLBACK.equals(of(material));
     }
 
     static Sprite of(String material, Set<String> names) {

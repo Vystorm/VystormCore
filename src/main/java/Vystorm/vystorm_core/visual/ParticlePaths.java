@@ -26,4 +26,34 @@ public final class ParticlePaths {
                 frame.global(corners.get((i + 1) % 4)), pointsPerEdge));
         return List.copyOf(result);
     }
+
+    /**
+     * The 12 edges of the box between two corners (any order), {@code pointsPerEdge} points per edge (2..128, corners
+     * included, so corners repeat). Up to 1,536 points: draw at most 512 per call. @since 0.71.0
+     */
+    public static List<Point3> box(Point3 min, Point3 max, int pointsPerEdge) {
+        if (pointsPerEdge < 2 || pointsPerEdge > 128) throw new IllegalArgumentException("Edge count must be 2..128");
+        double x0 = Math.min(min.x(), max.x()), x1 = Math.max(min.x(), max.x());
+        double y0 = Math.min(min.y(), max.y()), y1 = Math.max(min.y(), max.y());
+        double z0 = Math.min(min.z(), max.z()), z1 = Math.max(min.z(), max.z());
+        Point3[] c = {
+                new Point3(x0, y0, z0), new Point3(x1, y0, z0), new Point3(x1, y0, z1), new Point3(x0, y0, z1),
+                new Point3(x0, y1, z0), new Point3(x1, y1, z0), new Point3(x1, y1, z1), new Point3(x0, y1, z1)};
+        int[][] edges = {{0, 1}, {1, 2}, {2, 3}, {3, 0}, {4, 5}, {5, 6}, {6, 7}, {7, 4}, {0, 4}, {1, 5}, {2, 6}, {3, 7}};
+        List<Point3> result = new ArrayList<>(12 * pointsPerEdge);
+        for (int[] e : edges) result.addAll(line(c[e[0]], c[e[1]], pointsPerEdge));
+        return List.copyOf(result);
+    }
+
+    /** A horizontal circle around {@code centre} (radius above 0, 3..512 points, evenly spaced). @since 0.71.0 */
+    public static List<Point3> circle(Point3 centre, double radius, int count) {
+        if (!(radius > 0) || !Double.isFinite(radius)) throw new IllegalArgumentException("Radius must be above 0");
+        if (count < 3 || count > 512) throw new IllegalArgumentException("Count must be 3..512");
+        List<Point3> result = new ArrayList<>(count);
+        for (int i = 0; i < count; i++) {
+            double a = 2 * Math.PI * i / count;
+            result.add(new Point3(centre.x() + Math.cos(a) * radius, centre.y(), centre.z() + Math.sin(a) * radius));
+        }
+        return List.copyOf(result);
+    }
 }

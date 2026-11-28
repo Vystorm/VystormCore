@@ -39,6 +39,28 @@ class ManagedGuiRegistryTest {
         var e = click(); when(e.isCancelled()).thenReturn(true); gui.click(e);
         verifyNoInteractions(callback);
     }
+    @Test void givenSpectatorClickArrivingCancelledThenTheMenuAnswersAndNothingMoves() {
+        // the server cancels every container click of a spectator before plugins see it (0.71.1)
+        var callback = mock(GuiCallbacks.class); create(callback);
+        when(player.getGameMode()).thenReturn(org.bukkit.GameMode.SPECTATOR);
+        var e = click(); when(e.isCancelled()).thenReturn(true); gui.click(e);
+        verify(callback).click(e);
+        verify(e).setCancelled(true);
+    }
+    @Test void givenSpectatorClickThatTheMenuAllowsThenItStaysCancelled() {
+        create(new GuiCallbacks() { public void click(InventoryClickEvent e) { e.setCancelled(false); } });
+        when(player.getGameMode()).thenReturn(org.bukkit.GameMode.SPECTATOR);
+        var e = click(); when(e.isCancelled()).thenReturn(true); gui.click(e);
+        var order = inOrder(e);
+        order.verify(e).setCancelled(false);
+        order.verify(e).setCancelled(true);
+    }
+    @Test void givenSurvivalClickCancelledByAnotherPluginThenStillNoAction() {
+        var callback = mock(GuiCallbacks.class); create(callback);
+        when(player.getGameMode()).thenReturn(org.bukkit.GameMode.SURVIVAL);
+        var e = click(); when(e.isCancelled()).thenReturn(true); gui.click(e);
+        verifyNoInteractions(callback);
+    }
     @Test void givenPersonalMenuThenRejectsAnotherPlayerBeforeCallback() {
         var callback = mock(GuiCallbacks.class); create(callback);
         var e = click(); Player other = mock(Player.class); when(other.getUniqueId()).thenReturn(UUID.randomUUID());

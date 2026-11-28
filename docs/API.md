@@ -94,6 +94,8 @@ player.sendMessage(core.message().chat().button("Open", "Opens the menu", p -> o
 | `api.particle().paths()` | Point lists for lines and outlines | `visual.ParticlePaths` |
 | `api.packages().clientBiomes()` | Biomes that only one client sees | `packet.ClientBiomes` |
 | `api.packages().clientChunks()` | Chunks that only one client sees | `packet.ClientChunks` |
+| `api.packages().clientBlocks()` | Blocks that only some clients see: named sets per player or area, with priorities (0.72.0, section "Client blocks (0.72.0)") | `packet.ClientBlocks` |
+| `api.packages().packetView()` | The packet view: one shared pair of handlers per connection rewrites chunk, light, section and block packets through layers (0.73.0, section "Packet view (0.73.0)") | `packet.PacketView` |
 | `api.packages().clientDisplays()` | Map walls that only one client sees | `display.ClientDisplays` |
 | `api.admin().updates()` | Update check sources of plugins | `lifecycle.UpdateSources` |
 | `api.admin().diagnostics()` | Feature diagnostics shown to admins | `lifecycle.FeatureDiagnostics` |
@@ -108,6 +110,7 @@ player.sendMessage(core.message().chat().button("Open", "Opens the menu", p -> o
 | `api.lang().coreLanguage()` | A player's language choice, native names, reload | `lang.CoreLanguage` |
 | `api.priority().stages()` | The order in which plugins handle a shared event (next section) | new |
 | `api.placeholders()` | Placeholders of all plugins, Core's own values, PlaceholderAPI in both directions (0.65.0, section "Placeholders (0.65.0)") | new |
+| `api.survey()` | World survey: surface, rooms and caves, room joins across chunks, live open cells, pre-compute jobs (0.68.0, section "World survey (0.68.0)") | new |
 | `api.loot()` | Shared loot tables | `loot.LootTables` |
 | `api.loot().rolls()` | Rolls with luck, tiers, pity and conditions | `loot.LootRoll` |
 | `api.loot().mobs()` | Mob drops: ownership, level, rank, extra parts | `loot.MobLoot` |
@@ -134,6 +137,10 @@ player.sendMessage(core.message().chat().button("Open", "Opens the menu", p -> o
 | `api.runtime().combat()` | Player-versus-player policies | `combat.CombatRegistry` |
 | `api.runtime().threat()` | Threat scores | `threat.ThreatServices` |
 | `api.runtime().curves()` | Named curves | `curve.CurveRegistry` |
+| `api.blocks()` | Bulk block writes: state table, writer with a check before each cell and a time limit, chunk loads with tickets, `BlocksEditedEvent` (0.69.0, section "Bulk block writes (0.69.0)") | new |
+| `api.area().mayEdit(..)`, `api.area().editGuards()` | May a plugin change the cells of a chunk: Core's regions and the guards of other plugins (0.69.0) | new |
+| `api.data().knownPlayers()` | Players who joined: name, first and last seen, skin address; prefix search and recent players (0.71.0, section "Known players and the player picker (0.71.0)") | new |
+| `api.gui().pickers()` | The shared player picker with tabs, search, heads and Core's chest fallback; `PickReturn` back to the calling panel (0.71.0) | new |
 
 Managers that existed before and are unchanged: `api.vault()`, `api.luckperms()`, `api.nbt()`,
 `api.inventoryInteractor()`, `api.inventoryEvents()`, `api.interactionGenerator()`.
@@ -290,6 +297,143 @@ when(core.priority()).thenReturn(stages.priority());
 | `<E extends Event> E fire(E event)` | Calls the handlers like the server (one dispatch per stage in use, LOWEST to MONITOR) and returns the event. An exception in a handler is logged, not thrown. |
 
 Only staged handlers exist in such a test: listeners registered with `@EventHandler` are not called by `fire`.
+
+## World survey (0.68.0)
+
+Capability `CoreApi.Capability.WORLD_SURVEY` (`world-survey`, since `0.68.0`). Manager `api.survey()`
+(`survey.WorldSurveyInterface`, static twin `survey.WorldSurvey`, override `api.overrideSurveyHandler(..)`).
+
+The world survey tells which cells of a world are surface, which open cells are enclosed rooms (caves, mineshafts,
+dungeons, the inside of buildings), how rooms join across chunks, and which cells of loaded chunks are open right
+now. It is the base for an anti-xray plugin (send everything below the surface as stone, reveal rooms as the player
+gets close) and for plugins that care about the underground.
+
+**Off by default.** Nothing runs, nothing is listened to and nothing is stored until the switch `survey.enabled` in
+Core's `config.yml` is on (`/vadmin features vystorm_core`) or a plugin calls `api.survey().require(plugin)`. A
+required survey stays on while that plugin is enabled.
+
+### Model
+
+- Every block cell has a class: opaque, air, fluid or see-through (glass, leaves, ice, slabs, stairs, fences, walls,
+  panes, plants, doors and trapdoors ...). Everything that is not opaque is open. Core decides by block type:
+  air, water/lava/bubble columns, `Tag.DOORS`/`Tag.TRAPDOORS`, a fixed see-through name list, then
+  `Material.isOccluding()`.
+- `CellKind`: `SOLID` (opaque), `SURFACE` (open and in the sky column, above the highest opaque block of its column,
+  or within `reach` steps of such a cell through open cells) or `ENCLOSED` (every other open cell).
+- `SurveyRule(reach, hallRadius, voidBelow, doorsStopReach)` per world: Overworld `8, 0, false, true`, Nether
+  `8, 3, false, true` (an open cell whose 7x7x7 box is fully open counts like sky), End `8, 0, true, true` (sky also
+  from below). `api.survey().rule(world, rule)` changes it (kept in `survey/rules.yml`); `/vadmin survey rule`.
+- A **room** is a connected group (six neighbours) of enclosed cells inside one chunk: `RoomId(worldId, chunkX,
+  chunkZ, local)`, `RoomInfo(id, volume, mouth, sealed, fluid)`. `mouth`: the room touches a surface cell; `sealed`:
+  no mouth and no cell on a side face.
+- `ChunkSurvey`: one chunk's rooms, `roomsInSection(sy)`, `seed(room, sy)`, `borders(face)` (`BorderRun(start,
+  length, room)` per `SurveyFace`), `reachRuns()`, `kindAt(x, y, z)`, `roomAt(x, y, z)`, `cells()` (`OpenChunk`),
+  `stamp()`, `ruleHash()`. Labels are rebuilt on first use from the seeds and the open cells.
+- `RoomComponent`: rooms joined through overlapping border runs, `skyContact()` (`MOUTH`, `SEALED` or `UNKNOWN`),
+  `volume()`, `complete()`. In real worlds one component can span thousands of chunks (53 to 92 percent of all
+  enclosed air in one component in the study), so every search has a chunk limit.
+
+### Parts
+
+| Call | What it does |
+|---|---|
+| `rooms().cached(world, cx, cz)` | The survey if Core has it in memory and it is not stale. Any thread, never blocks. |
+| `rooms().request(world, cx, cz)` | `CompletableFuture<ChunkSurvey>`: memory, Core's files, or a new survey. The chunk and its 8 neighbours must be generated. Completes on a worker thread. |
+| `rooms().roomAt(world, x, y, z)`, `kindAt(..)` | From the cache (loaded, surveyed chunks). |
+| `rooms().adjacent(room)` | Rooms of the neighbour chunks that share border cells, as far as cached. |
+| `rooms().component(room, maxChunks)` | The joined rooms, at most `maxChunks` chunks. |
+| `rooms().isSkyConnected(room)` | True if a mouth is found within 256 chunks. |
+| `openCells().chunk(world, cx, cz)` | `OpenChunk` of a loaded, surveyed chunk: one `long[64]` per 16x16x16 section, a new immutable snapshot after every change. |
+| `openCells().request(world, cx, cz)` | `CompletableFuture<OpenChunk>` for a loaded chunk that has only its stored record so far (records offered at load carry no cells): Core snapshots it at once (an audit ahead of the sampled ones) or surveys it, and completes on the server thread; fails when the chunk unloads. For plugins that reveal rooms near players. |
+| `precompute().start(world, x, z, radius, JobOptions)` | A job over the square around x, z (blocks), ring by ring: `SurveyJob` with `pause()`, `resume()`, `cancel()`, `progress()` (done, total, skipped, chunks per second, ETA). |
+| `listen(plugin, listener, serverThread)` | `SurveyListener.surveyed(survey)`, `invalidated(world, cx, cz)`, `changed(before, after)`; removed with the plugin. |
+| `invalidate(world, x, y, z)`, `invalidateChunk(world, cx, cz)` | For changes Core cannot see (a plugin writing blocks without events). Writes announced with `BlocksEditedEvent` are seen (0.69.0). |
+
+**Threads.** A survey never runs on the server thread. Core takes the chunk snapshots there within a per-tick
+budget (`survey.snapshots-per-tick`, `survey.millis-per-tick`; a running job may raise them), surveys on its worker
+pool (`survey.workers`) and writes files on its own file thread. Futures complete on a worker thread: hop back to the
+server thread before touching the world.
+
+**Storage.** One record per chunk (format C: rule hash, stamp, room table, seeds per section, border runs, reach
+runs, the sky column per column since format 2, CRC32; about 400 bytes in the median, under 800 bytes at the 95th percentile in real Overworld regions, about 80 of them for the sky columns) in
+`plugins/vystorm_core/survey/<world-uuid>/r.<x>.<z>.vsurvey`, one file per 32 x 32 chunks, written atomically every
+few seconds. An unreadable file is moved aside and its chunks are surveyed again. The stamp is also kept in the
+chunk's persistent data (saved together with the blocks): a different stamp, another rule or other open cells than
+at survey time make the record stale, and it is surveyed again when it is needed.
+
+**Changes.** Core watches block break and place, explosions, pistons, burning, falling blocks, endermen, tree
+growth, fluids turning solid, fading and spreading blocks and physics updates (which also report `/setblock` and
+`/fill`). Only a change from opaque to open or back counts: the chunk (and a neighbour when the change is within
+the rule's reach of the border) becomes stale at once, listeners get `invalidated`, and five seconds after the last
+change the loaded chunk is surveyed again (`changed(before, after)`).
+
+Bulk edits through `api.blocks()` write without block events. Since 0.69.0 the survey listens to
+`BlocksEditedEvent` instead and applies the same rule to all written cells of the chunk in one pass: a cell counts
+when the state after the write is open and the cell was opaque before, or the other way round. The open cells and
+the cached classes follow at once (one copy per touched section of the chunk), the chunk and the neighbours within
+the margin of a counted cell become stale once per event, and the usual pause of five seconds applies. The cost is
+one table lookup and a few bit operations per written cell, about 16 ms for one million cells; chunks the survey
+does not track cost one lookup per event. A plugin that fires `BlocksEditedEvent` for its writes does not need to call
+`invalidateChunk` as well; with only `world-survey` present (Core 0.68.0) it still has to.
+
+### At chunk load (masking before the chunk is sent)
+
+When a chunk loads and its stored record carries the same stamp as the chunk's persistent data (and the same
+format and rule), Core offers the record inside the `ChunkLoadEvent` itself: no snapshot, no file read, no worker
+round trip (Core's own handler runs at `LOWEST`, so `rooms().cached(..)` already answers in other plugins' load
+handlers). `SurveyListener.loaded(worldId, chunkX, chunkZ, surveyOrNull)`, registered with `serverThread = true`, is
+called right there: the place to build a chunk's mask. `ChunkSurvey.mask()` gives `SurveyMask`, immutable per-section
+bitsets (`surface`, `visible` = surface plus its six neighbours inside the chunk, `hidden` = the rest; `enclosed` once
+the cells are known), built from the record alone (reach runs and the sky column per column, stored since format 2),
+kept through a soft reference and lock-free to read from a Netty thread. Side-face cells that touch a neighbour's
+surface cell are visible only in the neighbour's mask.
+
+- The region files around every player (view distance plus four chunks) and the areas of pre-compute jobs are read
+  ahead on the file thread. A chunk whose region file is not in memory yet gets `loaded(.., null)` and its record a
+  moment later through `surveyed` (Core never reads files on the server thread).
+- **What the stamp does not see:** the stamp is saved with the chunk's blocks, so a crash or a restore from backup
+  keeps both together. Blocks changed without the chunk's persistent data changing (WorldEdit's fast mode, tools that
+  write region files, plugins that set blocks without events) leave the stamp equal. Only the **audit** finds those:
+  it snapshots a share of the offered records later at low priority (`survey.audit: off|sample|all`,
+  `audit-share`, `audit-per-tick`), compares their open cells, attaches the cells when they match and makes the
+  record stale otherwise (listeners get `invalidated`). A block event in a chunk whose record has no cells yet sends
+  that chunk to the audit at once.
+- Loaded chunks without a usable record are surveyed a few per second (`survey.auto-survey-per-second`), the
+  nearest to a player first, only within the view distance of a player; never one survey per load burst.
+- `/vadmin survey status` shows how many loads found their record at once, a moment later, none or a stale one, the
+  lookup time per load, the audits and the region files in memory.
+
+### Example
+
+```java
+boolean survey;
+try { survey = CoreApi.has("world-survey"); } catch (LinkageError tooOld) { survey = false; }
+if (survey) {
+    WorldSurveyInterface s = core.survey();
+    s.require(this);                                    // this plugin needs it, whatever the switch says
+    s.listen(this, new SurveyListener() {
+        @Override public void changed(ChunkSurvey before, ChunkSurvey after) { resend(after); }
+    }, true);                                           // true: called on the server thread
+    s.rooms().request(world, chunkX, chunkZ).thenAccept(chunk -> {
+        // worker thread: read only
+        for (RoomInfo room : chunk.rooms())
+            if (room.sealed()) hide(chunk, room.id());
+    });
+}
+```
+
+### Admin
+
+`/vadmin survey status [world]`, `start <world> <radius> [x z] [generate=true workers=0 snapshots=9 ms=5 tps=18
+yield=true]`, `pause|resume|cancel [world]`, `rule <world> [reach|hall-radius|void-below|doors-stop-reach <value>]`,
+`at <world> <x> <y> <z>` (kind and room of a block). A running job shows a boss bar to admins and keeps its progress
+in `survey/<world-uuid>/job.properties`: after a restart it continues where it was. It waits below the TPS floor, uses
+a quarter of its budget while players are online (`yield`), and with `generate=true` generates missing chunks
+(asynchronously on Paper, one at a time on Spigot). At the end it surveys the chunks of its area again that went
+stale while it ran (world generation changes its own fresh chunks), in at most five passes. The snapshot budget
+follows the previous tick (a quarter after a tick over 60 ms, nothing after one over 100 ms), and chunk load calls are
+limited per tick. Classes of chunks snapshotted as neighbours are kept (more of them while a job runs, at most 64 MB)
+and stand in for a new snapshot of an unloaded chunk; the job's end line in the log shows where the time went.
 
 ## Placeholders (0.65.0)
 
@@ -750,6 +894,767 @@ How a file menu fits into what Core already has:
 
 `/vadmin menus` lists the files with their state; see the appendix.
 
+## Bulk block writes (0.69.0)
+
+Capabilities `CoreApi.Capability.BLOCK_WRITES` (`block-writes`), `CHUNK_LOADS` (`chunk-loads`),
+`BLOCKS_EDITED_EVENT` (`blocks-edited-event`) and `EDIT_ASK` (`edit-ask`), all since `0.69.0`.
+
+`api.blocks()` is the base for plugins that change many blocks at once: edit tools, generators, restores. It has four
+parts: a table that turns block states into small numbers, a writer that writes the cells of one chunk inside a time
+limit and checks each cell before it writes, chunk loads that hold a chunk with a plugin ticket, and one event per
+written chunk. The protection ask for such edits is `api.area().mayEdit(..)`. Nothing runs until a plugin uses it.
+
+```java
+// in onEnable, after the version gate
+if (!CoreApi.has("block-writes")) { getLogger().warning("Vystorm Core 0.69.0 or newer is needed for bulk edits."); return; }
+BlockWritesInterface blocks = core.blocks();
+StateTable states = blocks.states();
+int stone = states.id(Bukkit.createBlockData(Material.STONE));
+
+// any thread: load and hold the chunk
+blocks.chunks().load(this, world, cx, cz, true).thenAccept(hold -> {
+    // the future completes on the server thread
+    EditVerdict verdict = core.area().mayEdit(new EditAsk(this, player.getUniqueId(), world, cx, cz, minY, maxY));
+    if (verdict instanceof EditVerdict.Deny) { hold.close(); return; }
+    ChunkCells cells = ChunkCells.of(cx, cz, xs, ys, zs, befores, afters);   // from your own snapshot
+    EditedChunk.Builder written = EditedChunk.builder(editId, player.getUniqueId(), EditCause.EDIT, world, cx, cz);
+    int next = blocks.writer(world).write(world, cells, 0, System.nanoTime() + 5_000_000L, new WriteSink() {
+        @Override public void written(int i) { written.add(cells, i); }
+        @Override public void mismatch(int i, int currentId) { /* the cell changed since your snapshot: decide again */ }
+    });
+    // next < cells.size(): the time was up; continue from next in the next tick
+    blocks.announce(this, written.build());
+    hold.close();
+});
+```
+
+| `api.blocks()` | |
+| --- | --- |
+| `StateTable states()` | The shared state table of this server run. Any thread. |
+| `BlockWriter writer(World world)` | The writer Core picks for the world: the Bukkit writer in 0.69.0. A later Core may hand out a direct writer once its self-test passed; check `BlockWriter.direct()`. |
+| `BlockWriter bukkitWriter()` | Always the Bukkit writer. |
+| `WriterReport writerReport()` | `selected()`, `available()`, `reason()`: which writer is used and why, for diagnose commands. |
+| `ChunkLoads chunks()` | Chunk loads with tickets and a budget per tick (below). Throws `IllegalStateException` while Core is not enabled. |
+| `BlocksEditedEvent announce(Plugin source, EditedChunk chunk)` | Fires the event on the server thread: at once when called there, otherwise from a task of Core in the next tick. Returns the event. |
+
+`BlockWrites` has the same methods as static calls.
+
+### State table
+
+`StateTable` gives every block state an `int` id for one server run. Id `StateTable.AIR` (0) is always
+`minecraft:air`. Ids are not the same after a restart: files store `text(id)` (`BlockData.getAsString()`).
+Thread-safe; known states are looked up without a lock.
+
+| `StateTable` | |
+| --- | --- |
+| `int id(BlockData data)` | Id of the state; an unknown state is added. |
+| `int id(String blockData)` | Id of a state written as text, parsed with `Bukkit.createBlockData`; `IllegalArgumentException` for a text that is no block state. |
+| `BlockData data(int id)` | The shared instance. Never change it; clone it before you hand it to other code. |
+| `String text(int id)`, `Material material(int id)`, `int size()` | |
+| `boolean air(int id)` | Air, cave air or void air. |
+| `boolean solid(int id)` | `Material.isSolid()`, asked once when the state was added. |
+| `boolean hasBlockEntity(int id)` | Chest, sign, furnace and the like. Write these through the Bukkit writer only. |
+| `boolean poi(int id)` | Bed, bell, job sites, hives, nether portal, lodestone, lightning rod. |
+
+### Writer
+
+`BlockWriter.write(world, cells, from, deadlineNanos, sink)` runs on the server thread and writes the cells
+`from .. cells.size() - 1` of one loaded chunk without physics and without block events. Before each cell it reads
+`System.nanoTime()`: once the deadline is reached it returns the index of the first cell it did not handle, so a
+deadline that has already passed writes nothing. A cell is written only when the world still holds `cells.before(i)`;
+otherwise `sink.mismatch(i, currentId)` is called and the cell stays as it is. `sink.written(i)` follows every write.
+The Bukkit writer (`id()` `bukkit`, `direct()` false) uses `world.getBlockAt(x, y, z)`, compares its block data with
+`before` and calls `setBlockData(data, false)`.
+
+`ChunkCells` is the flat list of one chunk's cells in world coordinates with `before` and `after` ids;
+`ChunkCells.of(chunkX, chunkZ, x[], y[], z[], before[], after[])` wraps arrays of equal length. Measured on a
+16 x 16 chunk area with 5 ms per tick: about 18,000 cells per tick on Purpur 26.2, 15,000 on Paper 1.20.6 and 8,500
+on Spigot 26.2; light is finished one tick after the last write.
+
+### Chunk loads
+
+| `ChunkLoads` (`api.blocks().chunks()`) | |
+| --- | --- |
+| `CompletableFuture<ChunkHold> load(Plugin plugin, World world, int chunkX, int chunkZ, boolean generate)` | Loads the chunk (with `generate`: also creates it when it never existed) and holds it with a plugin ticket of `plugin`. Any thread. The future completes on the server thread. With `generate` false and a chunk that does not exist, it fails with `NoSuchElementException`. |
+| `int requestsPerTick()`, `requestsPerTick(int)` | New asynchronous loads started per tick for all plugins together; default 8, 1 to 256. |
+| `int waiting()` | Loads that wait for a slot. |
+| `boolean asynchronous()` | True on Paper and Purpur, false on Spigot. |
+| `double syncMillisPerTick()`, `syncMillisPerTick(double)` | Spigot: time per tick for synchronous loads; default 5 ms, 0.5 to 50. |
+
+On Paper and Purpur a load is `getChunkAtAsync`, started on the server thread within `requestsPerTick`. Spigot has
+no asynchronous chunk loading: there Core loads with `getChunkAt` inside `syncMillisPerTick` per tick (at least one
+chunk per tick) and starts at most one new chunk per tick, because generating a chunk on Spigot can take a whole tick
+or more. A chunk next to one Core created counts as new too (Spigot reports such half-built chunks as existing). Be
+aware that every plugin ticket keeps the chunks two rings around it fully loaded, so on Spigot the server also builds
+the new chunks around a held new chunk on the server thread: creating 64 new chunks this way gave ticks of up to
+1 s on Spigot 26.2 (Purpur: under 6 ms). On Spigot, let only admins create chunks. Call `load(..)` on the server thread
+where you can: Core then decides at once whether a chunk is new. A chunk that is already loaded completes at once when
+asked on the server thread, otherwise in the next tick, and uses no budget.
+
+`ChunkHold` has `world()`, `chunkX()`, `chunkZ()`, `chunk()` (server thread only) and `close()`, which removes the
+ticket; a second `close()` does nothing. Two holds of the same chunk by one plugin share one ticket until both are
+closed. While the server stops, waiting loads fail with `CancellationException`. When a plugin is disabled, its
+waiting loads fail the same way and Core removes its tickets.
+
+### BlocksEditedEvent
+
+`BlocksEditedEvent` (package `Vystorm.vystorm_core.blocks`) is fired on the server thread after the cells of one
+chunk were written without block events. It is not cancellable: the cells are already written. `source()` is the
+plugin that wrote them, `chunk()` the `EditedChunk`:
+
+| `EditedChunk` | |
+| --- | --- |
+| `UUID editId()`, `UUID actor()` | The edit (the same for all chunks of one edit) and the player, null for console and plugin edits. |
+| `EditCause cause()` | `EDIT`, `UNDO`, `REDO`, `PASTE`, `OTHER`. |
+| `World world()`, `int chunkX()`, `int chunkZ()`, `int size()` | |
+| `int x(i)`, `y(i)`, `z(i)`, `int beforeId(i)`, `afterId(i)` | Ids of `api.blocks().states()`; use these in loops. |
+| `BlockData before(i)`, `after(i)` | A new copy on every call. |
+| `boolean touches(int minY, int maxY)` | At least one written cell lies in the height range. |
+
+`EditedChunk.builder(editId, actor, cause, world, chunkX, chunkZ)` collects the cells (`add(x, y, z, beforeId,
+afterId)` or `add(cells, i)` from `WriteSink.written`); `build()` copies them. Core's world survey listens to the
+event and marks the chunk stale when cells turned open or opaque (section "World survey", "Changes"). Listen like to
+any Bukkit event:
+
+```java
+@EventHandler
+public void onEdited(BlocksEditedEvent event) {
+    EditedChunk chunk = event.chunk();
+    for (int i = 0; i < chunk.size(); i++) forget(chunk.x(i), chunk.y(i), chunk.z(i));
+}
+```
+
+### Protection ask
+
+`api.area().mayEdit(EditAsk ask)` answers for one chunk whether a plugin may change its cells between `minY` and
+`maxY`, on the server thread. `EditAsk(Plugin source, UUID actor, World world, int chunkX, int chunkZ, int minY, int
+maxY)`. The answer is an `EditVerdict`:
+
+| `EditVerdict` | |
+| --- | --- |
+| `Allow()` | Every cell may change. |
+| `Deny(String reasonKey)` | No cell may change. Core's regions give `regions`, a guard that failed gives `guard-failed`, other guards their own key. |
+| `Partial(CellTest allowed)` | Ask `allowed.allowed(x, y, z)` per cell. The test is pure and thread-safe, so it may run while the edit plans on other threads. |
+
+Core's own answer comes from the regions of `api.area().regions()` and their flag `build`: no region in the chunk
+sets the flag: allow; a region that denies `build` covers the whole asked box and none there allows it: deny;
+otherwise a test per cell where the region with the highest priority that sets the flag decides. Plugins with their
+own protection (claims, plots, arenas) register a guard:
+
+```java
+AutoCloseable guard = core.area().editGuards().register(this, ask ->
+        claims.anyIn(ask.world(), ask.chunkX(), ask.chunkZ()) ? new EditVerdict.Partial(claims::mayBuild) : new EditVerdict.Allow());
+```
+
+All answers are combined: any deny wins, partial answers are and-ed. A guard runs on the server thread for every
+chunk an edit touches, so it must be fast and must not read files. A guard that throws counts as a deny and is
+logged once. `close()` on the returned handle unregisters the guard; Core also removes the guards of a disabled
+plugin. Callers that hold a bypass permission do not ask.
+
+#### A guard for the plugin's own regions (0.71.0)
+
+An ordinary guard can only make the answer stricter: Core's region answer comes first, and a region that denies
+`build` for everyone also refuses the members, builders and bypassing admins of a protection plugin, although that
+plugin lets them build by hand. A plugin that publishes its own areas as regions answers for them itself:
+
+```java
+if (CoreApi.has("edit-ask-own-regions")) {
+    AutoCloseable guard = core.area().editGuards().registerOwnRegions(this, ask -> myAreas.editVerdict(ask));
+}
+```
+
+`EditGuards.registerOwnRegions(Plugin owner, EditGuard guard)` returns the usual handle. While it is registered:
+
+- Core's region answer leaves out the flag `build` of every region whose `Region.owner()` is the owner's name (the
+  name `RegionService.register` fills in), in the chunk scan and in the per-cell test.
+- The regions of every other plugin count as before, and the result is and-ed with the owner's guard: any deny wins.
+  Where a region of the owner and a region of another plugin overlap, both must allow; before, the region with the
+  higher priority that sets `build` decided alone.
+- The guard also gets the asks without an actor (console, automation, machines). It should answer them as its
+  published flag says, so nothing changes for them.
+- When the handle is closed, the owner's `build` flags count again (with two such guards of one owner, after both are
+  gone). When the owner is disabled, Core removes its guards and, as for every plugin, its regions.
+- The owner is matched by `Region.owner()`, which `RegionService.register` fills with the registering plugin's name
+  when the region does not set one: do not put other names (players, other plugins) into the owner of your regions.
+- The flag is not hidden anywhere else: `RegionService.flag(.., "build", ..)` and every other reader of the region
+  see the published value as before (plugins that read the flag directly, such as machines, are not changed).
+
+The guard answers on the server thread; a `Partial` test may run on other threads, so it holds only values taken
+when it was asked. On a Core older than 0.71.0 the method does not exist: keep the call in a class that is only
+loaded after the capability check. The interface default (a replacement `EditGuards`) registers an ordinary guard.
+Capability `edit-ask-own-regions`.
+
+### Testing without a server
+
+`BlockWritesTesting.detached(parser)` gives a state table that parses texts with `parser`, an in-memory world with a
+writer that follows the same rules as the Bukkit writer, chunk loads that complete at once and a manager that hands
+these out and records announced events:
+
+```java
+BlockWritesTesting.Detached blocks = BlockWritesTesting.detached(text -> myBlockData(text));
+when(core.blocks()).thenReturn(blocks.blocks());
+
+new MyEdit(core).run(world);
+
+assertEquals(blocks.states().id("minecraft:stone"), blocks.get(0, 64, 0));
+assertEquals(1, blocks.announced().size());
+assertEquals(0, blocks.openHolds());
+```
+
+`detached()` without a parser works with block data you create yourself. `solid` uses a rule by name there, because
+`Material.isSolid()` needs a running server; pass your own with `detached(parser, solidRule)`.
+
+## Known players and the player picker (0.71.0)
+
+Capabilities `CoreApi.Capability.KNOWN_PLAYERS` (`known-players`), `PICK_RETURN` (`pick-return`), `PLAYER_PICKER`
+(`player-picker`), `WORLD_PICK` (`world-pick`), `WORLD_PICK_AREA` (`world-pick-area`) and `PANEL_FALLBACK_CONTEXT` (`panel-fallback-context`), all since `0.71.0`. Keep picker code in a class that is only loaded after
+`CoreApi.has("player-picker")` (the usual `LinkageError` guard), so the plugin still runs on older Cores.
+
+### Known players: `api.data().knownPlayers()`
+
+Core keeps a list of the players who joined: UUID, current name, first and last seen (epoch ms) and the skin address
+the server got with the profile. It is filled on every join and quit, seeded once from the server's own
+`usercache.json` when Core starts without `plugins/vystorm_core/known-players.dat`, read off the server thread at
+start and written through Core's atomic files every 60 s when it changed and on disable. No Paper-only call, no scan of
+player data files, never a network lookup. Entries unseen for `known-players.forget-after-days` (365) are dropped at
+start; `known-players.enabled: false` switches the store off (then everything answers empty; needs a restart).
+
+```java
+KnownPlayersInterface known = core.data().knownPlayers();
+Optional<KnownPlayer> exact = known.byName("Alex");                 // current name, case-insensitive
+List<KnownPlayer> hits = known.search("ale", 20);                   // name prefix, at most 50, name order
+List<KnownPlayer> recent = known.recent(Duration.ofDays(14), 100);  // newest first, at most 500
+record KnownPlayer(UUID id, String name, long firstSeen, long lastSeen, Optional<String> skinUrl)
+```
+
+Also `get(UUID)`, `size()`, `enabled()`, `loaded()` (the file is in), `findable(UUID)`, `setFindable(UUID, boolean)`
+and `forget(UUID)`. Read calls are lock-free on any thread; `setFindable` and `forget` on the server thread.
+
+Privacy (owner decision): every player has the personal setting "Others can find me by name when I am offline"
+(`/vsettings`, section Privacy, default on). `search` and `recent` leave out players who switched it off; `get` and
+`byName` still find them, so commands that take an exact name keep working. Admins: `/vadmin players find <prefix>`
+(UUID, exact last seen, a mark for players who are not findable) and `/vadmin players forget <name|uuid>`, both from the
+console too.
+
+### Back to the calling panel: `PickReturn`
+
+A panel that hands the player over to something else (a picker, a dialog, a world action) can come back with the same
+panel id, the same argument and its session values:
+
+```java
+PickReturn back = PickReturn.panel(action);          // copies action.session()'s values
+back.session().put("payee", id);                     // write into the carried values
+back.go(player, Result.ok("Payee chosen"));          // reopens; the message is the status line
+```
+
+`PickReturn.panel(owner, panelName, arg)` opens another panel of the owner with a fresh session,
+`PickReturn.to(p -> MyChest.open(p))` runs your own code, `PickReturn.none()` leaves the player where they are. The
+status line shows on Vystorm Screens and in dialogs; the client mod and the web get it as a chat line.
+`PickReturn.panel(action)` works with Core's own actions (client mod, screen, dialog); a test double of `PanelAction`
+gives `none()`.
+
+#### Chest fallbacks with the panel's state: `FallbackContext` (0.71.0)
+
+A return can end in the plugin's own chest (Spigot, Paper 1.20.6, screens off, or just for a moment: in water,
+falling, right after damage). Register the chest with `contextFallback` instead of `fallback` and it gets what the screen gets:
+
+```java
+panels.register("area", PanelSpec.builder(lang.ref("area.title")).render(this::render)
+        .contextFallback(this::openChest)                  // void openChest(Player player, FallbackContext ctx)
+        .build());
+
+void openChest(Player player, FallbackContext ctx) {
+    String area = ctx.arg();                               // the panel's argument
+    String tab = ctx.session().get("tab");                 // the same session values render(ctx) reads
+    draw(player, ctx);                                     // the chest from arg and session
+    ctx.result().ifPresent(r -> { statusItem(r); ctx.resultShown(); });   // a returning pick's result; no chat line then
+    // button "Add people": the pick comes back to this panel, as a screen if it opens now, else this chest again
+    //   player.closeInventory(); core.gui().pickers().players(plugin, player, pick, PickReturn.panel(ctx));
+    // button "Members tab": ctx.session().put("tab", "members"); draw(player, ctx);   (draw without the result again) or ctx.reopen()
+}
+```
+
+| `FallbackContext` | |
+| --- | --- |
+| `Player player()` | the player |
+| `String arg()` | the panel's argument, `""` when none |
+| `PanelSession session()` | the panel's session values: empty on a fresh open, the carried values on a return (`id()` is 0) |
+| `Optional<Result> result()` | the result of the pick that came back (`PickReturn.go(player, result)`), else empty |
+| `boolean returning()` | true when this open is a `PickReturn` return |
+| `void resultShown()` | the chest shows the result itself: Core sends no chat line for it |
+| `PanelOpenResult reopen()` | open the panel again by the normal route (client mod, screen, then this chest) with the same argument and session; `NONE` from inside the fallback call itself, for an offline player or a disabled owner |
+
+`PickReturn.panel(FallbackContext)` is the return for picks started from such a chest: same panel, same argument, and
+the context's session map itself (what the chest wrote is carried, and what the pick handler writes is seen by the
+chest's context too); a return for another player than `ctx.player()` only sends the chat line. A plain
+`fallback(player -> ..)` works as before (only the player; the result as a chat line). `spec.fallback()` still returns
+a `Consumer<Player>`; for a `contextFallback` it runs it with a fresh context (empty argument and session), so tests
+that call `spec.fallback().accept(player)` keep working; `spec.contextFallback()` returns the context one. The later
+of `fallback(..)` and `contextFallback(..)` on a builder wins. It is a method of its own name, not a `fallback`
+overload, so existing `fallback(null)` and method references to overloaded methods keep compiling.
+`ctx.resultShown()` counts only while the fallback call runs (Core sends the chat line right after it): call it in the
+fallback itself after the chest opened, not a tick later or from a click handler. A fallback that throws keeps the chat
+line. `ctx.reopen()` returns `NONE` while a fallback of the same panel runs for that player, and for a context of a
+plugin instance that was disabled since (its values are not handed to the re-enabled plugin).
+Capability `panel-fallback-context` (0.71.0).
+
+**Session lifetime.** Core keeps no table of panel sessions. A fresh open (`Panels.open`, `/vmenu`, a command, a
+`navigate`) always starts empty, on every route, as before. The values go on, as the same map, through
+`ctx.reopen()`, `PickReturn.panel(ctx)`, `PickReturn.panel(action)` (a copy taken when the action ran) and the return of
+a pick, whichever route shows the panel then. They are gone when the panel is closed without a return (the player
+closes the chest or screen), when the player quits (a return to an offline player does nothing), when the pick ends
+without a return (timeout, damage, death, another menu; a timeout's "Open again" chat button keeps them until that
+button expires after 30 minutes) and when the owning plugin is disabled. Keep a context only in the chest's own click handlers, never
+in a per-player map, or it lives as long as that map.
+
+**Migration for plugins with their own menu state** (a per-player map that remembers the area, tab or page for the
+chest, such as a `MenuState`, `views.get(uuid)` or "remember the arg before `panels.open`"): register the chest with
+`contextFallback((player, ctx) -> ..)`, read the argument from `ctx.arg()` and the tab, page and selection from
+`ctx.session()` under the same keys the panel's `render` uses, write changes back into `ctx.session()` and redraw with
+the same context, start picks from the chest with `PickReturn.panel(ctx)` instead of `PickReturn.to(..)`, and drop the
+map and its quit cleanup. Guard it with `CoreApi.has("panel-fallback-context")` and keep the old path for older Cores.
+State that must outlive a closed menu (the area a player last edited, next time they type the command) is not session
+state: keep that in the plugin's own data.
+
+### The player picker: `api.gui().pickers()`
+
+```java
+PlayerPick pick = PlayerPick.builder(lang.ref("pick.buddies.title"))           // String, Lang.ref or Component
+        .subtitle(lang.ref("pick.buddies.sub"))
+        .sources(PlayerSource.ONLINE, PlayerSource.NEARBY, PlayerSource.RECENT, PlayerSource.SEARCH) // tabs, in order
+        .nearbyRadius(24)                    // default pickers.players.default-nearby (16), at most max-nearby (64)
+        .recentDays(14)                      // default pickers.players.recent-days (30)
+        .includeSelf(false)
+        .filter((viewer, c) -> !buddies.contains(c.id()))                       // hidden rows
+        .rule((viewer, c) -> c.online() || offlineOk ? PickVerdict.ok()         // greyed rows with a reason
+                : PickVerdict.deny(lang.ref("pick.online-only")))
+        .multiple(10)                        // or single() (default): one click ends the pick
+        .preselected(Set.of())               // multiple only: rows that start ticked
+        .confirmLabel(lang.ref("pick.buddies.add"))
+        .timeout(Duration.ofSeconds(120))    // idle time from the last click, 10 to 600 s
+        .onPick((viewer, picks) -> addBuddies(viewer, picks.added()))           // returns a panel Result
+        .onEnd((viewer, end) -> {})          // optional, every end (PickEnd)
+        .build();
+
+return core.gui().pickers().players(action, pick);                              // in a panel handler
+core.gui().pickers().players(this, player, pick, PickReturn.to(LocksChest::open)); // chest menu, command
+```
+
+Types: `PickedPlayer(UUID id, String name, boolean online, long lastSeen)` with `player()`;
+`PlayerPicks(List<PickedPlayer> chosen, Set<UUID> added, Set<UUID> removed, PanelSession session)` (multiple:
+`chosen` = all ticked rows, `added` = ticked but not preselected, `removed` = preselected but unticked; `session` = the
+carried values); `PickVerdict.ok()` / `deny(reason)`; `PickFlow` (`owner`, `viewer`, `kind`, `startedAt`, `active`,
+`cancel`); `api.gui().pickers().active(player)`, `cancel(player)`, `available()` (`pickers.enabled`).
+
+What the player sees: Core's panel `vystorm_core:player-pick` with a row of tab buttons (with counts; empty tabs and the
+row itself are left out with one source), the search field on the Search tab, the player list with heads, "online -
+12 m" / "seen this week", a "chosen" badge and the rule's reason, "1 to 45 of 120", and the footer Back / Previous /
+Next / Done. It opens on Nearby when someone is close, else on the first tab with rows. In the client mod and as a
+Vystorm Screen it is a normal panel; without a screen (Spigot and Paper 1.20.6 players without the client mod,
+falling, liquid, recent damage, screens off) Core shows its own 54-slot chest: heads in slots 0 to 44, then 45 Back,
+46 Online, 47 Nearby, 48 Recent, 49 Search (left-click types through `dialogs().prompt`: Paper dialog or chat form;
+right-click clears), 50 Info, 51 Done (multiple), 52 and 53 the pages; the current tab glints, ticked heads glint.
+Chest heads take the stored skin address (`SkullMeta.setOwnerProfile`, no lookup) or the online player
+(`pickers.players.heads: all|online|none`); since 0.71.1 the rows of the screen draw the same skin.
+
+Rules: offline players appear only in Recent and in a search of at least `pickers.players.search-min-chars` (3)
+letters, at most `search-max-hits` (20) of them. Vanished players (the viewer cannot see them, or the common
+`vanished` metadata) never show as online. Normal players see "seen today / this week / this month / earlier"; the
+exact date needs `vystorm_core.pickers.exact-last-seen` (op). The filter runs for every candidate, the rule only for
+the rows of the page that is shown and again for newly ticked rows right before `onPick`; both must be cheap and run on
+the server thread. The handler still re-checks its business rules.
+
+How a pick ends (`PickEnd`): `DONE` (the handler returned ok; also when it threw, with `panel.failed`) and `BACK`
+(Back, ESC, sneak, the screen's close button) take the player back through the `PickReturn`, with the handler's message
+as the status line. A handler that returns `Result.error(..)` keeps the picker open with the message. `TIMEOUT` closes
+it with a chat line and an "Open again" button; `INTERRUPTED` (damage or teleport closed the screen, death),
+`REPLACED` (another flow, another menu over the picker), `QUIT`, `OWNER_DISABLED` and `CANCELLED_BY_PLUGIN` leave the
+player where they are. One flow per player; starting a new one replaces the old. Online rows follow joins and quits at
+most once a second in the client mod and the chest (a screen on its next click).
+
+`/vadmin players pick [multi] [self]` opens a demo picker in game and prints the choice; from the console
+`/vadmin players pick [multi] [tab=online|nearby|recent|search] [search=TEXT] [page=N]` prints the chest the picker
+would show (slot, item, name, lore) with the server's online and known players.
+
+### The world pick: `api.gui().pickers().world(..)`
+
+Capability `CoreApi.Capability.WORLD_PICK` (`world-pick`, since `0.71.0`). Instead of "stand there and type
+`/plugin pos1`", a plugin button lets the player point at the target. Single targets: where the player stands (with
+facing), a block, one face of a block (a wall), a container, an entity; and an area from two corners (`PickKind.AREA`,
+capability `world-pick-area`, below).
+
+```java
+WorldPick pick = WorldPick.builder(lang.ref("pick.board.title"))         // String, Lang.ref or Component
+        .subtitle(lang.ref("pick.board.sub"))                            // optional, shown in the chat line at the start
+        .target(PickKind.FACE)                    // POSITION, BLOCK (default), FACE, CONTAINER, ENTITY
+        .reach(10)                                // default 6 (pickers.world.default-reach), at most max-reach (64)
+        .faces(PickFaces.SIDES)                   // FACE: SIDES, UP, DOWN, ANY (default) or your own set of the six faces
+        .blocks(b -> b.getType().isOccluding())   // BLOCK, FACE, CONTAINER: which blocks count (default all)
+        .entities(EntityType.PAINTING, EntityType.ITEM_FRAME)   // ENTITY: default every entity except players
+        .worlds(w -> w.getEnvironment() == World.Environment.NORMAL)
+        .protection(PickProtection.BUILD)         // NONE (default) or BUILD: api.area().mayEdit for the cell
+        .bypass("myplugin.admin")                 // skips BUILD
+        .check((viewer, c) -> fits(c) ? PickVerdict.ok() : PickVerdict.deny(lang.ref("pick.board.no-room")))
+        .outline((viewer, c) -> List.of(new WorldPick.Box(min(c), max(c))))   // extra boxes the preview draws
+        .timeout(Duration.ofSeconds(120))         // idle time, 10 to 600 s
+        .onPick((viewer, c) -> createBoard(viewer, (Picked.Face) c.target(), c.session()))   // returns a panel Result
+        .onEnd((viewer, end) -> {})               // optional, every end (PickEnd)
+        .build();
+
+return core.gui().pickers().world(action, pick);                                 // in a panel handler
+core.gui().pickers().world(this, player, pick, PickReturn.to(MyChest::open));    // chest menu, command
+```
+
+Types (values only, no live `Location`, `Block` or `Entity`; block and entity types are lower-case Bukkit names):
+`Picked.Position(world, at, yaw, pitch, facing)` (facing = yaw rounded to north/east/south/west),
+`Picked.Block(world, block, blockType)`, `Picked.Face(world, block, face, blockType)` with `front()` (the cell in front
+of the face), `Picked.Container(world, block, blockType)`, `Picked.EntityHit(world, entity, entityType, at, facing)`
+(hanging entities: the side they face); every `Picked` has `world()` and `cell()`. `PickCandidate(target, firstCorner,
+session)` goes to `check`, `outline` and `onPick`; `firstCorner` is always empty for single targets, `session` is the
+carried session of the calling panel (write into it in `onPick` to hand values to the reopened panel).
+
+What the player sees and does: the plugin's button closes its menu and two ticks later the player is in pick mode,
+with nothing put into the inventory. A chat line names the pick with clickable `[Options]` and `[Cancel]`, a blue boss
+bar shows the title and the idle time left. The target under the crosshair is outlined with dust particles only that
+player sees (green when allowed, red when not; points within `pickers.world.preview-distance` (48) blocks, at most
+`preview-points` (450) per pass, every 4 ticks); the action bar shows "Left-click: choose this block · Sneak: options"
+or the red reason. **Left-click** chooses (an arm swing always reaches the server, also with an empty hand and into
+the air; right-clicks on blocks and entities count too; one click is counted once). **Sneak** opens a small options
+chest (mirrored as a Vystorm Screen for pack players): "Use where I stand" (POSITION; for BLOCK the block under the
+feet), "Type coordinates..." (all but ENTITY; `x y z`, `~` relative, a face word for FACE; through `dialogs().prompt`:
+Paper dialog or chat form; at most `pickers.world.typed-distance` (128) blocks away, loaded chunks only), "Back to
+choosing" and "Cancel". In a boat or minecart sneaking gets the player off, so there only the chat `[Options]` opens
+them. Damage and teleports within the world keep the pick. A refused start (spectator, switched off) leaves a running
+pick alone, calls `onEnd(INTERRUPTED)` and goes back through the `PickReturn` with the reason.
+
+Rules: Core does its own ray trace (`World.rayTrace`/`rayTraceBlocks`, fluids looked through), so a block click, an
+air swing and an entity hit follow the same rules. For BLOCK, FACE and CONTAINER passable blocks count (rails, levers,
+signs, flowers can be chosen); for ENTITY only entities of the accepted types stop the ray. Started from a chest menu
+or a screen, Core closes that menu one tick after the start (inside a click event it would not be safe). `check` runs on the server thread whenever the aimed
+target changes (at most five times a second, cached per target) and once more right before `onPick`, after `BUILD`
+protection; keep it cheap and re-check business rules in `onPick`. `BUILD` asks `api.area().mayEdit(..)` for the cell
+the target changes (the block, for a face the cell in front of it, the cell of a position or entity): Core's regions
+(flag `build`) and every registered edit guard; a partial answer is tested for that cell. Third-party protection
+plugins are not asked in this version.
+
+While a player picks, Core cancels at stage `PREPARE` (before every other stage, and again at `FINISH` so a later
+stage cannot undo it): block break, start of mining, place,
+use of a block or the held item (pressure plates left alone), entity use (also armor stands), hits on entities by the
+player or the player's projectiles, breaking paintings and frames, vehicle damage, buckets. Core's own sneak +
+double-click menu shortcut skips picking players. Events fired while Core runs a screen or dialog handler pass (they
+come from plugin code, e.g. protection probes). Left over: a plain `@EventHandler(priority = LOWEST)` of another
+plugin that ignores the cancel flag still sees the event, and a creative client may show a broken block for a moment
+before the server sends it back.
+
+How a pick ends (`PickEnd`, as for the player picker): `DONE` (the handler returned ok; also when it threw, with
+`panel.failed`) and `BACK` (Cancel in the options or in chat) take the player back through the `PickReturn` with the
+handler's message as the status line; a handler that returns `Result.error(..)` keeps pick mode with the message in the
+action bar. `TIMEOUT` (idle: no click and no change of target for the timeout; three times as long in the options or
+the coordinate prompt), `INTERRUPTED` (death), `WORLD_CHANGED` and `REPLACED` (another plugin opened an inventory or a
+screen) leave the player in the world with a chat line and an "Open again" button. `REPLACED` by a new pick, `QUIT`,
+`OWNER_DISABLED` and `CANCELLED_BY_PLUGIN` end it quietly. One flow per player across both pickers: starting a world
+pick ends a running player picker and the other way round. Spectators cannot start a world pick. Config
+`pickers.world.enabled` (also a switch in `/vadmin features`; `pickers.enabled` switches both pickers off).
+
+`/vadmin pick world <position|block|face|container|entity> [reach=N] [build] [faces=sides|up|down|any]` starts a demo
+pick in game (barriers fail its block filter, bedrock its check, so both reds can be seen) and prints the choice in
+chat; from the console `/vadmin pick` prints the config, Core's hard limits and the number of running picks.
+
+#### Areas from two corners: `PickKind.AREA`
+
+Capability `CoreApi.Capability.WORLD_PICK_AREA` (`world-pick-area`, since `0.71.0`).
+
+```java
+WorldPick pick = WorldPick.builder(lang.ref("plot.pick.title"))
+        .target(PickKind.AREA)
+        .area(AreaRules.builder()
+                .minSize(3, 3, 3)                 // per axis, both ends counted (default 1 x 1 x 1)
+                .maxSize(64, 128, 64)             // per axis (default: only Core's caps)
+                .maxVolume(200_000)               // blocks in all (default: only Core's cap)
+                .height(AreaHeight.ASK)           // PICKED (default), FULL, ASK ("Full height" button), or .fixedHeight(10)
+                .build())
+        .protection(PickProtection.BUILD)         // the whole box through api.area().mayEdit
+        .check((viewer, c) -> c.firstCorner().isEmpty() ? PickVerdict.ok()          // a lone corner
+                : overlaps((Picked.Area) c.target()) ? PickVerdict.deny(lang.ref("plot.pick.overlap")) : PickVerdict.ok())
+        .onPick((viewer, c) -> createPlot(viewer, (Picked.Area) c.target(), c.session()))
+        .build();
+return core.gui().pickers().world(action, pick);
+```
+
+`Picked.Area(world, min, max)`: `min` is the lowest, `max` the highest corner (both included, sorted whatever order
+the player picked), `sizeX()`, `sizeY()`, `sizeZ()`, `volume()` (long), `contains(x, y, z)`, `shape()` (a
+`RegionShape.Box`, e.g. for a Core region) and `cell()` (= `min`).
+
+What the player sees: the chat line, the boss bar ("Plot · corner 1 of 2", later "corner 2 of 2 · 12 x 5 x 9") and the
+action bar as for single targets. Each corner is chosen like a block: left-click the outlined block within the reach,
+or in the options (sneak) "Block below me" (the cell under the feet, also air when flying), "Type x y z" (any cell up
+to `pickers.world.typed-distance` away, also in chunks that are not loaded; its block is never read) and, while corner
+2 is chosen, "Redo corner 1". The block filter (`blocks(..)`) does not apply to corners. From corner 1 on, the box
+from it to the aimed block is drawn with its size in the action bar ("12 x 5 x 9, 540 blocks · left-click: corner 2"):
+green when allowed, red with the reason (limits, your `check`, protection), yellow while the protection is still asked
+or only part of the box is protected. After corner 2 the confirm view opens: a 27-slot Core chest (mirrored as a
+Vystorm Screen for pack players) with the summary (from, to, size, blocks, world, height, the check's answer) and
+"Use this area", "Redo corner 1", "Redo corner 2", "Full height" / "As picked" (only `AreaHeight.ASK`) and "Cancel".
+A redone corner comes back to the confirm view with the other corner kept. ESC on the confirm view keeps both corners;
+a left-click, sneak or the chat `[Options]` opens it again. Timeouts, death, world changes and other menus end the pick
+as for single targets (`PickEnd`).
+
+Rules: the box is checked against your `AreaRules` and Core's caps (`pickers.world.max-area`: 512 x 384 x 512 and
+50,000,000 blocks; the config may only lower them), axis by axis, then the number of blocks; both corners must be in
+one world (a world change ends the pick). Under `FULL` (and after "Full height") the box spans the world's whole height
+and your y limits are not applied, Core's y cap still is. `FIXED` goes up from the lower corner and is moved down at the
+top of the world. Your `check` runs for a lone corner (`target` = the one-cell area, `firstCorner` empty), for every box
+while the second corner is aimed (`firstCorner` = the corner already fixed; while corner 1 is redone from the confirm
+view that is corner 2), in the confirm view, and once more right before `onPick`. Corners and boxes may lie in chunks
+that are not loaded (typed coordinates): a `check` that reads blocks must ask `World.isChunkLoaded` first, or it loads
+chunks on the server thread. "Full height" is only offered when the world's height fits Core's y cap. `onPick` runs only from "Use this
+area": `Result.error(..)` keeps the confirm view open with the message, ok goes back as usual.
+
+`BUILD` for an area, without loading chunks and without freezing the server: a lone corner asks `mayEdit` for its
+cell. For a box Core asks `mayEdit` once per chunk the box touches (chunk coordinates and the box's height only, so no
+chunk is read or loaded; edit guards must not do I/O by their contract; a 512 x 512 box touches at most 33 x 33 chunks).
+The preview asks at most 128 new chunks per pass and keeps the answers for 10 s, so a growing box only asks its new
+chunks. The confirm view runs the full check: chunks in slices of at most 256 or 2 ms per pass on the server thread,
+then every partly protected chunk is tested cell by cell off the server thread (a `CellTest` is pure and thread-safe),
+the first denied cell is named ("You may not build at x y z"), the whole check gives up after 20 s, and an answer older
+than 60 s is asked again before "Use this area". Players with the pick's `bypass` permission skip it.
+
+`/vadmin pick world area [max=N] [fullheight] [build] [reach=N]` starts a test area pick (`max` = largest size per
+axis, `fullheight` = `AreaHeight.ASK`; bedrock cannot be its first corner, so a red check can be seen).
+
+`/vadmin pick demo [arg]` opens a small test panel that calls the pickers with `PickReturn.panel(action)`: it shows the
+argument, a counter kept in the panel session and the last result, so a return that loses the argument or the session
+is visible at once. Its chest fallback is a `FallbackContext` fallback: it shows the same argument, the same session
+counter and the returning pick's result (top-right slot, no chat line) and starts picks with `PickReturn.panel(ctx)`,
+so the counter is the same on both routes.
+
+## Admin actions and game rules (0.73.0)
+
+Capabilities `admin-actions`, `game-rules`, `rule-claims` (since `0.73.0`).
+
+### Game rules across versions: `api.compat().gameRules()`
+
+`org.bukkit.GameRule` has three shapes: a final class on Paper 1.20.6, an interface on Spigot 26.x and an abstract
+class over `org.bukkit.GameRules` on Paper/Purpur 26.x. A plugin compiled against one shape throws
+`IncompatibleClassChangeError` on the others as soon as it calls a method on a rule (`getName()`, `values()`). This
+part never hands out a `GameRule`; every rule has a stable Vystorm id (the 26.x id, `spawn_chunk_radius` for the rule
+26.x removed), and every method also accepts the server's id and the 1.20.6 name.
+
+- `shape()`: `final-class`, `interface`, `abstract-class` or `unavailable`.
+- `rules(World)`: `List<GameRuleInfo>` (id, server id, 1.20.6 name, `GameRuleKind` BOOLEAN/INTEGER as the server has it,
+  min, max, value, default, `GameRuleCategory`, `inverted`, `known`); `rule(World, id)`, `value(World, id)`.
+- `set(World, id, value)`: type and range check, set, read back; `GameRuleChange` (`ok`, `before`, `after`, `reason`:
+  `unknown-rule`, `wrong-type`, `out-of-range`, `refused`, `unavailable`). No permission check: menus that act for a
+  player go through `api.admin().actions()`.
+- Values are in the stable meaning: `raids = true` means raids happen on every version, also on 1.20.6 where the rule
+  is `disableRaids = false` (the same for `elytra_movement_check`). `doFireTick` (switch, 1.20.6) became
+  `fire_spread_radius_around_player` (number, -1 = everywhere): `kind` tells which one the server has.
+- `command(World, id, value)`: `/execute in minecraft:the_nether run gamerule spawn_phantoms false` with the server's
+  own id and value.
+- `catalog()`: the known rules of both versions (`GameRuleCatalog.Entry`), independent of the server.
+- `label(viewer, id)`, `description(viewer, id)`, `categoryLabel(viewer, category)`: Vystorm's own short names and
+  one-line descriptions in the seven Core languages (no Mojang text). Unknown future rules show their id.
+- `claims()`: `claim(plugin, world|null, ruleId, reason)`, `release(plugin[, world, ruleId])`, `claims(world, ruleId)`,
+  `all()`. A claim says "this plugin sets this rule"; menus show "also set by X". Released when the plugin is disabled.
+
+```java
+if (CoreApi.has("rule-claims")) core.compat().gameRules().claims().claim(this, null, "spawn_phantoms", "night rules");
+```
+
+### Admin action runner: `api.admin().actions()`
+
+- `ActionPreview.builder(id)`: `text` (human line), `apiCall`, `command` (equivalent vanilla command, or none with a
+  `commandNote`), `world`, `target`, `change(before, after)`, `confirm(true)` for dangerous actions, `permission(node)`
+  for every node the actor needs (the plugin's own node AND `minecraft.command.<cmd>`), `notify(node)` for the staff
+  note.
+- `run(owner, actor, preview, confirmed, Supplier<ActionResult>)`: checks every node again, refuses a preview that
+  needs a confirm unless `confirmed`, runs the action (exceptions are caught and logged), writes the audit line
+  (refusals for missing permissions too) and sends vanilla's grey "[Admin: ...]" note to staff with the notify node
+  when the world's `log_admin_commands` is on. `ActionResult` codes: `ok`, `failed`, `no-permission`,
+  `needs-confirm`, `error`, `disabled`.
+- Permission rule (`allowed(actor, node)`, `missing(actor, nodes)`): a node that is set (granted or negated) decides,
+  also for an op; a node that is not set is allowed for ops only; the console may do everything.
+- `copyAsCommand(player, preview)`: one chat line whose command copies on click (Paper: Adventure; Spigot: the same
+  component as native JSON), or the reason there is no exact command. The open screen stays open.
+- `dispatchVanilla(owner, actor, line, done)`: runs a vanilla command for an admin who has `minecraft.command.<root>`
+  for every root of the line (inner `execute ... run` commands count); op, deop, stop, reload and restart are never
+  run. Paper/Purpur capture the answer (`Server#createCommandSender`, `DispatchResult.captured()`); Spigot runs it as the
+  admin and the answer goes to chat. `capturesAnswers()` says which.
+- `log(owner)`: `ActionLogInterface` of the plugin, `plugins/<Plugin>/log/<yyyy-MM>.log`, one tab-separated line per
+  run (time, actor id and name, plugin, action, world, target, before, after, command, result, message; control
+  characters and section signs escaped, so values cannot start a line or carry colours), appended in batches every
+  2 s through `api.data().files().append` (new here). `recent(limit)`, `query(LogQuery, done)` (off the server
+  thread, `done` on it), `keepMonths` (12; older months move to `log/old/` at start), `flush()`.
+- `/vadmin actions [plugin] [page] [filter]` shows a plugin's audit log, also from the console.
+
+## Client blocks (0.72.0)
+
+Capability `CoreApi.Capability.CLIENT_BLOCKS` (`client-blocks`, since `0.72.0`). Part `api.packages().clientBlocks()`
+(`packet.ClientBlocksInterface`, static `packet.ClientBlocks`). Blocks that some clients see instead of the real ones:
+portal previews, build previews, borders, hidden blocks behind a screen, lamps. No real block changes, no packet
+handler, the same on Paper, Purpur and Spigot 1.20.6 to 26.x (`supported()` is always true).
+
+- `open(owner, viewer, name, priority) -> ClientBlockSet`: a set for one player. It closes by itself when the player
+  quits, changes world or respawns, and when the plugin is disabled.
+- `openShared(owner, anchor, range, name, priority) -> ClientBlockSet`: one set for every player within `range` (1..256)
+  blocks of `anchor`; Core checks who is in range twice a second, and a player who leaves gets the real blocks back.
+- `ClientBlockSet`: `set(cell, data)`, `setAll(map)`, `replace(map)` (cells not in the map are cleared, unchanged cells
+  cost nothing), `clear(cells)`, `clearAll()`, `expireAfter(ticks)`, `budget(cellsPerTick)` (1..32,768, default 4,096),
+  `collision(boolean)`, `onInteract(listener)`, `pending()`, `size()`, `covers(cell)`, `isClosed()`, `close()`. Changes to a
+  closed set are ignored.
+- `shown(viewer, x, y, z)`: what Core sent there and has not restored; `sets(viewer)`: the player's sets in shown order;
+  `release(owner)`; `stats()` (`ClientBlocksStats`, any thread).
+
+**Shown order.** Where two sets of a player name the same cell, the higher priority is shown, on equal priority the
+newer set. Clearing or closing a set shows the next lower set's block there, or the real block as it is at that moment.
+
+**Sending.** Changes go out in Core's tick task, one multi-block packet per chunk section (Paper and Purpur: one
+section packet; Spigot: `Player.sendBlockChanges`, also one section packet per call of at most 256 cells), the section
+nearest the player first. A player gets at most `client-blocks.cells-per-tick` cells per tick (8,192), all players
+together `client-blocks.cells-per-tick-total` (32,768); a quarter of a player's budget is kept for restores. A cell in a
+chunk the client does not hold waits for that chunk.
+
+**Limits.** 32,768 cells per set, 131,072 cells and 64 sets per player (all plugins together). A change over a limit
+throws `IllegalArgumentException` and changes nothing; an open over the set limit throws `IllegalStateException`.
+
+**Repairs.** A real block change at a cell overwrites the client block in the client. Core sees breaks, places,
+explosions, pistons, fluids, fire, growth, forming and fading, entity changes, block physics and Core's own bulk edits
+(`BlocksEditedEvent`) at the OBSERVE stage and sends the cell again two ticks later (the server sends the real block in
+its chunk pass of the next tick, so earlier would be overwritten again). A chunk the server sends again (the player left
+view distance and came back) gets every cell of the set again. A real change that fires no Bukkit event (a plugin's
+`setType` without physics, some redirected writes) is not seen until the chunk is sent again.
+
+**Clicks.** When a player clicks, starts to break or breaks a cell where Core shows him a client block, the server answers
+with the real block. Without a listener Core sends the client block again two ticks later. With
+`onInteract(listener)` Core calls the listener (`ClientBlockInteract`: player, set, cell, shown block, action
+`LEFT_CLICK`, `RIGHT_CLICK`, `START_BREAK`, `BREAK`) and sends the client block again only when it calls `repair()`;
+otherwise that player keeps the real block there until the cell changes again.
+
+**Collision.** Sets are visual only by default: Core does not send a solid client block over a non-solid real block inside
+the player's own bounding box (it waits until he stepped out). A set whose cells change what a player can stand on or
+walk into must say so with `collision(true)`: Core logs one warning per plugin and `/vadmin packets` lists the set.
+Players may rubber-band at such cells and anti-cheat plugins may flag them.
+
+**Threads.** Every call on the server thread, except `supported()` and `stats()`.
+
+```java
+if (CoreApi.has("client-blocks")) {
+    ClientBlockSet preview = core.packages().clientBlocks().open(plugin, player, "gate-preview", 10);
+    preview.budget(4096).expireAfter(20 * 60).replace(cells); // Map<BlockPosition, BlockData>
+    // later, every few ticks: preview.replace(newCells); at the end: preview.close();
+}
+```
+
+`Visuals.open` block views (0.29.0) are sets of priority 0 named `visuals`: same calls and return values as before,
+sends batched per section in the same call, repairs without a new `replace`, one view per player and plugin.
+
+Admin: `/vadmin packets` prints the counts (sets, players, cells, budgets, cells sent, section packets, restores,
+repairs, cells held back inside a player, refusals), one line per plugin and the sets that change collision;
+`/vadmin packets sets` lists every open set.
+
+## Packet view (0.73.0)
+
+Capability `CoreApi.Capability.PACKET_VIEW` (`packet-view`, since `0.73.0`). Part `api.packages().packetView()`
+(`packet.PacketViewInterface`, static `packet.PacketView`; value types in `packet.view`). The heavy path for showing
+players another world than the real one: Core rewrites the chunk, light, section and block packets on their way to the
+client inside ONE pair of handlers per connection, through every registered **layer**. Each chunk is decoded and encoded
+once per viewer, however many layers there are; sections no layer touched keep their bytes. This is VystormAntiXray's
+packet code (0.1.2), moved into Core.
+
+- **Platforms.** Paper, Purpur and Spigot 26.2 and 26.3, after a self-test with a real chunk (the server's own codec
+  writes, Core rewrites with a checker mask, the server's codec reads it back). The first `supported()` call on the
+  server thread runs it; elsewhere (Paper 1.20.6, 26.1, other forks) `supported()` is false, `unsupportedReason()`
+  says why, `register` throws and nothing is attached.
+- **No layer, no handler.** Handlers go into every connection when the first layer registers (and into every
+  connection that joins while one exists) and leave every connection when the last layer leaves. Without a layer the
+  view costs nothing.
+- **This version runs MASK layers** (they hide real cells, as anti-xray does). CONTENT layers (decoration: insert
+  other states, light and heightmap rules, refresh budgets, a shared cache) come with later capabilities
+  (`packet-view-content`, `packet-view-cache`); registering one now throws `UnsupportedOperationException`.
+
+**Registering.** `register(owner, LayerSpec, ChunkLayer) -> ViewLayer` (server thread). `LayerSpec.builder("plugin:name")`
+with `mask()`/`content()`, `perViewer()`/`shared()`, `priority(int)` (lower runs first), `world(uuid)`/`worlds(..)`
+(default: every world), `collision(boolean)`, `maxHoldMillis(0..3000)`, `objects(boolean)`. `ViewLayer`: `spec()`,
+`owner()`, `holdMillis()`/`holdMillis(long)` (change the hold time after a reload), `isClosed()`, `close()`. A layer is
+released when its plugin disables. Closing a layer sends what the handlers hold for it first, judged by it as at the end
+of the hold time.
+
+**Order.** CONTENT layers by priority, then by age; then MASK layers the same way. MASK always runs after CONTENT. A cell
+an earlier MASK layer hid cannot be changed by a later one in the same packet (its writes there are ignored).
+
+**`ChunkLayer`** (every method on the Netty event loop of the viewer's connection unless noted: never block, never call
+Bukkit or read the world, read your own prebuilt state, allocate little):
+
+- `interested(viewer, world, chunkX, chunkZ)`: cheap; when no layer is interested the packet passes with no copy and no
+  decode. `Integer.MIN_VALUE` for both coordinates means the packet could not be read: answer for the world.
+- `ready(..)` -> `Readiness.READY`/`HOLD`: a chunk the layer is not ready for (and every packet behind it, so nothing
+  overtakes it) waits up to the layer's hold time, counted from the moment it was written; `held(..)` tells the layer once
+  per held chunk (ask for missing data there). After the time the chunk goes out and `apply` decides.
+- `apply(viewer, ChunkEdit)`: `state/realState/set(x, y, z)`, `section(index)` -> `SectionEdit` (`get`, `real`,
+  `uniform` (the one state of a single-value section, no decode), `copyTo`, `set`, `fill(long[64] cells, id)` (all
+  cells: no decode), `remap(int[])`, `untouched`), `heightmapTops()`, `blockEntities()`. States are network ids
+  (`wireId(BlockData)`, `wireStates()`). Sections are decoded on first access. **For a MASK layer every written cell
+  counts as hidden:** its block entity is removed from the chunk and its light is sent as 0 (only the light arrays of
+  sections with hidden cells are touched).
+- `hides(viewer, world, x, y, z)`: single block updates of hidden cells are dropped. `hiddenCells(viewer, world, chunkX,
+  sectionY, chunkZ)` (64 longs, null = none, `ChunkLayer.UNKNOWN` = cannot tell): light updates are zeroed and section
+  updates trimmed (dropped when every entry is hidden) with it; UNKNOWN drops the packet. The default asks `hides` per cell.
+- `drop(viewer, ObjectPacket)` (only with `objects(true)`): entity spawns, sounds, particles, block events, block
+  breaking, level events and block entity data at a position (`kind()`, `x/y/z()`, `blockX/Y/Z()`, `entityId()`), and
+  `PLAYER_INFO_REMOVE` (`profileIds()`, asked without `interested`).
+- `clientWorld(viewer, world, minY, sections)`, `clientReset(viewer)` (back to configuration: the client dropped every
+  chunk), `forgotten(viewer, world, chunkX, chunkZ)`: in the order the client gets the packets, so a layer's own
+  per-viewer state moves exactly with the client.
+- Server thread: `left(viewer)`, `notAttached(viewer, player, why)` (Core could not reach the connection after three
+  tries a second apart: a security layer decides, for example to disconnect), `stopped(why)` (the view switched itself
+  off, see below).
+
+**Fail rules (MASK).** A packet an interested MASK layer cannot have rewritten is not sent: unreadable bytes, an
+exception in the layer, a world Core does not know. A chunk is then asked again from the server thread (at most twice);
+unreadable bytes also run the self-test again (at most once a minute). Only that self-test, failing twice, switches the
+view off for the server (`supported()` false, packets pass unchanged, layers get `stopped`). A packet whose judgement
+fails (an exception in `hides`, `hiddenCells` or `drop`) is dropped. One console line per kind and minute.
+
+**Queries and sends** (server thread unless noted): `viewer(player)` -> `ViewerRef` (UUID, name, a dense slot number for
+per-viewer arrays); `heldChunks(player)` and `holders(world, x, z)` (any thread; chunk keys from `ViewChunks.key`);
+`resend(player, keys)` (chunks again, through every layer as it decides now); `sendReal(player, world, ChunkCells, unmasked)`
+(true states of cells of one chunk: section updates, their block entities, one light update; `unmasked = true` lets
+them pass every layer); `layers()`; `stats()` (`ViewStats`: per layer chunks, cells, drops, errors, holds and apply time
+p50/p95/p99 in µs; counters per kind; any thread); `release(owner)`.
+
+**Next to other packet plugins.** Core's pair is the innermost one: its object side right after the server's encoder,
+its byte side right before it; a pair another plugin puts next to the encoder (VystormAntiXray 0.1.x and its own path)
+ends up outside Core's pair, so its object side judges before Core's and its byte side rewrites after Core's. Both run
+(two decodes per chunk) and both masks apply. Core's byte side checks every buffer's packet id, so packets other plugins
+send past its object side are judged too.
+
+**Testing.** `packet.view.PacketViewTesting.bench(WireStates, bitsetBytes)` rewrites encoded chunk, light and section
+packets through your layers without a server (`world`, `layer`, `viewer`, `clientWorld`, `forget`, `rewrite`, `held`,
+`counter`). On a running server, `virtualViewer(..)` and `filter(viewer, packet)` run packet objects through the
+registered layers like a player's (no hold, no handler), for proofs.
+
+```java
+if (CoreApi.has("packet-view") && core.packages().packetView().supported()) {
+    PacketViewInterface view = core.packages().packetView();
+    ViewLayer layer = view.register(plugin, LayerSpec.builder("myplugin:mask").mask().objects(true).maxHoldMillis(1000).build(),
+            new ChunkLayer() {
+                @Override public boolean interested(ViewerRef v, UUID world, int cx, int cz) { return masks.protects(world); }
+                @Override public void apply(ViewerRef v, ChunkEdit chunk) {
+                    for (int s = 0; s < chunk.sections(); s++) {
+                        long[] hidden = masks.hidden(v, chunk.chunkX(), s, chunk.chunkZ()); // null = nothing hidden
+                        if (hidden != null) chunk.section(s).fill(hidden, stoneId);
+                    }
+                }
+                @Override public long[] hiddenCells(ViewerRef v, UUID world, int cx, int sy, int cz) { return masks.hiddenAt(v, cx, sy, cz); }
+            });
+    // on disable: layer.close() (Core also releases it)
+}
+```
+
+Admin: `/vadmin packets` adds one line for the packet view (layers, viewers, connections with handlers, chunks
+rewritten, packets dropped, unreadable, time per chunk) and one per layer; `/vadmin packets view` adds the self-test
+result and every counter.
+
 ## Core 0.51.0: shared Bukkit adapters
 
 Capability `CoreApi.Capability.BUKKIT_COMPAT` (`bukkit-compat`, since `0.51.0`). New adapters are additive and live in `Vystorm.vystorm_core.compat`. Paper uses its native implementations when available; Bukkit/Spigot equivalents use real server operations. World/entity mutations and callback registration run on the server thread. `teleportAsync` and `getChunkAtAsync` return futures and marshal Bukkit operations to that thread.
@@ -992,7 +1897,24 @@ Capability names are strings in `CoreApi.Capability` (use the constants, e.g. `C
 | `PLACEHOLDERS` | `placeholders` | 0.65.0 | `api.placeholders()`: one registry for the values of all Vystorm plugins (`%vystorm_<namespace>_<key>%`, `{namespace:key}`), Core's own values, the bridge to PlaceholderAPI in both directions, `/vadmin placeholders`, `Lang.placeholders(true)`; `PlaceholderTesting` for unit tests without a server (see "Placeholders (0.65.0)" at the top) |
 | `FILE_MENUS` | `file-menus` | 0.65.0 | `api.gui().fileMenus()`: screen menus from files in `plugins/vystorm_core/menus` (format `vystorm-menu` version 1), opened with `/vmenu <id>`, their own command or their tile in the main menu; `enabled()`, `ids()`, `open(player, id)`, `reload()`, `errors()`, `warnings()`; `/vadmin menus` (see "Menus from files (0.65.0)" at the top and `docs/MENUS.md`) |
 | `PANEL_LIST_LAYOUT` | `panel-list-layout` | 0.66.0 | `Ui.Section.list()`: a panel section drawn as a settings list on Vystorm Screens (see 18.12) |
+| `WORLD_SURVEY` | `world-survey` | 0.68.0 | `api.survey()`: cell kinds, rooms per chunk, joins across chunks, live open cells, stored records, pre-compute jobs, `/vadmin survey`; off until `survey.enabled` or `require(plugin)` (see "World survey (0.68.0)" at the top) |
 | `PLACEHOLDER_RANKINGS` | `placeholder-rankings` | 0.67.0 | `PlaceholderNamespace.ranking(key, info, source)`, `api.placeholders().rankings()/top/topAsync/rank/rankingValue`, `/vadmin placeholders rankings` (see "Rankings as placeholders") |
+| `BLOCK_WRITES` | `block-writes` | 0.69.0 | `api.blocks()`: `states()`, `writer(world)`, `bukkitWriter()`, `writerReport()`; `BlockWritesTesting` for unit tests (see "Bulk block writes (0.69.0)") |
+| `CHUNK_LOADS` | `chunk-loads` | 0.69.0 | `api.blocks().chunks()`: loads with plugin tickets, asynchronous on Paper and Purpur, a time slice per tick and at most one new chunk per tick on Spigot |
+| `BLOCKS_EDITED_EVENT` | `blocks-edited-event` | 0.69.0 | `blocks.BlocksEditedEvent`, `EditedChunk`, `EditCause`, `api.blocks().announce(source, chunk)` |
+| `EDIT_ASK` | `edit-ask` | 0.69.0 | `api.area().mayEdit(EditAsk)`, `api.area().editGuards().register(plugin, guard)` |
+| `EDIT_ASK_OWN_REGIONS` | `edit-ask-own-regions` | 0.71.0 | `api.area().editGuards().registerOwnRegions(plugin, guard)`: the plugin's guard answers for its own regions, whose `build` flag Core's region answer skips while it is registered; other plugins' regions still count, deny wins (see "A guard for the plugin's own regions (0.71.0)") |
+| `KNOWN_PLAYERS` | `known-players` | 0.71.0 | `api.data().knownPlayers()`: `get`, `byName`, `search`, `recent`, `findable`, `setFindable`, `forget`; `/vadmin players find\|forget` (see "Known players and the player picker (0.71.0)") |
+| `PICK_RETURN` | `pick-return` | 0.71.0 | `picker.PickReturn`: `panel(action)`, `panel(owner, name, arg)`, `to(..)`, `none()`, `session()`, `go(player, result)` |
+| `PLAYER_PICKER` | `player-picker` | 0.71.0 | `api.gui().pickers()`: `players(action, pick)`, `players(owner, viewer, pick, back)`, `active`, `cancel`, `available`; `PlayerPick`, `PlayerSource`, `PickedPlayer`, `PlayerPicks`, `PickVerdict`, `PickFlow`, `PickEnd` |
+| `WORLD_PICK` | `world-pick` | 0.71.0 | `api.gui().pickers()`: `world(action, pick)`, `world(owner, viewer, pick, back)`; `WorldPick`, `PickKind` (`POSITION`, `BLOCK`, `FACE`, `CONTAINER`, `ENTITY`), `Picked`, `PickCandidate`, `PickFaces`, `PickProtection`; `api.particle().paths().box/circle` |
+| `WORLD_PICK_AREA` | `world-pick-area` | 0.71.0 | `PickKind.AREA` for the world pick: two corners, box preview with the size, confirm view; `WorldPick.Builder.area(AreaRules)`, `AreaRules`, `AreaHeight`, `Picked.Area`; `BUILD` for the whole box; config `pickers.world.max-area` |
+| `PACKET_VIEW` | `packet-view` | 0.73.0 | `api.packages().packetView()`: `supported`, `unsupportedReason`, `register(owner, LayerSpec, ChunkLayer)`, `wireId`, `wireStates`, `viewer`, `heldChunks`, `holders`, `resend`, `sendReal`, `layers`, `stats`, `release`; `packet.view.*` (`LayerSpec`, `ChunkLayer`, `ChunkEdit`, `SectionEdit`, `ViewerRef`, `ObjectPacket`, `ViewLayer`, `ViewStats`, `WireStates`, `Readiness`, `ViewChunks`, `PacketViewTesting`); MASK layers; `/vadmin packets view` (see "Packet view (0.73.0)") |
+| `CLIENT_BLOCKS` | `client-blocks` | 0.72.0 | `api.packages().clientBlocks()`: `open(owner, viewer, name, priority)`, `openShared(owner, anchor, range, name, priority)`, `shown`, `sets`, `release`, `stats`; `ClientBlockSet`, `ClientBlockInteract`, `ClientBlocksStats`; `/vadmin packets`; `Visuals.open` block views run on it (see "Client blocks (0.72.0)") |
+| `ADMIN_ACTIONS` | `admin-actions` | 0.73.0 | `api.admin().actions()`: `run`, `allowed`, `missing`, `copyAsCommand`, `dispatchVanilla`, `capturesAnswers`, `log`; `ActionPreview`, `ActionResult`, `ActionLogEntry`, `ActionLogInterface`, `LogQuery`, `DispatchResult`; `/vadmin actions`; `api.data().files().append` |
+| `GAME_RULES` | `game-rules` | 0.73.0 | `api.compat().gameRules()`: `shape`, `rules`, `rule`, `value`, `set`, `command`, `catalog`, `label`, `description`, `categoryLabel`; `GameRuleInfo`, `GameRuleKind`, `GameRuleCategory`, `GameRuleChange`, `GameRuleCatalog` |
+| `RULE_CLAIMS` | `rule-claims` | 0.73.0 | `api.compat().gameRules().claims()`: `claim`, `release`, `claims`, `all`; `RuleClaim` |
+| `PANEL_FALLBACK_CONTEXT` | `panel-fallback-context` | 0.71.0 | `PanelSpec.Builder.contextFallback(BiConsumer<Player, FallbackContext>)`: a chest fallback gets `arg()`, `session()`, a returning pick's `result()`, `returning()`, `resultShown()`, `reopen()`; `PickReturn.panel(FallbackContext)`; `PanelSpec.contextFallback()` |
 | `COMMAND_VISIBILITY` | `command-visibility` | 0.65.0 | `CommandSpec.Builder.visibleWhen(..)`, `CommandSpec.visibleTo(sender)`, `api.command().refresh()`; the same label registered again after startup keeps its Paper node (see 24.2) |
 | `ITEM_REF_PRIORITY` | `item-ref-priority` | 0.12.0 | Several `ItemRefs` providers per namespace with priority |
 | `MOB_REFS` | `mob-refs` | 0.12.0 | `mob.MobRefs` |
@@ -1061,6 +1983,10 @@ Capability names are strings in `CoreApi.Capability` (use the constants, e.g. `C
 | `ROUTINE_MESSAGES` | `routine-messages` | 0.26.5 | `_uiMethods.notifications.RoutineMessages.send` |
 | `SCREENS` | `screens` | 0.57.0 | `screen.Screens`, `screen.ScreenSpec`, `screen.ScreenLayout`, `screen.ScreenWidget`, `screen.ScreenSession` |
 | `HUD_WINDOW` | `hud-window` | 0.59.0 | `screen.Huds`, `screen.HudCard` (corner window at the top right from boss bar titles, placed by the Core pack shader; works with shader packs) |
+| `SCREEN_MAP_PARTIAL` | `screen-map-partial` | 0.72.0 | `ScreenSession.setMap` sends only the changed rectangle per tile, `Screens.MAP_BYTES_PER_TICK` per viewer and tick |
+| `SCREEN_POINTER` | `screen-pointer` | 0.72.0 | `ScreenSession.trackPointer`, `ScreenInput.Pointer` (at most one per tick) |
+| `SCREEN_PRESS` | `screen-press` | 0.72.0 | `ScreenSession.trackPress`, `ScreenInput.Press` (right button down and up) |
+| `MAP_PALETTE` | `map-palette` | 0.72.0 | `api.gui().screens().mapColors()` = `screen.MapColors` (map colour table, nearest colour, picker order) |
 | `MIGRATION_PREVIEWS` | `migration-previews` | 0.26.5 | `storage.MigrationPreviews.register`, `storage.MigrationPreviews.run` |
 | `REWARD_POUCH` | `reward-pouch` | 0.32.0 | `item.RewardPouch` |
 | `ITEM_ANVIL` | `item-anvil` | 0.40.1 | `item.ItemServices.prepareAnvil`, `item.ItemServices.commitAnvil` |
@@ -3950,7 +4876,7 @@ thread (Core hops to the server thread). Render functions and handlers always ru
 |---|---|
 | no permission (`access` predicate false) | `NONE` + message `panel.no-permission` |
 | mod with panels (handshake done) | `NATIVE` – the panel opens as a screen |
-| otherwise, `fallback(...)` set | `FALLBACK` – your own chest/dialog menu (it has priority) |
+| otherwise, `fallback(...)` set | `FALLBACK` – your own chest/dialog menu (it has priority); since 0.71.0 a `contextFallback(...)` gets a `FallbackContext` (argument, session values, a returning pick's result) |
 | otherwise, `dialogFallback(true)` and the panel is dialog-capable | `DIALOG` – automatic Paper dialog built from the same panel |
 | otherwise, `web(module, page)` set | `WEB` – `WebServices.openOrLink` (system browser via the mod, else chat link) |
 | otherwise | `NONE` + message `panel.unavailable` |
@@ -3989,6 +4915,7 @@ PanelSpec.builder(String title)                         // title for logs and th
     .web(String moduleId, String subPath)               // "Open web page" button + WEB fallback
     .dialogFallback(boolean on)                         // automatic Paper dialog for players without the mod
     .fallback(Consumer<Player> fallback)                // your own chest/dialog menu (priority over dialog and web)
+    .contextFallback(BiConsumer<Player, FallbackContext> fallback)   // 0.71.0: the same, with arg, session values and a returning pick's result
     .build();
 ```
 
@@ -4359,12 +5286,15 @@ unusable (Core logs it and falls back to English/jar texts).
 | `/vadmin commands [page]`, `/vadmin commands mode all\|default\|none`, `/vadmin commands alias <alias> on\|off` | – | Registered command trees, localized root aliases with collisions and toggles (0.45.0, §24.4) | `vystorm_core.admin` |
 | `/vadmin placeholders [namespace] [page]`, `/vadmin placeholders test <text>` | – | Registered placeholders with their descriptions, bridges to other placeholder plugins, and a text resolved for the sender (0.65.0, "Placeholders (0.65.0)") | `vystorm_core.admin` |
 | `/vadmin menus`, `/vadmin menus reload` | – | Menu files in `plugins/vystorm_core/menus`: loaded menus with command and tile, remarks, skipped files with every reason; `reload` reads the folder again (0.65.0, "Menus from files (0.65.0)") | `vystorm_core.admin` |
+| `/vadmin players find <prefix>`, `/vadmin players forget <name\|uuid>`, `/vadmin players pick [multi] [self] [tab=..] [search=..] [page=N]` | – | Known players with UUID and exact last seen; remove one; the player picker as a demo in game or its chest layout as text from the console (0.71.0, "Known players and the player picker (0.71.0)") | `vystorm_core.admin` |
+| `/vadmin visible <player>` | – | Makes an online player visible again: closes their screen and clears the invisible flag (a running invisibility effect still counts; spectators are refused); for players an older Core (0.71.0 and before) left invisible, also from the console (0.71.1) | `vystorm_core.admin` |
+| `/vadmin packets [sets]` | – | Client blocks: sets, players, cells and budgets, what was sent, restored, repaired and held back, one line per plugin, the sets that change collision; `sets` lists every open set with priority, size, players and cells still waiting (0.72.0, "Client blocks (0.72.0)") | `vystorm_core.admin` |
 | `/vmenu <id>`, `/vmenu menus:<id>`, the command a menu file names | – | Opens a menu from a file (0.65.0); registered menu keys are tried first | `vystorm_core.menu` and the menu's own permission |
 
 Other permissions: `vystorm_core.playermenu` (player menu by shift-right-click or `/menu player`, default everyone,
 0.43.0), `vystormCore.debug` (HIGH debug messages in chat, default op), `vystorm_core.chat.teleport`
 (clickable coordinates teleport, default op), `vystorm_core.worlds.bypass` (creative/spectator admins may enter and
-edit managed worlds without a visit, default op), `vystorm_core.chat.trade.send`/`.receive` (`/vtrade`, default
+edit managed worlds without a visit, default op), `vystorm_core.pickers.exact-last-seen` (exact last-seen dates in the player picker, default op, 0.71.0), `vystorm_core.chat.trade.send`/`.receive` (`/vtrade`, default
 everyone), `vystorm_core.config.*` and `vystorm_core.config.<plugin>` (config editor, default op, children of
 `vystorm_core.admin`), `vcore.gui.access.<menu>`/`vgui.access.<menu>` (legacy chest menus) and `vcore.bookgui.<book>`
 (Core books), each with a `.*` parent (default op). `vystorm_core.*` grants all of them. Since 0.27.0 every Core command
@@ -4598,7 +5528,10 @@ Capability `CoreApi.Capability.VISUALS` (`visuals`). Public package `Vystorm.vys
 - `ViewFrame(UUID world, Point3 origin, int quarterTurns, double halfWidth, double height)`: bottom-centre origin, local +Z towards the viewer. `local/global`, `through(destination, point)`, `directionTo(destination, vector)`, `visible(eye, point)`, `crosses(from, to, bodyRadius, bodyHeight)`, `contains(x,y,margin)`. Quarter turns map the normal from +Z to -X, -Z, +X. Pure geometry is thread-safe.
 - `BlockPosition(int x,int y,int z)`, `centre()`, `containing(Point3)`.
 - `ParticlePaths.line(start,end,count)` (2..512), `outline(frame,pointsPerEdge)` (2..128). Immutable points; safe off-thread.
-- `Visuals.open(Plugin owner,Player viewer) -> BlockView`. Server thread only. One view per player across owners; conflicts throw. `BlockView.replace(Map<BlockPosition,BlockData>,int budget) -> int` accepts <=4096 blocks, clones BlockData, sends <=budget changes (1..4096), and returns pending change count. Repeat while nonzero. `covers(BlockPosition)` checks actually sent illusion blocks, `isClosed()` and idempotent `close()`; current real blocks restored without modifying the world.
+- 0.71.0: `ParticlePaths.box(min,max,pointsPerEdge)` (the 12 edges of a box, 2..128 points per edge, corners in any
+  order; up to 1,536 points, draw at most 512 per `Visuals.particles` call) and `circle(centre,radius,count)` (a
+  horizontal circle, 3..512 points). Same methods on `api.particle().paths()`.
+- `Visuals.open(Plugin owner,Player viewer) -> BlockView`. Server thread only. One view per player and plugin (before 0.72.0: one per player across owners); a second view of the same plugin throws. Since 0.72.0 a view is a client block set ("Client blocks (0.72.0)"): sends are one packet per chunk section, cells overwritten by real block changes or a chunk resend come back by themselves, and views of different plugins overlap by age (newer shown). `BlockView.replace(Map<BlockPosition,BlockData>,int budget) -> int` accepts <=4096 blocks, clones BlockData, sends <=budget changes (1..4096), and returns pending change count. Repeat while nonzero. `covers(BlockPosition)` checks actually sent illusion blocks, `isClosed()` and idempotent `close()`; current real blocks restored without modifying the world.
 - `Visuals.projection(entrance,destination,eye,radius,depth,maxBlocks) -> Map<BlockPosition,BlockData>`. Server thread only; radius1..12, depth1..16, maxBlocks1..4096. No chunk loads. Samples cardinally rotated block states; no tile-entity payloads, light, entities or physical collision. Caller schedules refreshes and enforces distance/work budgets.
 - `Visuals.particles(Player,Particle,List<Point3>,T data)`: server thread, <=512 points, emits only to that player in their current world.
 - `Visuals.release(Plugin)` and `shutdown()` restore outstanding views. Core registers lifecycle cleanup automatically. `lifecycleListener()` is the Core bootstrap hook; consumers do not register it.
@@ -5364,8 +6297,11 @@ enabled buttons, inputs and map widgets are. Put an explicit button over an item
 - `KeyInput(key, pressed)`: only keys requested with `ScreenSpec.Builder.claim(...)`; needs Paper 1.21.3+.
 - `Closed(reason)`: terminal session input; cancel consumer-owned animation/tasks here.
 
-Opening is refused when a screen is already open, while riding/gliding/falling/in liquid, or within five seconds of
-damage. `ScreenOpenResult.opened()` reports success; `mode()` gives the chosen mode and `refusedKey()` the failure key.
+Opening is refused when a screen is already open, while riding/gliding/falling/in liquid, within five seconds of
+damage and (since 0.71.1) for dead players and spectators (spectators get the fallback without a line, since a
+spectator cannot click a screen but can click chest menus and dialogs). Since 0.71.1 Core itself tells the player the reason in
+chat (at most once every 5 seconds; not for screens switched off by the server or a missing pack), so a plugin need not
+send `refusedKey()` itself. `ScreenOpenResult.opened()` reports success; `mode()` gives the chosen mode and `refusedKey()` the failure key.
 The spec's fallback runs on refusal or unsupported rendering. Closing occurs on sneak (unless SNEAK is claimed),
 `/screen close`, damage, death, teleport, world change, quit, owner disable, or `ScreenSession.close()`.
 
@@ -5421,9 +6357,71 @@ There is no public GIF decoding helper: consumers own decoding, palette conversi
 through `ScreenSession.setMap` on the server thread. Do expensive image work off-thread and release buffers/tasks
 when the session ends. Palette limits mean this is not full-color video; dithering trades color appearance for detail.
 
-Every update sends full 128×128 tiles only to the viewer. Screen maps do not inherit the world-map-wall service's
-changed-rectangle sender or packet budgets. Estimate uncompressed pixel payload as
-`tile count × 16,384 bytes × frames per second × viewers`, plus protocol overhead, before compression.
-A 2×2 canvas at 10 FPS is about 640 KiB/s per viewer; 8×8 at 20 FPS is about 20 MiB/s per viewer.
+Up to 0.71.1 every update sent full 128×128 tiles to the viewer. Since 0.72.0 (capability
+`screen-map-partial`) Core compares each update with what it sent and sends only the changed rectangle of each tile,
+at most `Screens.MAP_BYTES_PER_TICK` (64 KiB, four full tiles) per viewer and server tick; the rest follows in the
+next ticks, always with the newest pixels. A GIF frame that changes every pixel still costs
+`tile count × 16,256 bytes` (rows 1..127), so estimate full-frame animations as before:
+`tile count × 16 KiB × frames per second × viewers`, now capped at 1.25 MiB/s per viewer before compression.
 Use small canvases, lower frame rates and unchanged-frame suppression; cache palette frames and stop idle animations.
 Use direct Screens for custom maps/minigames; prefer Panels for normal UI and retain an accessible fallback.
+
+### Screen canvas: partial maps, pointer samples, press and the map colour table (0.72.0)
+
+Capabilities `screen-map-partial`, `screen-pointer`, `screen-press`, `map-palette` (0.72.0; check with
+`CoreApi.has(..)`). For in-game editors on a map widget: a canvas
+that is painted with a held right button, a colour column, a brush outline under the pointer.
+
+- **Partial redraw.** `session.setMap(id, pixels)` as before; Core keeps its own copy of every tile, diffs the new
+  pixels against it and sends only the changed rectangle of each tile (a 3-pixel brush step is one packet of about
+  25 bytes instead of 16 KiB per tile). The same array may be changed in place and passed again. Updates share a
+  budget of `Screens.MAP_BYTES_PER_TICK` per viewer and tick; the first picture when the screen opens is not limited.
+- **Pointer samples.** `session.trackPointer(widgetId, true)` asks for `ScreenInput.Pointer(widgetId, u, v)` while
+  the pointer is over that widget: at most one per server tick and only when it moved. `u, v` are the same
+  centre-origin panel units as `Click`, so `widget.mapPixel(p.u(), p.v(), layout.width(), layout.height())` gives
+  the canvas pixel. Leaving the widget comes as a `Hover` with another id or null. `false` stops the samples; Core
+  polls the look direction once per tick only while a screen asks.
+- **Press and hold.** `session.trackPress(true)` asks for `ScreenInput.Press(right, down)`: `down` right before the
+  `Click` of the first "use" of a hold, `up` once no repeat came for `Screens.PRESS_RELEASE_MILLIS` (350 ms), and
+  before `Closed` when the screen closes during a hold. Every repeat still arrives as a `Click`. A held right button
+  repeats every 4 client ticks (200 ms, Minecraft `rightClickDelay`), so "up" is reported 150 to 200 ms after the
+  real release plus the way to the server. The left button has no Press: the client sends one attack on button
+  down and nothing while it is held or let go. For a pen that is both held and released exactly, claim
+  `ScreenInput.Key.JUMP` (Paper 1.21.3+ input events) and use `KeyInput(JUMP, pressed)`.
+- **Map colours.** `api.gui().screens().mapColors()` returns `MapColors`, the game's table copied into Core:
+  `rgb(byte)` (-1 for transparent bytes 0..3), `visible(byte)`, `nearest(rgb)` / `nearest(r, g, b)` (the same
+  answers as Bukkit's `MapPalette.matchColor`), `pickerOrder()` (the 244 visible bytes: one row of four shades per
+  base colour, bright to dark, greys first, then by hue), `base(byte)`, `shade(byte)`. A unit test checks it against
+  `MapPalette` of Paper 1.20.6, Paper 26.x and Spigot 26.2 (248 indices, 244 visible, identical RGB and nearest).
+  Use it instead of `MapPalette.getColor`, which Paper 1.20.6 marks for removal.
+
+Screens that call none of `trackPointer`, `trackPress` and `setMap` behave exactly as before and schedule nothing
+per tick. `Pointer` and `Press` are new `ScreenInput` records: they reach only screens that asked, so a plugin
+built against an older Core never receives them at run time. Source note: an exhaustive `switch` over `ScreenInput`
+without `default` no longer compiles against this Core; add `default -> { }` or the two new cases when you rebuild.
+Full-frame animations larger than about four tiles are now spread over several ticks (64 KiB per viewer and tick),
+so their tiles can show different frames for a moment.
+
+```java
+// On the server thread, after screens.open(player, spec) returned opened().
+screens.session(player).ifPresent(session -> {
+    session.trackPointer("canvas", true);
+    session.trackPress(true);
+    session.setMap("canvas", pixels);
+});
+// in onInput:
+switch (input) {
+    case ScreenInput.Press press -> painting = press.down();
+    case ScreenInput.Pointer p when painting && "canvas".equals(p.widgetId()) -> {
+        int[] px = canvas.mapPixel(p.u(), p.v(), layout.width(), layout.height());
+        stamp(pixels, px[0], px[1], colour);
+        session.setMap("canvas", pixels);   // only the changed rectangle is sent
+    }
+    default -> { }
+}
+```
+
+`/screen demo paint` (admin) is a 2×2-tile canvas with three colours and Clear that uses all of this; the info
+line shows how many patches and pixels went to the client after each stroke. Map widgets still show only on
+clients below 26.3 (see 0.65.1); `/screen demo paint holes` is a test of a possible 26.3 fix (the panel is cut
+around the map) and changes nothing for other screens.

@@ -33,4 +33,16 @@ public interface AreaInterface {
 
     /** Fixed spawn points per region ({@code spawn.SpawnPointService.get()}). @since 0.64.0 */
     default Vystorm.vystorm_core.spawn.SpawnPointService spawnPoints() { return Vystorm.vystorm_core.spawn.SpawnPointService.get(); }
+
+    /**
+     * May a plugin change cells of one chunk without per-block events (bulk edits)? Combines Core's regions (flag
+     * {@code build}) with every guard plugins registered through {@link #editGuards()}: any deny wins, partial answers
+     * are and-ed. Server thread. Capability {@code edit-ask}. @since 0.69.0
+     */
+    default Vystorm.vystorm_core.blocks.EditVerdict mayEdit(Vystorm.vystorm_core.blocks.EditAsk ask) {
+        return Vystorm.vystorm_core.blocks.EditGuards.ask(ask);
+    }
+
+    /** The guards plugins register for bulk edits (claims, plots, arenas). Capability {@code edit-ask}. @since 0.69.0 */
+    default Vystorm.vystorm_core.blocks.EditGuards editGuards() { return Vystorm.vystorm_core.blocks.EditGuards.instance(); }
 }

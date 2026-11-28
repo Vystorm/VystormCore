@@ -205,6 +205,80 @@ class ScreenRuntimeTest {
         assertTrue(spawned.isEmpty());
     }
 
+    @Test void givenSpectator_whenOpen_thenTheClassicMenuOpensWithoutALine() {
+        List<String> told = new ArrayList<>();
+        runtime.noticeRefusals((who, key) -> told.add(key));
+        Player p = player(0, 0);
+        when(p.getGameMode()).thenReturn(org.bukkit.GameMode.SPECTATOR);
+        AtomicBoolean fallback = new AtomicBoolean();
+        ScreenOpenResult result = runtime.open(core, p, spec(fallback));
+        assertEquals(ScreenRuntime.REFUSED_SPECTATOR, result.refusedKey());
+        assertTrue(fallback.get(), "a spectator gets the chest or dialog, which a spectator can click");
+        assertTrue(spawned.isEmpty(), "no screen entity for a spectator");
+        assertTrue(told.isEmpty(), "the menu opens, so there is nothing to explain");
+        assertTrue(ScreenRuntime.silentRefusal(ScreenRuntime.REFUSED_SPECTATOR));
+    }
+
+    @Test void givenRepeatedRefusals_whenOpen_thenOneLineEveryFewSeconds() {
+        List<String> told = new ArrayList<>();
+        runtime.noticeRefusals((who, key) -> told.add(key));
+        Player p = player(0, 0);
+        when(p.isInWater()).thenReturn(true);
+        // typed five times in a row: one line, not five
+        for (int i = 0; i < 5; i++) { runtime.open(core, p, spec(new AtomicBoolean())); now += 500; }
+        assertEquals(1, told.size());
+        now += ScreenRuntime.REFUSAL_REPEAT_MILLIS;
+        runtime.open(core, p, spec(new AtomicBoolean()));
+        assertEquals(2, told.size(), "told again after a few seconds");
+    }
+
+    @Test void givenDeadPlayer_whenOpen_thenRefusedDead() {
+        List<String> told = new ArrayList<>();
+        runtime.noticeRefusals((who, key) -> told.add(key));
+        Player p = player(0, 0);
+        when(p.isDead()).thenReturn(true);
+        assertEquals("screen.refused.dead", runtime.open(core, p, spec(new AtomicBoolean())).refusedKey());
+        assertEquals(List.of("screen.refused.dead"), told);
+        assertTrue(spawned.isEmpty());
+    }
+
+    @Test void givenEveryRefusalReason_whenOpen_thenThePlayerIsTold() {
+        List<String> told = new ArrayList<>();
+        runtime.noticeRefusals((who, key) -> told.add(key));
+        Player riding = player(0, 0);
+        when(riding.isInsideVehicle()).thenReturn(true);
+        Player gliding = player(0, 0);
+        when(gliding.isGliding()).thenReturn(true);
+        Player falling = player(0, 0);
+        when(falling.getFallDistance()).thenReturn(4f);
+        when(falling.isOnGround()).thenReturn(false);
+        Player swimming = player(0, 0);
+        when(swimming.isInWater()).thenReturn(true);
+        Player hit = player(0, 0);
+        runtime.onDamage(hit);
+        for (Player p : List.of(riding, gliding, falling, swimming, hit)) assertFalse(runtime.open(core, p, spec(new AtomicBoolean())).opened());
+        assertEquals(List.of("screen.refused.riding", "screen.refused.gliding", "screen.refused.falling", "screen.refused.liquid", "screen.refused.combat"), told);
+    }
+
+    @Test void givenSilentRefusalOrQuietMirror_whenOpen_thenNothingIsTold() {
+        List<String> told = new ArrayList<>();
+        runtime.noticeRefusals((who, key) -> told.add(key));
+        pack = true;
+        runtime.requirePack(p -> false);
+        assertEquals(ScreenRuntime.REFUSED_PACK, runtime.open(core, player(0, 0), spec(new AtomicBoolean())).refusedKey());
+        runtime.requirePack(null);
+        runtime.blockWhen((owner, keys) -> true);
+        assertEquals(ScreenRuntime.REFUSED_OFF, runtime.open(core, player(0, 0), spec(new AtomicBoolean())).refusedKey());
+        runtime.blockWhen(null);
+        Player swimming = player(0, 0);
+        when(swimming.isInWater()).thenReturn(true);
+        assertEquals("screen.refused.liquid", runtime.open(core, swimming, spec(new AtomicBoolean()), null, false).refusedKey());
+        assertTrue(told.isEmpty(), "screens off, no pack and a refused chest mirror explain themselves: " + told);
+        assertFalse(runtime.tellRefusal(swimming, ScreenRuntime.REFUSED_OFF));
+        assertTrue(runtime.tellRefusal(swimming, "screen.refused.liquid"));
+        assertFalse(runtime.tellRefusal(swimming, "screen.refused.liquid"), "the caller's second line within a few seconds is dropped");
+    }
+
     @Test void givenOpenScreen_whenOpeningAnother_thenTheNewOneReplacesIt() {
         Player p = player(0, 0);
         AtomicBoolean firstFallback = new AtomicBoolean(), secondFallback = new AtomicBoolean();
@@ -776,6 +850,7 @@ class ScreenRuntimeTest {
 
     private final List<List<byte[]>> shownTiles = new ArrayList<>();
     private final List<byte[]> pushed = new ArrayList<>();
+    private final List<int[]> patched = new ArrayList<>();
     private final List<ScreenMapCodec.Placement> placements = new ArrayList<>();
     private int mapRemovals;
     private boolean mapsSupported = true;
@@ -787,6 +862,7 @@ class ScreenRuntimeTest {
             placements.add(at);
             return new Handle() {
                 @Override public void pixels(int tile, byte[] colours) { pushed.add(colours); }
+                @Override public void patch(int tile, int x, int y, int w, int h, byte[] colours) { patched.add(new int[] { tile, x, y, w, h }); pushed.add(colours); }
                 @Override public void remove() { mapRemovals++; }
             };
         }
@@ -825,7 +901,7 @@ class ScreenRuntimeTest {
         assertTrue(runtime.session(p).orElseThrow().showsMap("map"));
     }
 
-    @Test void givenShownMap_whenSetMap_thenEveryTileSentAndRemovedOnClose() {
+    @Test void givenShownMap_whenSetMap_thenTheChangedRectangleOfEveryTileSentAndRemovedOnClose() {
         runtime.useMaps(fakeMaps);
         Player p = player(0, 0);
         runtime.open(core, p, mapSpec());
@@ -833,9 +909,12 @@ class ScreenRuntimeTest {
         canvas[0] = 42;
         canvas[GRID.pixelWidth() - 1] = 43;
         runtime.session(p).orElseThrow().setMap("map", canvas);
+        // screen canvas: only the changed part (rows 1..127, the header row stays) of each tile, no full tile
         assertEquals(2, pushed.size());
-        assertEquals(42, pushed.get(0)[128], "canvas row 0 is tile row 1");
-        assertEquals(43, pushed.get(1)[128 + 127]);
+        assertArrayEquals(new int[] { 0, 0, 1, 128, 127 }, patched.get(0));
+        assertArrayEquals(new int[] { 1, 0, 1, 128, 127 }, patched.get(1));
+        assertEquals(42, pushed.get(0)[0], "canvas row 0 is tile row 1");
+        assertEquals(43, pushed.get(1)[127]);
         runtime.close(p, ScreenInput.Reason.PLAYER);
         assertEquals(1, mapRemovals);
     }

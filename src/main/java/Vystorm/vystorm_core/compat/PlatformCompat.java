@@ -128,13 +128,42 @@ public final class PlatformCompat {
         }
     }
 
+    /**
+     * Sends client-only blocks. Paper and Purpur: one section-blocks packet per chunk section. Spigot (no
+     * {@code sendMultiBlockChange}) since 0.72.0: {@code Player.sendBlockChanges}, which also sends one packet per
+     * section, at most {@value #SPIGOT_BATCH} cells per call (its per-section set is linear per add); before 0.72.0 one
+     * packet per block. Servers without either send one block change per block.
+     */
     public static void sendMultiBlockChange(Player player, Map<Location, org.bukkit.block.data.BlockData> blocks) {
+        if (blocks.isEmpty()) return;
         try {
             player.sendMultiBlockChange(blocks);
+            return;
         } catch (NoSuchMethodError missing) {
-            blocks.forEach(player::sendBlockChange);
+            // Spigot: no Paper multi-block method.
         }
+        if (!noBlockChanges) {
+            try {
+                List<BlockState> batch = new ArrayList<>(Math.min(SPIGOT_BATCH, blocks.size()));
+                for (Map.Entry<Location, org.bukkit.block.data.BlockData> e : blocks.entrySet()) {
+                    batch.add(e.getValue().createBlockState().copy(e.getKey()));
+                    if (batch.size() == SPIGOT_BATCH) {
+                        player.sendBlockChanges(batch);
+                        batch = new ArrayList<>(SPIGOT_BATCH);
+                    }
+                }
+                if (!batch.isEmpty()) player.sendBlockChanges(batch);
+                return;
+            } catch (NoSuchMethodError | AbstractMethodError missing) {
+                noBlockChanges = true;
+            }
+        }
+        blocks.forEach(player::sendBlockChange);
     }
+
+    /** Cells per {@code sendBlockChanges} call on Spigot. */
+    static final int SPIGOT_BATCH = 256;
+    private static volatile boolean noBlockChanges;
 
     public static void showTitle(Player player, Title title) {
         if (((Object) player) instanceof Audience audience) {

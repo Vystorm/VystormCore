@@ -4,7 +4,7 @@ plugins {
 }
 
 group = 'Vystorm'
-version = '0.67.0-Vystorm-Core-26.2'
+version = '0.73.0-Vystorm-Core-26.2'
 
 sourceSets {
     main {
@@ -84,6 +84,8 @@ test {
     systemProperty "vystorm.test.classpath", "@" + new File(cpDir, "test.txt").absolutePath
     doFirst { cpDir.mkdirs(); new File(cpDir, "test.txt").text = sourceSets.test.runtimeClasspath.asPath }
     systemProperty "vystorm.test.spigotClasspath", project.findProperty('spigotApiJar') ?: configurations.spigotCompatibility.asPath
+    // World survey benchmark: folders of exported study fixtures (optional, see SurveyBenchmarkTest)
+    systemProperty "vystorm.surveyBench", project.findProperty("surveyBench") ?: ""
 }
 
 tasks.withType(JavaCompile).configureEach {

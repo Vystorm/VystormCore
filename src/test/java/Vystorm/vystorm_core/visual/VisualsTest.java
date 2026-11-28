@@ -62,6 +62,7 @@ class VisualsTest {
     void closeAllViewsOnServerThread() {
         bukkit.when(Bukkit::isPrimaryThread).thenReturn(true);
         Visuals.shutdown();
+        Vystorm.vystorm_core.packet.ClientBlocks.shutdown();
         bukkit.close();
     }
 
@@ -108,9 +109,12 @@ class VisualsTest {
         view.replace(old, 8); clearInvocations(playerA);
 
         assertEquals(12, view.replacePrioritized(next, 4));
-        ArgumentCaptor<Location> positions = ArgumentCaptor.forClass(Location.class);
-        verify(playerA, org.mockito.Mockito.times(4)).sendBlockChange(positions.capture(), any(BlockData.class));
-        assertEquals(List.of(1, 2, 2, 2), positions.getAllValues().stream().map(Location::getBlockZ).toList());
+        // 0.72.0: one restore and three additions of one chunk section go out as one multi-block change, restore first.
+        @SuppressWarnings({"unchecked", "rawtypes"})
+        ArgumentCaptor<Map<Location, BlockData>> batch = (ArgumentCaptor) ArgumentCaptor.forClass(Map.class);
+        verify(playerA).sendMultiBlockChange(batch.capture());
+        verify(playerA, never()).sendBlockChange(any(Location.class), any(BlockData.class));
+        assertEquals(List.of(1, 2, 2, 2), batch.getValue().keySet().stream().map(Location::getBlockZ).toList());
         for (int i = 0; i < 3; i++) view.replacePrioritized(next, 4);
         assertEquals(0, view.replacePrioritized(next, 4));
         assertFalse(view.covers(new BlockPosition(7, 64, 1)));
@@ -169,9 +173,28 @@ class VisualsTest {
     }
 
     @Test
-    void givenViewerWithActiveViewWhenOpeningSecondThenRejectsConflict() {
+    void givenViewerWithActiveViewWhenTheSamePluginOpensSecondThenRejectsConflict() {
         Visuals.open(ownerA, playerA);
-        assertThrows(IllegalStateException.class, () -> Visuals.open(ownerB, playerA));
+        assertThrows(IllegalStateException.class, () -> Visuals.open(ownerA, playerA));
+    }
+
+    /** 0.72.0: views of different plugins no longer exclude each other; on a shared cell the newer view is shown. */
+    @Test
+    void givenViewOfAnotherPluginWhenOpeningThenBothShowAndTheNewerWinsSharedCells() {
+        BlockView first = Visuals.open(ownerA, playerA);
+        BlockView second = Visuals.open(ownerB, playerA);
+        BlockData a = stableBlockData(), b = stableBlockData();
+        BlockPosition shared = new BlockPosition(1, 64, 1);
+        first.replace(Map.of(shared, a), 4);
+        clearInvocations(playerA);
+        second.replace(Map.of(shared, b), 4);
+        verify(playerA).sendBlockChange(any(Location.class), org.mockito.ArgumentMatchers.eq(b));
+        assertTrue(first.covers(shared));
+        assertTrue(second.covers(shared));
+        clearInvocations(playerA);
+        second.close();
+        verify(playerA).sendBlockChange(any(Location.class), org.mockito.ArgumentMatchers.eq(a));
+        assertFalse(first.isClosed());
     }
 
     @Test
@@ -247,33 +270,41 @@ class VisualsTest {
         assertEquals(0, firstView.replace(desired, 2), "unchanged desired data sends no packets");
         verify(playerA, never()).sendBlockChange(any(Location.class), any(BlockData.class));
 
+        // 0.72.0: the client block runtime sends the cells of a resent chunk again by itself, without a new replace.
         clearInvocations(playerA, playerB, worldA);
         Visuals.chunkUpdated(playerB, WORLD_A_ID, 0, 0);
+        Visuals.chunkUpdated(playerA, WORLD_B_ID, 0, 0);
         assertFalse(firstView.isClosed());
         assertFalse(secondView.isClosed());
-        assertTrue(firstView.covers(inChunkZero), "another viewer's chunk event leaves this view intact");
-        assertFalse(secondView.covers(inChunkZero));
-        assertTrue(secondView.covers(inChunkTwo));
-        assertEquals(0, secondView.replace(desired, 2));
-
-        Visuals.chunkUpdated(playerA, WORLD_B_ID, 0, 0);
-        assertTrue(firstView.covers(inChunkZero), "updates for a different world are ignored");
-        Visuals.chunkUpdated(playerA, WORLD_A_ID, 0, 0);
-        assertFalse(firstView.isClosed(), "a chunk reload keeps the session open");
-        assertFalse(firstView.covers(inChunkZero));
-        assertTrue(firstView.covers(inChunkTwo), "unaffected chunks retain their sent state");
-        assertTrue(secondView.covers(inChunkZero), "one viewer's update does not affect another view");
-
-        clearInvocations(playerA, worldA);
-        assertEquals(0, firstView.replace(desired, 1));
+        assertTrue(secondView.covers(inChunkZero), "a chunk reload keeps the view's cells");
+        Vystorm.vystorm_core.packet.internal.blocks.ClientBlocksRuntime.get().tick();
 
         ArgumentCaptor<Location> sentLocations = ArgumentCaptor.forClass(Location.class);
-        verify(playerA).sendBlockChange(sentLocations.capture(), any(BlockData.class));
+        verify(playerB).sendBlockChange(sentLocations.capture(), any(BlockData.class));
         assertEquals(1, sentLocations.getValue().getBlockX());
         assertEquals(1, sentLocations.getValue().getBlockZ());
+        verify(playerA, never()).sendBlockChange(any(Location.class), any(BlockData.class));
+        verify(playerA, never()).sendMultiBlockChange(org.mockito.ArgumentMatchers.anyMap());
+        clearInvocations(playerB);
+        assertEquals(0, secondView.replace(desired, 2), "nothing left for the caller to do");
+        verify(playerB, never()).sendBlockChange(any(Location.class), any(BlockData.class));
         verify(worldA, never()).getBlockAt(anyInt(), anyInt(), anyInt());
         verify(worldA, never()).getChunkAt(anyInt(), anyInt());
         verify(worldA, never()).getChunkAtAsync(anyInt(), anyInt(), anyBoolean());
+    }
+
+    @Test
+    void givenViewerQuitWhenTheRuntimeForgetsHimThenTheViewIsClosedWithoutPackets() {
+        BlockView view = Visuals.open(ownerA, playerA);
+        view.replace(Map.of(new BlockPosition(4, 70, 9), stableBlockData()), 1);
+        clearInvocations(playerA);
+        Vystorm.vystorm_core.packet.internal.blocks.ClientBlocksRuntime.get().forget(playerA);
+        assertTrue(view.isClosed());
+        view.close();
+        verify(playerA, never()).sendBlockChange(any(Location.class), any(BlockData.class));
+        assertEquals(0, Vystorm.vystorm_core.packet.ClientBlocks.stats().sets());
+        BlockView again = Visuals.open(ownerA, playerA);
+        assertFalse(again.isClosed(), "a new view can be opened after the old one was dropped");
     }
 
     private static World world(UUID id) {

@@ -12,10 +12,9 @@ public final class Menu implements TabExecutor {
         var gui = main.getApi().gui();
         if (args.length == 0 && main.getPlugin().getConfig().getBoolean("menu.screen", true)) {
             // Vystorm Screens (0.57.0): the main menu as icon tiles; without a screen the previous menu opens.
-            var result = new Vystorm.vystorm_core.screen.internal.MenuScreen(main.getPlugin(), gui).open(player, p -> openClassic(p, gui));
-            // 0.60.0: say why the classic menu opened instead of the screen (riding, falling, water, just hit …).
-            if (!result.opened() && result.refusedKey() != null
-                    && !Vystorm.vystorm_core.screen.internal.ScreenRuntime.silentRefusal(result.refusedKey())) lang.send(player, result.refusedKey());
+            // 0.60.0: say why the classic menu opened instead of the screen (riding, falling, water, just hit …);
+            // since 0.71.1 the screen runtime says it for every refused screen (at most every few seconds)
+            new Vystorm.vystorm_core.screen.internal.MenuScreen(main.getPlugin(), gui).open(player, p -> openClassic(p, gui));
         }
         else if (args.length == 0) {
             // Natives Panel (ohne Mod: dessen fallback = openDirectory(player, 0)); nicht registriert → wie bisher.

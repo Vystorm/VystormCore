@@ -111,7 +111,8 @@ class ApiManagersTest {
             new NewManager<>("items", API::items, API::overrideItemHandler, () -> new ItemsInterface() {}),
             new NewManager<>("mobs", API::mobs, API::overrideMobHandler, () -> new MobsInterface() {}),
             new NewManager<>("runtime", API::runtime, API::overrideRuntimeHandler, () -> new RuntimeInterface() {}),
-            new NewManager<>("placeholders", API::placeholders, API::overridePlaceholderHandler, () -> new Vystorm.vystorm_core._advancedMethods.placeholderHandler.PlaceholderInterface() {}));
+            new NewManager<>("placeholders", API::placeholders, API::overridePlaceholderHandler, () -> new Vystorm.vystorm_core._advancedMethods.placeholderHandler.PlaceholderInterface() {}),
+            new NewManager<>("blocks", API::blocks, API::overrideBlocksHandler, () -> new Vystorm.vystorm_core.blocks.BlockWritesInterface() {}));
 
     @TestFactory
     Stream<DynamicTest> givenNewManager_whenAccessedAndOverridden_thenDefaultThenReplacementAndNullRejected() {
@@ -208,6 +209,7 @@ class ApiManagersTest {
         PackageInterface packages = legacy(PackageInterface.class);
         assertSame(ClientBiomesInterface.DEFAULT, packages.clientBiomes());
         assertSame(ClientChunksInterface.DEFAULT, packages.clientChunks());
+        assertSame(Vystorm.vystorm_core.packet.ClientBlocksInterface.DEFAULT, packages.clientBlocks());
         assertSame(ClientDisplaysInterface.DEFAULT, packages.clientDisplays());
 
         AdminInterface admin = legacy(AdminInterface.class);

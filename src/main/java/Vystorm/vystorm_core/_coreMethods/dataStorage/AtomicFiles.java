@@ -90,4 +90,22 @@ public final class AtomicFiles {
             return null;
         }
     }
+
+    /**
+     * Appends bytes to the end of a file (created with its folders when missing) and forces them to disk. Lines that
+     * were there before stay untouched; a crash during the call can only lose or cut this call's bytes. For logs that
+     * grow line by line (audit logs); any thread, one writer per file.
+     *
+     * @since 0.73.0
+     */
+    public static void append(Path file, byte[] bytes) throws IOException {
+        Path target = file.toAbsolutePath();
+        Path parent = target.getParent();
+        if (parent != null) Files.createDirectories(parent);
+        try (FileChannel output = FileChannel.open(target, StandardOpenOption.CREATE, StandardOpenOption.WRITE, StandardOpenOption.APPEND)) {
+            ByteBuffer buffer = ByteBuffer.wrap(bytes);
+            while (buffer.hasRemaining()) output.write(buffer);
+            output.force(true);
+        }
+    }
 }

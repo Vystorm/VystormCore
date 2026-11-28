@@ -21,4 +21,10 @@ public interface ParticlePathsInterface {
 
     /** See {@link ParticlePaths#outline}. */
     default List<Point3> outline(ViewFrame frame, int pointsPerEdge) { return ParticlePaths.outline(frame, pointsPerEdge); }
+
+    /** See {@link ParticlePaths#box}. @since 0.71.0 */
+    default List<Point3> box(Point3 min, Point3 max, int pointsPerEdge) { return ParticlePaths.box(min, max, pointsPerEdge); }
+
+    /** See {@link ParticlePaths#circle}. @since 0.71.0 */
+    default List<Point3> circle(Point3 centre, double radius, int count) { return ParticlePaths.circle(centre, radius, count); }
 }

@@ -646,6 +646,26 @@ public class API {
         DebugMessages.mid("[API] Handler override applied: overrideRuntimeHandler");
     }
 
+    // ---- Manager added in 0.69.0. ----
+
+    private final ManagerHolder<Vystorm.vystorm_core.blocks.BlockWritesInterface> blocksSystem =
+            new ManagerHolder<>(Vystorm.vystorm_core.blocks.BlockWritesInterface.DEFAULT);
+
+    /**
+     * Bulk block writes: the shared block state table, the Bukkit block writer with a check of the state before each
+     * write and a time limit, chunk loads with plugin tickets, and {@code BlocksEditedEvent}. The protection ask for
+     * such edits is {@code area().mayEdit(..)}. Capabilities {@link CoreApi.Capability#BLOCK_WRITES},
+     * {@link CoreApi.Capability#CHUNK_LOADS}, {@link CoreApi.Capability#BLOCKS_EDITED_EVENT}.
+     *
+     * @since 0.69.0
+     */
+    public Vystorm.vystorm_core.blocks.BlockWritesInterface blocks() { return blocksSystem.getInstance(); }
+
+    public void overrideBlocksHandler(Vystorm.vystorm_core.blocks.BlockWritesInterface replacement) {
+        blocksSystem.override(java.util.Objects.requireNonNull(replacement, "replacement"));
+        DebugMessages.mid("[API] Handler override applied: overrideBlocksHandler");
+    }
+
     // ---- Manager added in 0.65.0. ----
 
     private final ManagerHolder<Vystorm.vystorm_core._advancedMethods.placeholderHandler.PlaceholderInterface> placeholderSystem =
@@ -664,6 +684,25 @@ public class API {
     public void overridePlaceholderHandler(Vystorm.vystorm_core._advancedMethods.placeholderHandler.PlaceholderInterface replacement) {
         placeholderSystem.override(java.util.Objects.requireNonNull(replacement, "replacement"));
         DebugMessages.mid("[API] Handler override applied: overridePlaceholderHandler");
+    }
+
+    // ---- Manager added in 0.68.0. ----
+
+    private final ManagerHolder<Vystorm.vystorm_core.survey.WorldSurveyInterface> surveySystem =
+            new ManagerHolder<>(Vystorm.vystorm_core.survey.WorldSurveyInterface.DEFAULT);
+
+    /**
+     * The world survey: surface, rooms and caves of the worlds, how rooms join across chunks, live open cells of
+     * loaded chunks and pre-compute jobs. Off until Core's switch {@code survey.enabled} is on or a plugin calls
+     * {@code survey().require(plugin)}. Capability {@link CoreApi.Capability#WORLD_SURVEY}.
+     *
+     * @since 0.68.0
+     */
+    public Vystorm.vystorm_core.survey.WorldSurveyInterface survey() { return surveySystem.getInstance(); }
+
+    public void overrideSurveyHandler(Vystorm.vystorm_core.survey.WorldSurveyInterface replacement) {
+        surveySystem.override(java.util.Objects.requireNonNull(replacement, "replacement"));
+        DebugMessages.mid("[API] Handler override applied: overrideSurveyHandler");
     }
 
     public void releaseAdvancedResources(Plugin owner) {

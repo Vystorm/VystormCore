@@ -78,22 +78,31 @@ public final class ClientEvents implements Listener {
         }
     }
 
+    // 0.72.0: Spigot has neither Paper method; remember that instead of throwing NoSuchMethodError on every call.
+    private static volatile boolean noNativeKeys, noNativeSent;
+
     public static Set<Long> sentKeys(Player p) {
-        try {
-            return p.getSentChunkKeys();
-        } catch (NoSuchMethodError missing) {
-            State state = PLAYERS.get(p.getUniqueId());
-            return state == null ? Set.of() : Set.copyOf(state.chunks);
+        if (!noNativeKeys) {
+            try {
+                return p.getSentChunkKeys();
+            } catch (NoSuchMethodError missing) {
+                noNativeKeys = true;
+            }
         }
+        State state = PLAYERS.get(p.getUniqueId());
+        return state == null ? Set.of() : Set.copyOf(state.chunks);
     }
 
     public static boolean sent(Player p, long key) {
-        try {
-            return p.isChunkSent(key);
-        } catch (NoSuchMethodError missing) {
-            State state = PLAYERS.get(p.getUniqueId());
-            return state != null && state.world.equals(p.getWorld().getUID()) && state.chunks.contains(key);
+        if (!noNativeSent) {
+            try {
+                return p.isChunkSent(key);
+            } catch (NoSuchMethodError missing) {
+                noNativeSent = true;
+            }
         }
+        State state = PLAYERS.get(p.getUniqueId());
+        return state != null && state.world.equals(p.getWorld().getUID()) && state.chunks.contains(key);
     }
 
     public static Set<Chunk> sentChunks(Player p) {

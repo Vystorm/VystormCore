@@ -115,6 +115,10 @@ public void onEnable() {
         start("News board", () -> NewsService.start(this, api));
         start("Inbox", () -> InboxService.start(this, api));
         start("Profile cards", () -> ProfileService.start(this, api));
+        // Known players (0.71.0): names for searches without Paper-only calls; the file is read off the server thread
+        start("Known players", () -> Vystorm.vystorm_core.knownplayers.KnownPlayers.start(this));
+        // Player picker (0.71.0): Core panel vystorm_core:player-pick with its chest fallback
+        start("Player picker", () -> Vystorm.vystorm_core.picker.Pickers.start(this));
         start("Placeholders", () -> Vystorm.vystorm_core._advancedMethods.placeholderHandler.internal.PlaceholderRuntime.start(this, api));
         // Screen menus from plugins/vystorm_core/menus (0.65.0); a broken file is skipped, never a reason to stop.
         start("File menus", () -> Vystorm.vystorm_core.menus.internal.FileMenuService.start(this, api));
@@ -139,9 +143,16 @@ public void onEnable() {
         getServer().getPluginManager().registerEvents(Visuals.lifecycleListener(), this);
         ClientBiomes.initialize(this);
         ClientChunks.initialize(this);
+        // Client blocks (0.72.0): per-player block sets; Visuals block views run on them
+        start("Client blocks", () -> Vystorm.vystorm_core.packet.ClientBlocks.initialize(this));
+        // Packet view (0.73.0): only a listener here; self-test and handlers once a plugin registers a layer
+        start("Packet view", () -> Vystorm.vystorm_core.packet.PacketView.initialize(this));
         mythicItemDrops = MythicItemDrops.start(this);
         RegionService.get();
         start("Managed worlds", () -> WorldsPlatform.start(this));
+        // World survey (0.68.0): nothing runs unless survey.enabled is on or a plugin requires it; read on the first
+        // tick, when the worlds exist (Core loads at STARTUP).
+        getServer().getScheduler().runTask(this, () -> start("World survey", () -> Vystorm.vystorm_core.survey.WorldSurvey.configure(this, getConfig())));
         getServer().getScheduler().runTaskTimerAsynchronously(this, ThreatServices::purgeExpired, 1200L, 1200L);
         startSharedDatabase();
         start("Network", () -> {
@@ -203,8 +214,27 @@ private void startScreens() {
     // 0.62.0: screens.enabled false = no screens at all, screens.off = single menus or plugins; both show the fallback
     runtime.blockWhen((owner, keys) -> !getConfig().getBoolean("screens.enabled", true)
             || ScreenRuntime.listed(getConfig().getStringList("screens.off"), owner, keys));
+    // 0.71.1: a refused screen always says why in chat (at most every few seconds), whoever opened it
+    runtime.noticeRefusals((p, key) -> Vystorm.vystorm_core.lang.Localization.get().core().send(p, key));
+    // 0.71.1: players invisible without an effect (left by 0.71.0 and older) are reported; admins are told the fix
+    runtime.invisibleRules(
+            p -> p.getGameMode() == org.bukkit.GameMode.SPECTATOR || p.hasPotionEffect(org.bukkit.potion.PotionEffectType.INVISIBILITY),
+            () -> getConfig().getBoolean("screens.repair-invisible-on-join", false),
+            p -> p.hasPermission("vystorm_core.admin"),
+            (p, key) -> Vystorm.vystorm_core.lang.Localization.get().core().send(p, key, "player", p.getName()));
+    // after Core clears its own flag, a running invisibility effect must count again: off and on with the same values
+    runtime.invisibleEffectRefresh(p -> {
+        org.bukkit.potion.PotionEffect running = p.getPotionEffect(org.bukkit.potion.PotionEffectType.INVISIBILITY);
+        if (running == null) return;
+        p.removePotionEffect(org.bukkit.potion.PotionEffectType.INVISIBILITY);
+        p.addPotionEffect(running);
+    });
     ScreenRuntime.install(runtime);
     getServer().getPluginManager().registerEvents(new ScreenListener(), this);
+    // a reload: players online now joined before this listener existed
+    for (org.bukkit.entity.Player online : getServer().getOnlinePlayers()) {
+        try { runtime.onJoin(online); } catch (RuntimeException | LinkageError failure) { getLogger().log(Level.WARNING, "Invisible check of " + online.getName() + " failed", failure); }
+    }
     // 0.65.0: a click that closes or replaces a screen must not reach the block or mob behind it
     try { Vystorm.vystorm_core.screen.internal.ScreenWorldGuard.register(api.priority().stages(), this, ScreenRuntime::get); }
     catch (RuntimeException | LinkageError noStages) { getLogger().log(Level.WARNING, "Screen click guard not started", noStages); }
@@ -216,27 +246,36 @@ private void startScreens() {
     HudRuntime.install(this, main::packApplied);
     getServer().getPluginManager().registerEvents(new MenuShortcut(System::currentTimeMillis,
             () -> getConfig().getBoolean("menu.sneak-click-shortcut", false),
-            p -> ScreenRuntime.get().session(p).isPresent()), this);
+            p -> ScreenRuntime.get().session(p).isPresent() || Vystorm.vystorm_core.picker.internal.WorldPickRuntime.picking(p)), this);
 }
 
 @Override
 @SuppressWarnings("deprecation")
 public void onDisable() {
+     try { Vystorm.vystorm_core.picker.Pickers.shutdown(); } catch (RuntimeException | LinkageError ignored) { }
      try { ScreenRuntime.uninstall(); } catch (RuntimeException | LinkageError ignored) { }
         try { TraceLifecycle.stop(); } catch (RuntimeException | LinkageError ignored) { }
+        try { Vystorm.vystorm_core.survey.WorldSurvey.shutdown(); }
+        catch (RuntimeException | LinkageError failure) { DebugMessages.high("[main] World survey stop failed", failure); }
         try { PaperNetwork.stop(); }
         catch (RuntimeException | LinkageError failure) { DebugMessages.high("[main] Network stop failed", failure); }
+        try { Vystorm.vystorm_core.blocks.BlockWrites.shutdown(); }
+        catch (RuntimeException | LinkageError failure) { DebugMessages.high("[main] Chunk loads stop failed", failure); }
         if (polls != null) polls.close();
         UpdateChecker.stop();
         ReviewReminder.stop();
         NewsService.stop();
         InboxService.stop();
         try { Vystorm.vystorm_core.menus.internal.FileMenuService.stop(); } catch (RuntimeException | LinkageError ignored) { }
+        try { Vystorm.vystorm_core.knownplayers.KnownPlayers.shutdown(); }
+        catch (RuntimeException | LinkageError failure) { DebugMessages.high("[main] Known players not saved", failure); }
         CoreMetrics.stop();
         WorldEvents.get().close();
      ClientBiomes.shutdown();
      ClientChunks.shutdown();
      Visuals.shutdown();
+     try { Vystorm.vystorm_core.packet.ClientBlocks.shutdown(); } catch (RuntimeException | LinkageError ignored) { }
+     try { Vystorm.vystorm_core.packet.PacketView.shutdown(); } catch (RuntimeException | LinkageError ignored) { }
      LicensedModules.shutdown();
      if (mythicItemDrops != null) mythicItemDrops.close();
      CoreOnboarding.stop();
@@ -293,6 +332,8 @@ private void registerOwnConfig() {
                         SettingPolicy.Activation.RESTART);
                 ConfigEditor.activation(this, "database",
                         SettingPolicy.Activation.RESTART);
+                ConfigEditor.activation(this, "known-players",
+                        SettingPolicy.Activation.RESTART);
                 LinkedHashMap<String, String> modes = new LinkedHashMap<>();
                 modes.put("embedded", "embedded"); modes.put("gateway", "gateway");
                 ConfigEditor.choices(this, "web.mode", modes);
@@ -307,6 +348,7 @@ private void registerOwnConfig() {
                                 applyStartSwitches();
                                 Vystorm.vystorm_core._advancedMethods.placeholderHandler.internal.PlaceholderRuntime.configure(this);
                                 Vystorm.vystorm_core.menus.FileMenus.reload();
+                                Vystorm.vystorm_core.survey.WorldSurvey.configure(this, getConfig());
                                 Vystorm.vystorm_core._coreMethods.eventRegulator.EventStages.shared().configure(getConfig().getConfigurationSection("event-order")); });
                 for (String lootFile : LootTableConfig.CORE_FILES)
                         ConfigEditor.register(this, lootFile, () -> {

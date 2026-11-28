@@ -43,7 +43,11 @@ final class PanelDialogs {
     /** false = nicht dialogfähig (Aufrufer nimmt den nächsten Fallback). */
     boolean open(Player p, PanelRegistry.Registered reg, String arg) {
         handedOff.remove(p.getUniqueId());
-        return show(new PanelHub.Session(0, p, reg, arg), 0, List.of());
+        PanelHub.Session s = new PanelHub.Session(0, p, reg, arg);
+        PanelOpener.Seed seed = PanelOpener.seed(s);   // 0.71.0: values and status carried back by PickReturn
+        boolean shown = show(s, 0, seed == null ? List.of() : seed.status);
+        if (shown && seed != null) seed.statusShown = true;
+        return shown;
     }
 
     @SuppressWarnings("unchecked")

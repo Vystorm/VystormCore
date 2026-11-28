@@ -213,17 +213,30 @@ final class ManagedGuiRegistry {
         Session s = sessions.get(Vystorm.vystorm_core.compat.InventoryCompat.top(e.getView()));
         if (s == null) return;
         if (!valid(s, e.getWhoClicked())) { e.setCancelled(true); return; }
-        if (e.isCancelled()) return;
+        // 0.71.1: the server hands every click of a spectator to plugins already cancelled (spectators may look into
+        // containers but not move items), so menus never answered a spectator. A menu click of a spectator now reaches
+        // the menu; it stays cancelled afterwards, so a spectator still moves no item.
+        boolean spectator = spectatorClick(e);
+        if (e.isCancelled() && !spectator) return;
         try { s.callbacks.click(e); }
         catch (RuntimeException ex) { e.setCancelled(true); failure(s, ex); }
+        finally { if (spectator) e.setCancelled(true); }
+    }
+
+    /** True for a click or drag of a player in spectator mode (Core-internal, 0.71.1). */
+    static boolean spectatorClick(org.bukkit.event.inventory.InventoryInteractEvent e) {
+        try { return e.getWhoClicked().getGameMode() == org.bukkit.GameMode.SPECTATOR; }
+        catch (RuntimeException | LinkageError unknown) { return false; }
     }
     void drag(InventoryDragEvent e) {
         Session s = sessions.get(Vystorm.vystorm_core.compat.InventoryCompat.top(e.getView()));
         if (s == null) return;
         if (!valid(s, e.getWhoClicked())) { e.setCancelled(true); return; }
-        if (e.isCancelled()) return;
+        boolean spectator = spectatorClick(e);
+        if (e.isCancelled() && !spectator) return;
         try { s.callbacks.drag(e); }
         catch (RuntimeException ex) { e.setCancelled(true); failure(s, ex); }
+        finally { if (spectator) e.setCancelled(true); }
     }
     void open(InventoryOpenEvent e) {
         Session s = sessions.get(e.getInventory());

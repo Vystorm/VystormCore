@@ -19,6 +19,12 @@ public interface PackageInterface {
     /** Client-only chunks ({@code packet.ClientChunks}). @since 0.64.0 */
     default Vystorm.vystorm_core.packet.ClientChunksInterface clientChunks() { return Vystorm.vystorm_core.packet.ClientChunksInterface.DEFAULT; }
 
+    /** Client-only blocks: per-player block sets with priorities ({@code packet.ClientBlocks}). @since 0.72.0 */
+    default Vystorm.vystorm_core.packet.ClientBlocksInterface clientBlocks() { return Vystorm.vystorm_core.packet.ClientBlocksInterface.DEFAULT; }
+
+    /** The packet view: shared chunk rewriting with layers in each player's connection ({@code packet.PacketView}). @since 0.73.0 */
+    default Vystorm.vystorm_core.packet.PacketViewInterface packetView() { return Vystorm.vystorm_core.packet.PacketViewInterface.DEFAULT; }
+
     /** Client-only map walls ({@code display.ClientDisplays}). @since 0.64.0 */
     default Vystorm.vystorm_core.display.ClientDisplaysInterface clientDisplays() { return Vystorm.vystorm_core.display.ClientDisplaysInterface.DEFAULT; }
 }

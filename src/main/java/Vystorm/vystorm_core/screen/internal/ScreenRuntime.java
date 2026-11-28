@@ -102,6 +102,48 @@ public final class ScreenRuntime {
         this.packLoaded = packLoaded;
         this.classic = classic;
         this.tag = ScreenEntities.tag(core);
+        this.hiding = new HandHiding(line -> { try { core.getLogger().warning("[Screens] " + line); } catch (RuntimeException noLog) { } });
+    }
+
+    /** 0.71.1: invisible flag, player weather and held slot changed for PINNED screens, kept once per player. */
+    private final HandHiding hiding;
+
+    /**
+     * 0.71.1: the rules for players who are invisible without Core: {@code naturallyInvisible} (spectator or an
+     * invisibility effect: never reported), {@code repairOnJoin} ({@code screens.repair-invisible-on-join}),
+     * {@code admin} (told how to fix it) and how lines reach the player ({@code (player, lang key)}).
+     */
+    public void invisibleRules(Predicate<Player> naturallyInvisible, java.util.function.BooleanSupplier repairOnJoin,
+                               Predicate<Player> admin, java.util.function.BiConsumer<Player, String> notice) {
+        hiding.rules(naturallyInvisible, repairOnJoin, admin, notice);
+    }
+
+    /** 0.71.1: how the game is made to work out the invisible flag again after Core cleared it (see {@link HandHiding}). */
+    public void invisibleEffectRefresh(java.util.function.Consumer<Player> refresh) { hiding.effectRefresh(refresh); }
+
+    /** 0.71.1: a player joined or was online at the start: undoes what Core left after a crash, reports stuck players. */
+    public HandHiding.JoinCheck onJoin(Player player) { return hiding.join(player); }
+
+    /**
+     * 0.71.1: the same check a moment after a player left spectator mode or lost an invisibility effect: a player whom
+     * an older Core left invisible is noticed then (at join the game still explained the invisibility).
+     */
+    void recheckInvisible(Player player) {
+        try {
+            later.accept(() -> { if (player.isOnline() && !sessions.containsKey(player.getUniqueId())) hiding.join(player); });
+        } catch (RuntimeException | LinkageError schedulerGone) { }
+    }
+
+    /** 0.71.1: {@code /vadmin visible}: closes the player's screen and clears the invisible flag. True when they were invisible. */
+    public boolean makeVisible(Player player) {
+        if (sessions.containsKey(player.getUniqueId())) close(player, ScreenInput.Reason.COMMAND);
+        return hiding.makeVisible(player);
+    }
+
+    /** 0.71.1: a screen cannot stay open into spectator mode (a spectator cannot click it, the game shows them invisible). */
+    void onGameMode(Player player, org.bukkit.GameMode next) {
+        if (next == org.bukkit.GameMode.SPECTATOR && sessions.containsKey(player.getUniqueId())) close(player, ScreenInput.Reason.COMMAND);
+        else if (next != org.bukkit.GameMode.SPECTATOR && player.getGameMode() == org.bukkit.GameMode.SPECTATOR) recheckInvisible(player);
     }
 
     public static ScreenRuntime get() {
@@ -112,7 +154,11 @@ public final class ScreenRuntime {
     public static void install(ScreenRuntime runtime) { instance = runtime; }
 
     public static void uninstall() {
-        if (instance != null) instance.closeAll(ScreenInput.Reason.PLUGIN);
+        if (instance != null) {
+            // 0.71.1: plugin disable and server stop run before the players are saved: nobody keeps Core's changes
+            try { instance.closeAll(ScreenInput.Reason.PLUGIN); }
+            finally { instance.hiding.releaseAll(); }
+        }
         instance = null;
     }
 
@@ -254,7 +300,15 @@ public final class ScreenRuntime {
     public void mapsDrawableFor(Predicate<Player> drawable) { mapsDrawable = drawable == null ? p -> true : drawable; }
 
     /** True for refusals that already explain themselves elsewhere and need no chat line (screens off, no pack). */
-    public static boolean silentRefusal(String key) { return REFUSED_OFF.equals(key) || REFUSED_PACK.equals(key); }
+    public static boolean silentRefusal(String key) { return REFUSED_OFF.equals(key) || REFUSED_PACK.equals(key) || REFUSED_SPECTATOR.equals(key); }
+
+    /**
+     * 0.71.1: spectators get the classic menu (chest or dialog) instead of a screen, without a chat line: the server
+     * drops a spectator's attack on the screen's click box (ServerGamePacketListenerImpl.handleAttack skips spectators)
+     * and the client turns a left click on an entity into "spectate it", so a screen cannot be clicked; chest clicks
+     * and dialog buttons do reach plugins (see ManagedGuiRegistry.click).
+     */
+    public static final String REFUSED_SPECTATOR = "screen.refused.spectator";
 
     /** Screen keys seen since the start, mapped to the owning plugin's name. */
     public Map<String, String> seen() { synchronized (seen) { return new java.util.LinkedHashMap<>(seen); } }
@@ -293,6 +347,16 @@ public final class ScreenRuntime {
             }
         }
         return false;
+    }
+
+    /**
+     * 0.71.0: forgets the player's screen history and the link to a screen that just closed, so the next screen gets
+     * no Core Back button (Core's picker brings the player back itself). Server thread.
+     */
+    public void forgetHistory(Player player) {
+        UUID id = player.getUniqueId();
+        pending.remove(id);
+        history.remove(id);
     }
 
     /** True when Back would lead somewhere for this player. */
@@ -340,7 +404,13 @@ public final class ScreenRuntime {
     public ScreenOpenResult open(Plugin owner, Player player, ScreenSpec spec) { return open(owner, player, spec, null); }
 
     /** {@link #open(Plugin, Player, ScreenSpec)} for a screen that can be returned to with Back ({@code origin}, or null). */
-    public ScreenOpenResult open(Plugin owner, Player player, ScreenSpec spec, Origin origin) {
+    public ScreenOpenResult open(Plugin owner, Player player, ScreenSpec spec, Origin origin) { return open(owner, player, spec, origin, true); }
+
+    /**
+     * 0.71.1: {@code tellRefusal} false for a screen that only mirrors a menu the player already sees (a plugin's
+     * chest shown as a screen): when it is refused the chest simply stays, so there is nothing to explain.
+     */
+    public ScreenOpenResult open(Plugin owner, Player player, ScreenSpec spec, Origin origin, boolean tellRefusal) {
         // 0.60.0: a new screen replaces the one that is open (like opening another inventory). Before, the open
         // screen made every further open fall back to the classic menu without a word ("/vmenu opens the wrong menu").
         if (sessions.containsKey(player.getUniqueId())) close(player, ScreenInput.Reason.PLUGIN);
@@ -365,6 +435,8 @@ public final class ScreenRuntime {
         }
         String refused = refusal(player);
         if (refused != null) {
+            // 0.71.1: the player always learns why (one line, not more often than every few seconds)
+            if (tellRefusal) tellRefusal(player, refused);
             runFallback(spec, player);
             return ScreenOpenResult.refused(refused);
         }
@@ -387,6 +459,7 @@ public final class ScreenRuntime {
         } catch (RuntimeException failure) {
             session.teardown(false);
             sessions.remove(player.getUniqueId());
+            if (tellRefusal) tellRefusal(player, "screen.refused.unsupported");
             runFallback(spec, player);
             return ScreenOpenResult.refused("screen.refused.unsupported");
         }
@@ -396,6 +469,10 @@ public final class ScreenRuntime {
     /** Lang key why this player may not open a screen now, or null. */
     String refusal(Player player) {
         if (sessions.containsKey(player.getUniqueId())) return "screen.refused.busy";
+        // 0.71.1: a dead player sees the death screen; a spectator cannot click a screen (REFUSED_SPECTATOR): both got
+        // a screen nobody could use. Spectators now get the classic menu silently, dead players are told why
+        if (player.isDead()) return "screen.refused.dead";
+        if (player.getGameMode() == org.bukkit.GameMode.SPECTATOR) return REFUSED_SPECTATOR;
         if (player.isInsideVehicle()) return "screen.refused.riding";
         if (player.isGliding()) return "screen.refused.gliding";
         if (player.getFallDistance() > 1 && !((Entity) player).isOnGround()) return "screen.refused.falling";
@@ -404,6 +481,30 @@ public final class ScreenRuntime {
         Long hit = lastDamage.get(player.getUniqueId());
         if (hit != null && clock.getAsLong() - hit < COMBAT_MILLIS) return "screen.refused.combat";
         return null;
+    }
+
+    /** 0.71.1: a player hears about refused screens at most once in this time (any reason). */
+    static final long REFUSAL_REPEAT_MILLIS = 5_000;
+    private final Map<UUID, Long> lastRefusalNotice = new HashMap<>();
+    /** How a refusal line reaches the player ({@code (player, lang key)}); Core sends it to chat, tests record it. */
+    private volatile java.util.function.BiConsumer<Player, String> refusalNotice = (p, key) -> { };
+
+    /** Sets how refusal lines reach players (null = nobody is told). */
+    public void noticeRefusals(java.util.function.BiConsumer<Player, String> notice) { refusalNotice = notice == null ? (p, key) -> { } : notice; }
+
+    /**
+     * 0.71.1: tells the player why a screen did not open, unless the refusal explains itself ({@link #silentRefusal})
+     * or the player heard a refusal less than {@link #REFUSAL_REPEAT_MILLIS} ago. True when the line was sent. Callers
+     * that report a refused open themselves use this too, so the player never gets the same reason twice. Server thread.
+     */
+    public boolean tellRefusal(Player player, String key) {
+        if (player == null || key == null || silentRefusal(key)) return false;
+        long now = clock.getAsLong();
+        Long last = lastRefusalNotice.get(player.getUniqueId());
+        if (last != null && now - last < REFUSAL_REPEAT_MILLIS) return false;
+        lastRefusalNotice.put(player.getUniqueId(), now);
+        try { refusalNotice.accept(player, key); } catch (RuntimeException | LinkageError noChat) { }
+        return true;
     }
 
     private static void runFallback(ScreenSpec spec, Player player) {
@@ -415,20 +516,26 @@ public final class ScreenRuntime {
     public void close(Player player, ScreenInput.Reason reason) {
         UUID id = player.getUniqueId();
         Session session = sessions.remove(id);
+        if (reason == ScreenInput.Reason.QUIT) lastRefusalNotice.remove(id);
         if (session == null) {
-            if (reason == ScreenInput.Reason.QUIT) { lastLeftClick.remove(id); lastClick.remove(id); guards.remove(id); }
+            if (reason == ScreenInput.Reason.QUIT) { lastLeftClick.remove(id); lastClick.remove(id); guards.remove(id); hiding.release(player); }
             return;
         }
-        // closed by code: the next screen (if one follows at once) gets this one as its parent; closed by the
-        // player, damage, teleport and so on: the whole history ends
-        if (reason == ScreenInput.Reason.PLUGIN) pending.put(id, new Pending(session.origin, clock.getAsLong()));
-        else { pending.remove(id); history.remove(id); }
-        // 0.65.0: closed by a click (inside its handler or right after it): the button is probably still down
-        long now = clock.getAsLong();
-        Long clicked = lastClick.get(id);
-        if (clicking.contains(id) || (clicked != null && now - clicked <= CLICK_CLOSES_MILLIS)) guards.put(id, new Guard(now, now + GUARD_MILLIS));
-        if (reason == ScreenInput.Reason.QUIT) { lastLeftClick.remove(id); lastClick.remove(id); guards.remove(id); }
-        session.finish(reason);
+        try {
+            // closed by code: the next screen (if one follows at once) gets this one as its parent; closed by the
+            // player, damage, teleport and so on: the whole history ends
+            if (reason == ScreenInput.Reason.PLUGIN) pending.put(id, new Pending(session.origin, clock.getAsLong()));
+            else { pending.remove(id); history.remove(id); }
+            // 0.65.0: closed by a click (inside its handler or right after it): the button is probably still down
+            long now = clock.getAsLong();
+            Long clicked = lastClick.get(id);
+            if (clicking.contains(id) || (clicked != null && now - clicked <= CLICK_CLOSES_MILLIS)) guards.put(id, new Guard(now, now + GUARD_MILLIS));
+            if (reason == ScreenInput.Reason.QUIT) { lastLeftClick.remove(id); lastClick.remove(id); guards.remove(id); }
+        } finally {
+            session.finish(reason);
+            // 0.71.1: quit and kick run before the player file is saved: Core's changes must not be saved with it
+            if (reason == ScreenInput.Reason.QUIT) hiding.release(player);
+        }
     }
 
     /** Adds Core's Back button (a strip at the bottom, left) when the player came from another screen and the layout has none. */
@@ -445,7 +552,10 @@ public final class ScreenRuntime {
     }
 
     public void closeAll(ScreenInput.Reason reason) {
-        for (Session session : List.copyOf(sessions.values())) close(session.player, reason);
+        for (Session session : List.copyOf(sessions.values())) {
+            try { close(session.player, reason); }
+            catch (RuntimeException | LinkageError failure) { core.getLogger().warning("[Screens] Closing the screen of " + session.player.getName() + " failed: " + failure); }
+        }
     }
 
     /** A plugin was disabled: close the screens it opened. */
@@ -462,7 +572,9 @@ public final class ScreenRuntime {
 
     void onRotate(Player player, float yaw, float pitch) {
         Session session = sessions.get(player.getUniqueId());
-        if (session != null) session.hover(yaw, pitch);
+        if (session == null) return;
+        session.hover(yaw, pitch);
+        if (!session.pointerWidgets.isEmpty()) session.samplePointer(yaw, pitch);
     }
 
     /** True when the clicked entity belongs to this player's screen (the event should then be cancelled). */
@@ -473,6 +585,15 @@ public final class ScreenRuntime {
         if (!session.built) return true;
         // a right button that is still down from the click that led here repeats "use" several times a second
         if (right && stopsHeldRight(player.getUniqueId())) return true;
+        // screen canvas: the first use of a hold is "down", released after a pause without repeats (Session.onTick)
+        ScreenPress press = right ? session.press : null;   // a handler may switch it off while it runs
+        if (press != null) {
+            long now = clock.getAsLong();
+            if (press.released(now)) session.deliver(new ScreenInput.Press(true, false));
+            if (press.use(now) && session.press == press) session.deliver(new ScreenInput.Press(true, true));
+            if (!session.open) return true;
+            wantTick();
+        }
         session.click(right);
         return true;
     }
@@ -559,6 +680,53 @@ public final class ScreenRuntime {
         catch (RuntimeException schedulerGone) { flush.run(); }
     }
 
+    // ---- screen canvas: work of the next ticks (map patches, pointer samples, press release) ----------------------
+
+    /** Server ticks seen by {@link #tick} (pointer samples are limited to one per tick). */
+    private long ticks;
+    private boolean tickQueued;
+    private int mapBudget = Vystorm.vystorm_core.screen.Screens.MAP_BYTES_PER_TICK;
+
+    /** Map bytes per viewer and tick for {@code setMap} updates (tests). */
+    void mapBudget(int bytes) { mapBudget = Math.max(1, bytes); }
+
+    /**
+     * C0 experiment (26.3 clients): players whose next screens show map widgets even where {@link #mapsDrawableFor}
+     * says no, with the panel background cut around the maps ({@link PanelHoles}), no box behind the maps, a
+     * depth-tested backdrop and a see-through pointer. Only {@code /screen demo paint holes} sets it.
+     */
+    private final Set<UUID> holesFor = new HashSet<>();
+
+    void mapHoles(Player player, boolean on) { if (on) holesFor.add(player.getUniqueId()); else holesFor.remove(player.getUniqueId()); }
+
+    /**
+     * Asks for one {@link #tick} at the start of the next server tick (through the scheduler given to
+     * {@link #coalesceWheel}); nothing is scheduled while no screen needs it, so screens that use none of this pay
+     * nothing. Without a scheduler (tests) map patches go out at once and only rotation events sample the pointer.
+     */
+    private void wantTick() {
+        if (tickQueued || nextTick == null) return;
+        tickQueued = true;
+        try { nextTick.accept(this::tick); }
+        catch (RuntimeException schedulerGone) { tickQueued = false; }
+    }
+
+    /** One server tick of canvas work for every open screen that needs it; asks for the next one while any does. */
+    void tick() {
+        tickQueued = false;
+        ticks++;
+        boolean again = false;
+        for (Session session : List.copyOf(sessions.values())) {
+            if (!session.open) continue;
+            try { session.onTick(); }
+            catch (RuntimeException | LinkageError failure) {
+                core.getLogger().warning("[Screens] Tick of " + session.spec.id() + " for " + session.player.getName() + " failed: " + failure);
+            }
+            again |= session.open && session.needsTick();
+        }
+        if (again) wantTick();
+    }
+
     /** Sneak: closes unless the screen claims SNEAK. Returns true when a screen handled it. */
     boolean onSneak(Player player, boolean pressed) {
         Session session = sessions.get(player.getUniqueId());
@@ -617,6 +785,14 @@ public final class ScreenRuntime {
         /** Shown map widgets (PINNED with frames) and the last pixels of every map widget, keyed by widget id. */
         final Map<String, ScreenMapFrames.Handle> mapFrames = new LinkedHashMap<>();
         final Map<String, byte[]> mapPixels = new HashMap<>();
+        /** Screen canvas: changed-rectangle senders of the shown maps, and map bytes sent to this viewer this tick. */
+        final Map<String, ScreenMapSender> senders = new LinkedHashMap<>();
+        long mapSpent;
+        int senderCursor;
+        /** Screen canvas: widgets that asked for pointer samples, their rate limit, the right-button hold (null: not asked). */
+        final Set<String> pointerWidgets = new HashSet<>();
+        final ScreenPointerGate pointerGate = new ScreenPointerGate();
+        ScreenPress press;
         /** Current widgets' layout; starts as the spec's layout and changes with {@link #setLayout}. */
         ScreenLayout layout;
         Entity mount;
@@ -632,8 +808,8 @@ public final class ScreenRuntime {
         /** True once the screen is drawn ({@link #buildVisuals}); the click box exists before that. */
         boolean built;
 
-        /** Player state before the screen hid the first-person hand; restored in {@link #showHand}. */
-        boolean wasInvisible; int savedSlot = -1; boolean handHidden;
+        /** True while this screen holds the player's hidden hand (the state before is kept per player in {@link HandHiding}). */
+        boolean handHidden;
         /** True while the client was told its off hand is empty; the real item never left the off hand. */
         boolean offHandHidden;
 
@@ -645,41 +821,23 @@ public final class ScreenRuntime {
          * The off hand (0.66.2) is drawn over the bottom-left the same way. There is no empty slot to switch to, so only
          * this player's client is told the off hand is empty (an equipment packet, like the hidden blocks); the server
          * keeps the item where it is, so nothing can be lost or duplicated. {@link #showHand} sends the real item again.
+         * <p>
+         * 0.71.1: the invisible flag, the weather (rain falls closer than the backdrop) and the held slot go through
+         * {@link HandHiding}, once per player: a player who is invisible already is not touched, and the state before
+         * is taken only by the first screen.
          */
         void hideHand() {
             if (mode != ScreenSpec.Mode.PINNED || handHidden) return;
-            try {
-                wasInvisible = player.isInvisible();
-                var inventory = player.getInventory();
-                if (inventory != null) {
-                    int held = inventory.getHeldItemSlot();
-                    org.bukkit.inventory.ItemStack item = inventory.getItem(held);
-                    if (!emptyStack(item)) {
-                        for (int slot = 0; slot < 9; slot++) {
-                            org.bukkit.inventory.ItemStack other = inventory.getItem(slot);
-                            if (emptyStack(other)) { savedSlot = held; inventory.setHeldItemSlot(slot); break; }
-                        }
-                    }
-                }
-                hideOffHand();
-                player.setInvisible(true);
-                player.setPlayerWeather(org.bukkit.WeatherType.CLEAR);   // rain falls closer than the backdrop
-                handHidden = true;
-            } catch (RuntimeException | LinkageError failure) {
-                handHidden = false;
-            }
+            handHidden = true;
+            hideOffHand();
+            hiding.hide(player, this);
         }
 
         void showHand() {
             showOffHand();   // first: also when hiding the main hand failed after the off hand was hidden
             if (!handHidden) return;
             handHidden = false;
-            try {
-                player.setInvisible(wasInvisible);
-                player.resetPlayerWeather();
-                if (savedSlot >= 0 && player.getInventory() != null) player.getInventory().setHeldItemSlot(savedSlot);
-            } catch (RuntimeException | LinkageError ignored) { }
-            savedSlot = -1;
+            hiding.show(player, this);
         }
 
         /** Tells only this player's client that its off hand is empty; the server-side item stays. */
@@ -729,6 +887,7 @@ public final class ScreenRuntime {
             this.anchorYaw = eye.getYaw();
             this.anchorPitch = Math.max(-60f, Math.min(60f, eye.getPitch()));
             this.layout = withBack(player, origin, spec.layout());
+            this.holesAsked = holesFor.contains(player.getUniqueId());
             for (ScreenWidget widget : layout.widgets()) widgets.put(widget.id(), widget);
         }
 
@@ -754,8 +913,12 @@ public final class ScreenRuntime {
             hideHand();
             hideNearBlocks();
             centreClickBox();
+            holes = mode == ScreenSpec.Mode.PINNED && holesAsked && maps.supported()
+                    && widgets.values().stream().anyMatch(w -> w.kind() == ScreenWidget.Kind.MAP);
+            if (holes) { try { mapsBeforeText = !mapsDrawable.test(player); } catch (RuntimeException failed) { mapsBeforeText = false; } }
             if (mode == ScreenSpec.Mode.PINNED && spec.backdrop() != ScreenSpec.Backdrop.NONE) backdrop = entities.text(player, panelLocation(), this::placeBackdrop);
             background = entities.text(player, panelLocation(), d -> placeBackground(d));
+            spawnBackgroundParts();
             spawnWidgets();
             if (mode == ScreenSpec.Mode.PINNED) pointer = entities.text(player, pointerLocation(), this::placePointer);
             // 0.66.2: no draw() pass here: every widget is complete in its spawn, a second pass only wrote the same values
@@ -841,7 +1004,52 @@ public final class ScreenRuntime {
 
         private void placeBackground(TextDisplay d) {
             common(d);
+            if (holes) { placePiece(d, backgroundPieces().get(0)); return; }
             solidAt(d, 0, 0, layout.width() + PANEL_BORDER, layout.height() + PANEL_BORDER, mode == ScreenSpec.Mode.PINNED ? 0 : 0.008, 0x1B1F27, 235, 0);
+        }
+
+        // -- C0 experiment: panel holes over map widgets (26.3 draws maps before see-through text) --
+
+        /** True for a screen of a player in {@link #holesFor} that has a map widget (set when the visuals are built). */
+        boolean holes;
+        /**
+         * The client draws maps before see-through text (26.3: FeatureRenderDispatcher runs solid, translucent, then
+         * see-through), so a see-through pointer lies on top of a map. 26.2 draws maps after text: there the pointer
+         * must stay depth-tested as before, even in the experiment.
+         */
+        boolean mapsBeforeText;
+        /** The player was in {@link #holesFor} when this screen opened (the visuals come a few ticks later). */
+        final boolean holesAsked;
+        /** Background rectangles after the first one (which the {@link #background} display carries). */
+        final List<TextDisplay> backgroundParts = new java.util.ArrayList<>();
+
+        /** The panel background minus the map widgets, in centre-origin panel units {x0, y0, x1, y1} (y up). */
+        List<double[]> backgroundPieces() {
+            double hw = (layout.width() + PANEL_BORDER) / 2, hh = (layout.height() + PANEL_BORDER) / 2;
+            List<double[]> maps = new java.util.ArrayList<>();
+            for (ScreenWidget w : widgets.values()) {
+                if (w.kind() != ScreenWidget.Kind.MAP) continue;
+                double x0 = w.u() - layout.width() / 2, top = layout.height() / 2 - w.v();
+                maps.add(new double[] { x0, top - w.height(), x0 + w.width(), top });
+            }
+            List<double[]> pieces = PanelHoles.pieces(new double[] { -hw, -hh, hw, hh }, maps);
+            return pieces.isEmpty() ? List.of(new double[] { 0, 0, 0, 0 }) : pieces;
+        }
+
+        private void placePiece(TextDisplay d, double[] r) {
+            common(d);
+            double w = r[2] - r[0], h = r[3] - r[1];
+            solidAt(d, (r[0] + r[2]) / 2, (r[1] + r[3]) / 2, Math.max(w, 1e-4), Math.max(h, 1e-4), 0, 0x1B1F27, w > 0 && h > 0 ? 235 : 0, 0);
+        }
+
+        /** Spawns the background rectangles after the first (before the widgets, so 26.2 draws them first too). */
+        private void spawnBackgroundParts() {
+            if (!holes) return;
+            List<double[]> pieces = backgroundPieces();
+            for (int i = 1; i < pieces.size(); i++) {
+                double[] r = pieces.get(i);
+                backgroundParts.add(entities.text(player, panelLocation(), d -> placePiece(d, r)));
+            }
         }
 
         /** PINNED only: a dim, screen-filling backdrop behind the panel, like the dark background of vanilla menus. */
@@ -849,7 +1057,7 @@ public final class ScreenRuntime {
             common(d);
             // Depth-tested (not see-through) when opaque: the world behind it (clouds, sign texts, block outlines) is drawn
             // after see-through text and would otherwise show through. Nearer blocks are hidden by hideNearBlocks.
-            if (spec.backdrop().opacity() >= 255) d.setSeeThrough(false);
+            if (spec.backdrop().opacity() >= 255 || holes) d.setSeeThrough(false);   // C0: a see-through DIM backdrop would cover the maps
             solid(d, BACKDROP_WIDTH, BACKDROP_HEIGHT, BACKDROP_DEPTH, spec.backdrop().rgb(), spec.backdrop().opacity());
         }
 
@@ -913,7 +1121,8 @@ public final class ScreenRuntime {
             // Maps are drawn after all text (26.2 phase order: texts, then translucent custom geometry). A see-through
             // pointer writes no depth and would vanish under a map; a depth-tested one that the shader pulls close to
             // the camera stays on top. Without maps the pointer keeps the proven see-through setup.
-            d.setSeeThrough(mapFrames.isEmpty());
+            // C0: where maps are drawn before text (26.3), a see-through pointer is drawn after them, so it stays on top
+            d.setSeeThrough(mapFrames.isEmpty() || mapsBeforeText);
             d.setBackgroundColor(Color.fromARGB(0, 0, 0, 0));
             Component glyph = Component.text(ScreenShader.POINTER).font(Key.key(ScreenShader.FONT)).color(TextColor.color(ScreenShader.MARKER_RGB));
             PlatformCompat.text(d, glyph);
@@ -941,12 +1150,66 @@ public final class ScreenRuntime {
             if (mode != ScreenSpec.Mode.PINNED || !maps.supported()) return false;
             boolean drawable;
             try { drawable = mapsDrawable.test(player); } catch (RuntimeException failed) { drawable = true; }
-            if (!drawable) return false;
+            if (!drawable && !holes) return false;
             ScreenMapCodec.Placement at = ScreenMapCodec.placement(eye.getX(), eye.getY(), eye.getZ());
-            ScreenMapFrames.Handle handle = maps.show(player, at, mapTiles(widget));
+            List<byte[]> tiles = mapTiles(widget);
+            ScreenMapFrames.Handle handle = maps.show(player, at, tiles);
             if (handle == null) return false;
             mapFrames.put(widget.id(), handle);
+            senders.put(widget.id(), new ScreenMapSender(tiles));
             return true;
+        }
+
+        // -- screen canvas: partial map sends, pointer samples, press --
+
+        /** Sends pending map rectangles within this tick's budget for this viewer; asks for a tick while any are left. */
+        void flushMaps() {
+            if (senders.isEmpty()) return;
+            boolean unlimited = nextTick == null;
+            // start with another widget each time, so a busy animation cannot starve a second map widget
+            List<Map.Entry<String, ScreenMapSender>> order = List.copyOf(senders.entrySet());
+            int start = Math.floorMod(senderCursor++, order.size());
+            for (int k = 0; k < order.size(); k++) {
+                Map.Entry<String, ScreenMapSender> entry = order.get((start + k) % order.size());
+                ScreenMapSender sender = entry.getValue();
+                if (!sender.pending()) continue;
+                ScreenMapFrames.Handle handle = mapFrames.get(entry.getKey());
+                if (handle == null) continue;
+                int left = unlimited ? Integer.MAX_VALUE : (int) Math.max(0, mapBudget - mapSpent);
+                mapSpent += sender.flush(left, mapSpent == 0, handle::patch);
+            }
+            if (needsTick()) wantTick();
+        }
+
+        /** True while this screen has work for the next tick. */
+        boolean needsTick() {
+            if (pointerWidgets.stream().anyMatch(widgets::containsKey) || mapSpent > 0 || (press != null && press.down())) return true;
+            for (ScreenMapSender sender : senders.values()) if (sender.pending()) return true;
+            return false;
+        }
+
+        void onTick() {
+            mapSpent = 0;
+            flushMaps();
+            if (built && pointerWidgets.stream().anyMatch(widgets::containsKey)) {
+                Location at = player.getLocation();
+                if (at != null) samplePointer(at.getYaw(), at.getPitch());
+            }
+            if (open && press != null && press.released(clock.getAsLong())) deliver(new ScreenInput.Press(true, false));
+        }
+
+        /** Delivers a {@link ScreenInput.Pointer} when the pointer is over a tracked widget, moved, and this tick had none. */
+        void samplePointer(float yaw, float pitch) {
+            if (!built || !open) return;
+            Optional<double[]> p = point(yaw, pitch);
+            String id = null;
+            double u = 0, v = 0;
+            if (p.isPresent()) {
+                u = p.get()[0];
+                v = p.get()[1];
+                id = layout.hit(u, v).map(ScreenWidget::id).filter(pointerWidgets::contains).orElse(null);
+            }
+            if (pointerGate.offer(ticks, id, u, v)) deliver(new ScreenInput.Pointer(id, u, v));
         }
 
         /** The widget's tiles with their shader headers, from its last pixels (dark until the plugin sets some). */
@@ -970,6 +1233,7 @@ public final class ScreenRuntime {
         private void removeMaps() {
             for (ScreenMapFrames.Handle handle : mapFrames.values()) handle.remove();
             mapFrames.clear();
+            senders.clear();
         }
 
         private static boolean hasBox(ScreenWidget widget) {
@@ -986,6 +1250,7 @@ public final class ScreenRuntime {
         private void drawBox(TextDisplay d, ScreenWidget widget) {
             boolean lit = widget.selected() || (widget.clickable() && widget.id().equals(hovered));
             int argb = lit ? widget.litFill() : widget.restingFill();
+            if (holes && widget.kind() == ScreenWidget.Kind.MAP) argb = 0;   // C0: nothing see-through over a map
             double cx = widget.u() + widget.width() / 2 - layout.width() / 2;
             double cy = layout.height() / 2 - (widget.v() + widget.height() / 2);
             solidAt(d, cx, cy, widget.width(), widget.height(), mode == ScreenSpec.Mode.PINNED ? 0 : 0.004, argb, argb >>> 24, boxLayer(widget));
@@ -1000,7 +1265,9 @@ public final class ScreenRuntime {
             Object icon = widget.icon();
             String material = icon instanceof org.bukkit.inventory.ItemStack stack ? stack.getType().name() : String.valueOf(icon);
             try {
-                Component glyph = spriteGlyph(ScreenSprites.of(material));
+                // 0.71.0: a player head has no flat sprite (it was drawn as paper): a player object glyph instead
+                ScreenHeads.Head head = ScreenHeads.of(icon);
+                Component glyph = head != null ? SpriteGlyphs.head(head) : spriteGlyph(ScreenSprites.of(material));
                 return entities.text(player, panelLocation(), d -> placeSpriteIcon(d, widget, glyph));
             } catch (LinkageError olderApi) {
                 return entities.item(player, panelLocation(), d -> placeIcon(d, widget));
@@ -1036,7 +1303,8 @@ public final class ScreenRuntime {
         private void placeIcon(org.bukkit.entity.ItemDisplay d, ScreenWidget widget) {
             d.setBillboard(mode == ScreenSpec.Mode.PINNED ? Display.Billboard.CENTER : Display.Billboard.FIXED);
             Object icon = widget.icon();
-            d.setItemStack(icon instanceof org.bukkit.inventory.ItemStack stack ? stack : new org.bukkit.inventory.ItemStack((Material) icon));
+            d.setItemStack(icon instanceof org.bukkit.inventory.ItemStack stack ? stack
+                    : new org.bukkit.inventory.ItemStack(icon instanceof ScreenHeads.Head ? Material.PLAYER_HEAD : (Material) icon));
             double x = widget.u() + widget.width() / 2 - layout.width() / 2;
             double y = layout.height() / 2 - (widget.v() + widget.height() / 2);
             boolean pinned = mode == ScreenSpec.Mode.PINNED;
@@ -1168,6 +1436,7 @@ public final class ScreenRuntime {
             List<Entity> all = new java.util.ArrayList<>(boxes.values());
             all.addAll(displays.values());
             all.addAll(icons.values());
+            all.addAll(backgroundParts);
             all.add(background);
             all.add(backdrop);
             all.add(pointer);
@@ -1223,7 +1492,10 @@ public final class ScreenRuntime {
             restoreBlocks();
             removeMaps();
             if (mount != null) mount.removePassenger(player);
-            for (Entity e : allEntities()) if (e != null) entities.remove(e);
+            for (Entity e : allEntities()) {
+                if (e == null) continue;
+                try { entities.remove(e); } catch (RuntimeException | LinkageError gone) { }   // 0.71.1: one failed removal must not keep the others
+            }
             displays.clear();
             if (returnPlayer && player.isOnline()) {
                 Location back = saved.clone();
@@ -1236,7 +1508,13 @@ public final class ScreenRuntime {
         void finish(ScreenInput.Reason reason) {
             if (!open) return;
             open = false;
-            teardown(reason != ScreenInput.Reason.QUIT && reason != ScreenInput.Reason.DEATH);
+            try { teardown(reason != ScreenInput.Reason.QUIT && reason != ScreenInput.Reason.DEATH); }
+            catch (RuntimeException | LinkageError failure) {
+                core.getLogger().warning("[Screens] Closing " + spec.id() + " for " + player.getName() + " failed: " + failure);
+            } finally { showHand(); }   // 0.71.1: also when the teleport back or a block restore failed
+            // screen canvas: a hold that is still down ends before Closed, so Closed stays the last input
+            if (press != null && press.end()) deliver(new ScreenInput.Press(true, false));
+            pointerWidgets.clear();
             deliver(new ScreenInput.Closed(reason));
         }
 
@@ -1274,6 +1552,7 @@ public final class ScreenRuntime {
             icons.clear();
             boxes.clear();
             mapFrames.clear();
+            senders.clear();
             widgets.clear();
             boolean resized = layout == null || layout.width() != next.width() || layout.height() != next.height();
             layout = next;
@@ -1281,7 +1560,8 @@ public final class ScreenRuntime {
             for (ScreenWidget widget : next.widgets()) widgets.put(widget.id(), widget);
             hovered = null;
             if (built) {
-                if (resized && background != null && background.isValid()) placeBackground(background);
+                if ((resized || holes) && background != null && background.isValid()) placeBackground(background);
+                if (holes) { old.addAll(backgroundParts); backgroundParts.clear(); spawnBackgroundParts(); }   // C0: the maps may have moved
                 spawnWidgets();
                 // the pointer must stay the last (topmost) display: the new one is shown after the new widgets, the
                 // old one goes with the old set (both draw the same glyph at the same place meanwhile)
@@ -1306,10 +1586,37 @@ public final class ScreenRuntime {
             ScreenMapFrames.Handle handle = mapFrames.get(widgetId);
             if (handle == null) return; // placeholder, or visuals not built yet (they use the stored pixels)
             List<byte[]> tiles = mapTiles(widget);
-            for (int i = 0; i < tiles.size(); i++) handle.pixels(i, tiles.get(i));
+            ScreenMapSender sender = senders.get(widgetId);
+            if (sender == null || sender.tiles() != tiles.size()) {
+                for (int i = 0; i < tiles.size(); i++) handle.pixels(i, tiles.get(i));
+                senders.put(widgetId, new ScreenMapSender(tiles));
+                return;
+            }
+            // screen canvas: only the changed rectangle of each tile, within this viewer's budget per tick
+            sender.stage(tiles);
+            flushMaps();
         }
 
         @Override public boolean showsMap(String widgetId) { return mapFrames.containsKey(widgetId); }
+
+        @Override public boolean trackPointer(String widgetId, boolean on) {
+            if (widgetId == null || !open) return false;
+            if (on) pointerWidgets.add(widgetId);
+            else pointerWidgets.remove(widgetId);
+            if (on) wantTick();
+            return true;
+        }
+
+        @Override public boolean trackPress(boolean on) {
+            if (!open) return false;
+            if (on && press == null) press = new ScreenPress(Vystorm.vystorm_core.screen.Screens.PRESS_RELEASE_MILLIS);
+            else if (!on && press != null) {
+                ScreenPress was = press;
+                press = null;
+                if (was.end()) deliver(new ScreenInput.Press(true, false));   // a hold that was down ends with "up"
+            }
+            return true;
+        }
 
         @Override public void setEnabled(String widgetId, boolean enabled) {
             ScreenWidget widget = widgets.get(widgetId);

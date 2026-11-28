@@ -57,7 +57,7 @@ final class ScreenMapDemo {
                 .onInput((session, input) -> handle(session, input, zoom, cx, cz))
                 .build();
         ScreenOpenResult result = screens.open(player, spec);
-        if (!result.opened()) { lang.send(player, result.refusedKey()); return; }
+        if (!result.opened()) { if (ScreenRuntime.silentRefusal(result.refusedKey())) lang.send(player, result.refusedKey()); return; }
         lang.send(player, "screen.demo.map.opened", "mode", result.mode().name().toLowerCase(java.util.Locale.ROOT));
         screens.session(player).ifPresent(s -> redraw(s, zoom[0], cx, cz));
     }
@@ -140,11 +140,10 @@ final class ScreenMapDemo {
         }
     }
 
-    @SuppressWarnings("deprecation")
     private static byte match(Map<Integer, Byte> palette, int rgb, int shade) {
         return palette.computeIfAbsent((rgb & 0xFFFFFF) | shade << 24, key -> {
             int r = (rgb >> 16 & 0xFF) * shade / 255, g = (rgb >> 8 & 0xFF) * shade / 255, b = (rgb & 0xFF) * shade / 255;
-            return org.bukkit.map.MapPalette.matchColor(r, g, b);
+            return Vystorm.vystorm_core.screen.MapColors.table().nearest(r, g, b);   // = MapPalette.matchColor
         });
     }
 }

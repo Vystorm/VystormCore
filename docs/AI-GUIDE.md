@@ -1,6 +1,6 @@
 # Vystorm Core: guide for AI assistants
 
-This guide covers all 110 capabilities in Core 0.65.0, including the Screens prototype.
+This guide covers all 126 capabilities in Core 0.71.0, including the Screens prototype.
 Use [API.md](API.md) for signatures and full contracts, [CHANGELOG.md](../CHANGELOG.md) for changes,
 and [llms.txt](../llms.txt) to navigate. The capability registry in CoreApi is authoritative for flag versions.
 Package names start with `Vystorm.vystorm_core` (capital V); names such as `GuiInteface` are intentional.
@@ -527,6 +527,72 @@ Some older features received flags later. A flag's absence on an old Core need n
 - **`CLIENT_CHUNKS`** (`client-chunks`, since 0.45.0).
   Entry points: `packet.ClientChunks.supported`, `packet.ClientChunks`.
   Preview entire client-only chunks without generating the corresponding server terrain. Runtime adapter support and caller-managed view lifetime are required. Read: [API — Client-only chunks (0.45.0)](API.md#client-only-chunks-0450).
+
+### Added in 0.65.0 to 0.71.0
+
+- **`FILE_MENUS`** (`file-menus`, since 0.65.0).
+  Entry points: `api.gui().fileMenus()`: `enabled`, `ids`, `open`, `reload`, `errors`, `warnings`.
+  Screen menus that server owners write as files in `plugins/vystorm_core/menus` (format `vystorm-menu` version 1). Read: [MENUS.md](MENUS.md).
+
+- **`COMMAND_VISIBILITY`** (`command-visibility`, since 0.65.0).
+  Entry points: `commands.CommandSpec.Builder.visibleWhen`, `CommandSpec.visibleTo`, `api.command().refresh()`.
+  Hide a command from players who may not use it; call `refresh()` after the condition changes.
+
+- **`PANEL_LIST_LAYOUT`** (`panel-list-layout`, since 0.66.0).
+  Entry points: `Ui.Section.list()`.
+  Draw a panel section as a settings list on Vystorm Screens; chest fallbacks are unchanged.
+
+- **`PLACEHOLDER_RANKINGS`** (`placeholder-rankings`, since 0.67.0).
+  Entry points: `PlaceholderNamespace.ranking(key, info, source)`, `api.placeholders().rankings`, `top`, `topAsync`, `rank`, `rankingValue`.
+  Declare a ranking once and get `top_<key>_<n>_name/value`, `rank_<key>` and `value_<key>` placeholders. Read: [API — Rankings as placeholders (0.67.0)](API.md#rankings-as-placeholders-0670).
+
+- **`WORLD_SURVEY`** (`world-survey`, since 0.68.0).
+  Entry points: `api.survey()`: `rooms()`, `openCells()`, `precompute()`, `listen`, `invalidate`, `rule`, `require(plugin)`.
+  Surface, rooms and caves per chunk, joined across chunks, computed off the server thread. Off on a server until `survey.enabled` or a plugin calls `require(plugin)`. Read: [API — World survey (0.68.0)](API.md#world-survey-0680).
+
+- **`BLOCK_WRITES`** (`block-writes`, since 0.69.0).
+  Entry points: `api.blocks()`: `states`, `writer(world)`, `bukkitWriter`, `writerReport`; `BlockWritesTesting`.
+  Write many blocks without block events or physics, checked per block and within a time budget per tick. Read: [API — Bulk block writes (0.69.0)](API.md#bulk-block-writes-0690).
+
+- **`CHUNK_LOADS`** (`chunk-loads`, since 0.69.0).
+  Entry points: `api.blocks().chunks()`.
+  Load and hold the chunks an edit needs with plugin tickets; release them when done (Core releases them when the plugin is disabled).
+
+- **`BLOCKS_EDITED_EVENT`** (`blocks-edited-event`, since 0.69.0).
+  Entry points: `blocks.BlocksEditedEvent`, `EditedChunk`, `EditCause`, `api.blocks().announce`.
+  One event per chunk that a bulk edit changed, for plugins that keep their own block records.
+
+- **`EDIT_ASK`** (`edit-ask`, since 0.69.0).
+  Entry points: `api.area().mayEdit(EditAsk)`, `api.area().editGuards().register(plugin, guard)`.
+  Ask Core's regions (flag `build`) and every registered guard whether an edit may change a chunk: yes, no or block by block.
+
+- **`KNOWN_PLAYERS`** (`known-players`, since 0.71.0).
+  Entry points: `api.data().knownPlayers()`: `get`, `byName`, `search`, `recent`, `findable`, `setFindable`, `forget`.
+  Players who joined the server, without network lookups; respects the player's "findable when offline" privacy setting. Read: [API — Known players and the player picker (0.71.0)](API.md#known-players-and-the-player-picker-0710).
+
+- **`PICK_RETURN`** (`pick-return`, since 0.71.0).
+  Entry points: `picker.PickReturn`: `panel(action)`, `panel(owner, name, arg)`, `to`, `none`, `session`, `go`.
+  Bring a player back to the calling panel with its argument and session values.
+
+- **`PLAYER_PICKER`** (`player-picker`, since 0.71.0).
+  Entry points: `api.gui().pickers().players(action, pick)`, `players(owner, viewer, pick, back)`, `active`, `cancel`, `available`; `PlayerPick`.
+  One shared menu to choose one or several players (tabs Online, Nearby, Recent, Search), with a Core chest where no screen opens.
+
+- **`WORLD_PICK`** (`world-pick`, since 0.71.0).
+  Entry points: `api.gui().pickers().world(action, pick)`, `world(owner, viewer, pick, back)`; `WorldPick`, `PickKind`, `Picked`, `PickProtection`.
+  Let a player choose a position, block, face, container or entity by looking at it; the player cannot change the world while picking.
+
+- **`WORLD_PICK_AREA`** (`world-pick-area`, since 0.71.0).
+  Entry points: `PickKind.AREA`, `WorldPick.Builder.area(AreaRules)`, `AreaHeight`, `Picked.Area`.
+  An area from two corners with a size preview and a confirm view, always under Core's caps in `pickers.world.max-area`.
+
+- **`PANEL_FALLBACK_CONTEXT`** (`panel-fallback-context`, since 0.71.0).
+  Entry points: `PanelSpec.Builder.contextFallback((player, ctx) -> ..)`, `panel.FallbackContext`, `PickReturn.panel(FallbackContext)`.
+  A chest fallback gets the panel's argument, session values and a returning pick's result. Use the own name `contextFallback`, not an overload of `fallback`.
+
+- **`EDIT_ASK_OWN_REGIONS`** (`edit-ask-own-regions`, since 0.71.0).
+  Entry points: `api.area().editGuards().registerOwnRegions(plugin, guard)`.
+  A protection plugin answers the edit ask for its own regions; Core then skips their `build` flag, other regions still count and any deny wins.
 
 ## Recipes
 

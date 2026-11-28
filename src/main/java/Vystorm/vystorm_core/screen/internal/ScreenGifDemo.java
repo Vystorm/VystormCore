@@ -110,7 +110,7 @@ final class ScreenGifDemo {
                 })
                 .build();
         ScreenOpenResult result = screens.open(player, spec);
-        if (!result.opened()) { lang.send(player, result.refusedKey()); return; }
+        if (!result.opened()) { if (ScreenRuntime.silentRefusal(result.refusedKey())) lang.send(player, result.refusedKey()); return; }
         ScreenSession session = screens.session(player).orElse(null);
         if (session == null) return;
         int[] index = { 0 };

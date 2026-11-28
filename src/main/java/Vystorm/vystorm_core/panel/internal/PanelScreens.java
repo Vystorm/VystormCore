@@ -51,6 +51,8 @@ final class PanelScreens {
     boolean open(Player player, PanelRegistry.Registered reg, String arg) {
         if (core == null) return false;
         State state = new State(new PanelHub.Session(0, player, reg, arg));
+        PanelOpener.Seed seed = PanelOpener.seed(state.session);   // 0.71.0: values and status carried back by PickReturn
+        if (seed != null) state.status = seed.status;
         if (!render(state)) return false;
         state.result = layout(state);
         ScreenSpec spec = ScreenSpec.builder("panel:" + reg.id(), state.result.layout())
@@ -58,8 +60,10 @@ final class PanelScreens {
                 .onInput((screen, input) -> { state.screen = screen; handle(state, input); })
                 .build();
         String key = "panel:" + reg.id() + ":" + (arg == null ? "" : arg);
-        return Vystorm.vystorm_core.screen.internal.ScreenRuntime.get().open(core, player, spec,
+        boolean opened = Vystorm.vystorm_core.screen.internal.ScreenRuntime.get().open(core, player, spec,
                 new Vystorm.vystorm_core.screen.internal.ScreenRuntime.Origin(key, p -> PanelOpener.open(p, reg, arg), true)).opened();
+        if (opened && seed != null) seed.statusShown = true;
+        return opened;
     }
 
     /** After a confirmation (its screen replaced the panel): show the panel again. */
@@ -93,6 +97,16 @@ final class PanelScreens {
             @Override public Component off() { return lang.component(player, "features.state-off"); }
             @Override public Component rows(int from, int to, int total) { return lang.component(player, "screen.list.position", "from", from, "to", to, "total", total); }
             @Override public Component listHelp(String kind) { return lang.component(player, "screen.list.help-" + kind); }
+            @Override public Object listIcon(String entryKey, org.bukkit.Material material) {
+                PanelOpener.ListIcons icons = PanelOpener.listIcons;
+                if (icons == null || entryKey == null) return material;
+                try {
+                    Object icon = icons.icon(player, state.session.reg.id(), entryKey);
+                    return icon == null ? material : icon;
+                } catch (RuntimeException | LinkageError failed) {
+                    return material;
+                }
+            }
         };
         return PanelScreenLayout.layout(state.session.model, state.view, metrics, texts, state.status, PanelScreenLayout.listIds(state.session.doc));
     }
@@ -114,6 +128,13 @@ final class PanelScreens {
                 double before = state.view.scroll;
                 state.view.scroll = Math.max(0, Math.min(state.result.maxScroll(), before + scroll.delta() * 0.12));
                 if (state.view.scroll != before) relayout(state);
+            }
+            case ScreenInput.Closed closed -> {
+                PanelOpener.ClosedListener listener = PanelOpener.closedListener;
+                if (listener != null) {
+                    try { listener.closed(state.session.player, state.session.reg.id(), state.session.arg, closed.reason()); }
+                    catch (RuntimeException failure) { hub.logger().log(java.util.logging.Level.WARNING, "[Panels] Close listener failed", failure); }
+                }
             }
             default -> { }
         }
@@ -193,7 +214,7 @@ final class PanelScreens {
             }
         });
         Component title = DialogDowngrade.component(state.session.model.root().title());
-        Vystorm.vystorm_core.main.getApi().dialogs().open(core, player, new DialogRequest(title, List.of(), List.of(field), List.of(apply),
+        typingDialogs(Vystorm.vystorm_core.main.getApi().dialogs()).open(core, player, new DialogRequest(title, List.of(), List.of(field), List.of(apply),
                 Player::isOnline, () -> { }, lang.plain(player, "panel.dialog.close"), 2));
     }
 
@@ -213,6 +234,30 @@ final class PanelScreens {
         List<String> status = new ArrayList<>();
         PanelDialogs.addStatus(state.session, status, hub.dialogs().action(state.session, elementId, kind, value));
         refresh(state, status);
+        // 0.71.0: the handler asked for typing into a field of the redrawn screen (Core's picker: Search tab = one prompt)
+        String typeNext = PanelOpener.takeTypeNext(state.session.player);
+        if (typeNext != null && state.screen != null && state.screen.isOpen() && state.result != null) {
+            PanelScreenLayout.Act.Edit e = editFor(state.result.acts(), typeNext);
+            if (e != null) edit(state, e);
+        }
+    }
+
+    /** The typing act of the input {@code elementId} on the drawn screen, or null. */
+    static PanelScreenLayout.Act.Edit editFor(Map<String, PanelScreenLayout.Act> acts, String elementId) {
+        if (acts == null || elementId == null) return null;
+        for (PanelScreenLayout.Act act : acts.values())
+            if (act instanceof PanelScreenLayout.Act.Edit e && elementId.equals(e.elementId())) return e;
+        return null;
+    }
+
+    /**
+     * The handler that shows the typing box: never the screen wrapper. Since 0.61.0 dialogs with inputs open as a
+     * screen; a screen replaces the panel's screen, so the panel closed under the player (Core's player picker took
+     * that close for "another menu" and ended) and typing took two forms. The native dialog (Paper) or chat form opens
+     * over the panel's screen, which stays open and shows the result.
+     */
+    static Vystorm.vystorm_core.compat.dialog.DialogInterface typingDialogs(Vystorm.vystorm_core.compat.dialog.DialogInterface api) {
+        return api instanceof Vystorm.vystorm_core.compat.internal.ScreenDialogs screens ? screens.delegate() : api;
     }
 
     /** Shows the panel again after an action; when the action handed over (closeAndThen), the screen closes. */

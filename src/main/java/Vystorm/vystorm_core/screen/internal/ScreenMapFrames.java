@@ -25,6 +25,11 @@ public interface ScreenMapFrames {
     interface Handle {
         /** Sends a full tile (128x128 map colours, row 0 = header). */
         void pixels(int tile, byte[] colours);
+        /**
+         * Sends one rectangle of a tile (0.72.0): {@code w*h} map colours, row-major, at tile pixel
+         * {@code (x, y)}; the client keeps the rest of the tile. Default: nothing (frames that cannot patch).
+         */
+        default void patch(int tile, int x, int y, int w, int h, byte[] colours) { }
         /** Removes the frames from the viewer and frees the map ids. Idempotent. */
         void remove();
     }
@@ -77,6 +82,10 @@ public interface ScreenMapFrames {
                 @Override public void pixels(int tile, byte[] colours) {
                     if (removed || !viewer.isOnline()) return;
                     try { send(viewer, maps[tile], colours); } catch (ReflectiveOperationException | RuntimeException ignored) { }
+                }
+                @Override public void patch(int tile, int x, int y, int w, int h, byte[] colours) {
+                    if (removed || !viewer.isOnline()) return;
+                    try { packets.send(viewer, packets.mapData(maps[tile], x, y, w, h, colours)); } catch (ReflectiveOperationException | RuntimeException ignored) { }
                 }
                 @Override public void remove() {
                     if (removed) return;

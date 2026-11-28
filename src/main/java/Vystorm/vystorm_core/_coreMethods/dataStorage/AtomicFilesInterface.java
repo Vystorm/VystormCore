@@ -50,4 +50,7 @@ public interface AtomicFilesInterface {
      * @since 0.44.0
      */
     default YamlConfiguration readYaml(Path file, java.util.logging.Logger log) { return AtomicFiles.readYaml(file, log); }
+
+    /** See {@link AtomicFiles#append}. @since 0.73.0 */
+    default void append(Path file, byte[] bytes) throws IOException { AtomicFiles.append(file, bytes); }
 }

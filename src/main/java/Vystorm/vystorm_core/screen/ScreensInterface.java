@@ -28,4 +28,11 @@ public interface ScreensInterface {
      * windows, send slots, crafting inputs). Guard with {@code CoreApi.atLeast("0.61.0")}.
      */
     default void keepAsChest(org.bukkit.inventory.Inventory inventory) { Screens.keepAsChest(inventory); }
+
+    /**
+     * The map colour table (since 0.72.0, capability {@code map-palette}): RGB per map colour byte, the nearest byte for an RGB
+     * colour and the 244 visible colours in picker order, the same on every server. Replaces
+     * {@code MapPalette.getColor}/{@code matchColor}. Any thread.
+     */
+    default MapColors mapColors() { return Screens.mapColors(); }
 }
